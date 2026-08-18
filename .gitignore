@@ -1,0 +1,38 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# wrangler 가 생성하는 Cloudflare 런타임 타입 (570KB+).
+# 빌드 산출물 유무에 따라 내용이 달라져 `--check` 로 고정할 수 없으므로 커밋하지 않는다.
+# `npm install`(prepare) / `npm run check` / `npm run build` 가 항상 새로 생성한다.
+worker-configuration.d.ts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets  ── 절대 커밋 금지
+.env
+.env.*
+!.env.example
+!.env.test
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Playwright
+test-results
+playwright-report
+blob-report
+.playwright

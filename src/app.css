@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+/*
+ * 마법한자탐험대 — 전역 스타일 기반.
+ *
+ * PHASE 1: 부트스트랩(리셋 + 최소 기반)만 둔다.
+ * PHASE 2: 여기에 @theme 디자인 토큰 전체(색/폰트/그림자/모션)를 정의한다.
+ *          docs/02-DESIGN-SYSTEM.md 가 그 근거 문서다.
+ */
+
+@theme {
+	/* PHASE 2 에서 확장. 지금은 부팅 확인에 필요한 최소값만. */
+	--color-magic-50: #f3f0ff;
+	--color-magic-500: #7c5cff;
+	--color-magic-700: #5231bc;
+	--color-ink-500: #6f659b;
+	--color-ink-900: #2a2050;
+}
+
+@layer base {
+	html {
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+	}
+
+	body {
+		min-height: 100dvh;
+		margin: 0;
+		color: var(--color-ink-900);
+		background: linear-gradient(180deg, #c9e9ff 0%, #e4e0ff 55%, #f6eeff 100%);
+		background-attachment: fixed;
+		font-family:
+			'Noto Sans KR',
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			'Malgun Gothic',
+			sans-serif;
+		/* 어린이 대상 — 본문은 16px 아래로 내려가지 않는다 */
+		font-size: 1rem;
+		line-height: 1.6;
+	}
+
+	/* 포커스는 항상 눈에 보여야 한다 (키보드 접근성) */
+	:focus-visible {
+		outline: 3px solid var(--color-magic-500);
+		outline-offset: 3px;
+		border-radius: 6px;
+	}
+
+	/* 연출을 꺼도 게임 진행과 보상은 100% 동일해야 한다 */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
+}
