@@ -13,6 +13,23 @@ import { captureScreen, waitForFonts } from '../helpers/screens';
  * 화면 내용 자체는 PHASE 2/3 에서 교체되므로 여기서는 최소한만 단언한다.
  */
 test.describe('부팅 스모크', () => {
+	/**
+	 * 가장 먼저: 우리가 검사하는 서버가 **정말 이 프로젝트인지** 확인한다.
+	 *
+	 * 과거에 같은 PC 의 다른 프로젝트가 같은 포트를 쓰고 있어
+	 * 엉뚱한 앱을 상대로 테스트가 돌아간 적이 있다. 그때 실패 메시지가
+	 * "버튼이 작다" 같은 엉뚱한 내용이라 원인을 찾는 데 시간이 걸렸다.
+	 */
+	test('검사 대상이 이 프로젝트가 맞다', async ({ page, baseURL }) => {
+		await page.goto('/');
+		const title = await page.title();
+		expect(
+			title,
+			`${baseURL} 에서 다른 앱이 응답하고 있습니다 (title="${title}"). ` +
+				`해당 포트를 쓰는 다른 개발 서버를 종료하세요.`
+		).toContain('마법한자탐험대');
+	});
+
 	test('홈이 열리고 서비스 이름이 보인다', async ({ page }) => {
 		const response = await page.goto('/');
 		expect(response?.status()).toBe(200);

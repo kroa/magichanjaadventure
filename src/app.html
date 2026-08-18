@@ -6,6 +6,19 @@
 		<meta name="text-scale" content="scale" />
 		<meta name="theme-color" content="#7C5CFF" />
 		<meta name="color-scheme" content="light" />
+
+		<!--
+			폰트는 전부 SIL OFL 라이선스다 (docs/06-ASSETS-LICENSE.md).
+			Jua = 제목/버튼, Noto Sans KR = 본문, Noto Serif KR = 한자 글리프.
+			한자를 명조로 쓰는 것은 취향이 아니라 기능이다 — 획의 시작/끝/삐침이 구분되어야 학습이 된다.
+			PHASE 19 에서 서브셋 self-host 로 전환한다.
+		-->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@500;700&display=swap"
+		/>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

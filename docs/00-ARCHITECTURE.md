@@ -43,13 +43,27 @@
 
 **명시적 비채택**: React, Spring Boot, 별도 Node/Express 서버, 외부 상태관리 라이브러리(Svelte 5 runes로 충분), ORM(D1 raw SQL + 얇은 repository 레이어가 더 가볍고 명확하다).
 
-### 2.1 배포 타깃은 Pages가 아니라 Workers
+### 2.1 배포 타깃: Workers(주) + Pages(추가)
 
-`@sveltejs/adapter-cloudflare`는 Pages와 Workers 양쪽을 지원하지만 **Workers + Static Assets**를 선택한다.
+`@sveltejs/adapter-cloudflare`는 Pages와 Workers 양쪽을 지원한다. 이 프로젝트는 **둘 다** 쓴다.
 
-- Cloudflare가 현재 권장하는 방향이며 Pages Functions는 사실상 유지보수 모드다.
-- `wrangler.jsonc` 하나로 D1 / R2 / 변수 바인딩을 선언적으로 관리한다.
-- 로컬 개발에서 `getPlatformProxy`로 **동일한 바인딩**을 그대로 쓸 수 있어, 개발·테스트·운영의 코드 경로가 갈라지지 않는다.
+| 타깃                        | 설정 파일              | 쓰는 곳                                              |
+| --------------------------- | ---------------------- | ---------------------------------------------------- |
+| **Workers + Static Assets** | `wrangler.jsonc`       | 로컬 개발(`npm run dev`), 프리뷰, **Playwright E2E** |
+| **Pages**                   | `wrangler.pages.jsonc` | `npm run deploy:pages` 로 배포                       |
+
+Workers 를 개발·테스트의 기준으로 삼는 이유:
+
+- Cloudflare 가 현재 권장하는 방향이며 Pages Functions 는 사실상 유지보수 모드다.
+- 로컬에서 `getPlatformProxy` 로 **운영과 동일한 바인딩**을 그대로 쓸 수 있어,
+  개발·테스트·운영의 코드 경로가 갈라지지 않는다.
+
+빌드 타깃은 `CF_TARGET=pages` 환경변수로 전환한다(`vite.config.ts` 참조).
+Pages 는 `_worker.js` 가 자체 완결이어야 하고 `_routes.json` / `404.html` 이 추가로 필요해서
+출력 형태가 다르다. `scripts/deploy-pages.mjs` 가 빌드와 배포에 **같은 설정 파일**을 쓰도록 강제한다.
+
+> ⚠️ **두 설정 파일의 바인딩(D1 / R2 / vars)은 항상 같아야 한다.**
+> 한쪽만 고치면 그 타깃에서 바인딩이 조용히 사라진다. 바인딩을 바꿀 때는 두 파일을 함께 고친다.
 
 ---
 

@@ -7,20 +7,20 @@
 
 ## 1. 명령 체계
 
-| 명령                   | 하는 일                                            | 소요 |
-| ---------------------- | -------------------------------------------------- | ---- |
-| `npm run dev`          | Vite dev (로컬 D1/R2 바인딩 프록시 포함)           | —    |
-| `npm run check`        | `wrangler types` + `svelte-check` (TS 타입 검사)   | ~15s |
-| `npm run lint`         | `prettier --check` + `eslint`                      | ~15s |
-| `npm run format`       | 자동 포맷                                          | ~5s  |
-| `npm run test:unit`    | Vitest — 순수 로직 + 데이터 무결성                 | ~5s  |
-| `npm run test:e2e`     | Playwright — 3 viewport                            | ~60s |
-| `npm run build`        | 프로덕션 빌드 (Worker 번들)                        | ~15s |
+| 명령                   | 하는 일                                                      | 소요 |
+| ---------------------- | ------------------------------------------------------------ | ---- |
+| `npm run dev`          | Vite dev (로컬 D1/R2 바인딩 프록시 포함)                     | —    |
+| `npm run check`        | `wrangler types` + `svelte-check` (TS 타입 검사)             | ~15s |
+| `npm run lint`         | `prettier --check` + `eslint`                                | ~15s |
+| `npm run format`       | 자동 포맷                                                    | ~5s  |
+| `npm run test:unit`    | Vitest — 순수 로직 + 데이터 무결성                           | ~5s  |
+| `npm run test:e2e`     | Playwright — 3 viewport                                      | ~60s |
+| `npm run build`        | 프로덕션 빌드 (Worker 번들)                                  | ~15s |
 | `npm run verify`       | **scan:secrets → check → lint → test:unit → build** (게이트) | ~60s |
-| `npm run clean`        | 빌드 산출물 정리 (`check` 가 자동 실행)            | ~1s  |
-| `npm run db:migrate`   | 로컬 D1 마이그레이션 적용                          | ~3s  |
-| `npm run db:reset`     | 로컬 D1 초기화 후 재적용 (⚠️ 로컬 전용)            | ~5s  |
-| `npm run scan:secrets` | 시크릿/개인정보 패턴 스캔                          | ~2s  |
+| `npm run clean`        | 빌드 산출물 정리 (`check` 가 자동 실행)                      | ~1s  |
+| `npm run db:migrate`   | 로컬 D1 마이그레이션 적용                                    | ~3s  |
+| `npm run db:reset`     | 로컬 D1 초기화 후 재적용 (⚠️ 로컬 전용)                      | ~5s  |
+| `npm run scan:secrets` | 시크릿/개인정보 패턴 스캔                                    | ~2s  |
 
 `npm run verify`가 **커밋 가능 상태의 정의**다. 빨간 상태로 다음 기능에 넘어가지 않는다.
 

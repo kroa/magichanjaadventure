@@ -7,7 +7,7 @@ import type { Page, TestInfo } from '@playwright/test';
  * 목적은 사람(그리고 AI)이 디자인을 눈으로 확인하는 것이다.
  * 레이아웃 오류 판정은 `helpers/layout.ts` 의 주장(assertion)이 담당한다.
  *
- * 저장 위치: test-results/screens/<project>/<name>.png
+ * 저장 위치: screenshots/<project>/<name>.png
  */
 export async function captureScreen(
 	page: Page,
@@ -17,7 +17,7 @@ export async function captureScreen(
 ): Promise<void> {
 	const project = testInfo.project.name;
 	await page.screenshot({
-		path: `test-results/screens/${project}/${name}.png`,
+		path: `screenshots/${project}/${name}.png`,
 		fullPage: options.fullPage ?? true,
 		animations: 'disabled'
 	});

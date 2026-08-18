@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import process from 'node:process';
 
-const PORT = 4173;
+const PORT = 4319;
 const CI = !!process.env.CI;
 
 /**
@@ -63,7 +63,15 @@ export default defineConfig({
 	webServer: {
 		command: 'npm run build && npm run preview',
 		port: PORT,
-		reuseExistingServer: !CI,
+		/*
+		 * 절대 기존 서버를 재사용하지 않는다.
+		 *
+		 * Vite 기본 포트(4173)를 쓰던 때, 같은 PC 의 **다른 프로젝트** 서버를 재사용해
+		 * 엉뚱한 앱을 검사하면서도 테스트가 도는 일이 실제로 있었다.
+		 * 조용히 틀리는 테스트가 제일 위험하므로, 포트가 막혀 있으면 크게 실패하는 편이 낫다.
+		 * PORT 도 흔한 값 대신 이 프로젝트 전용 값을 쓴다.
+		 */
+		reuseExistingServer: false,
 		timeout: 180_000,
 		stdout: 'pipe',
 		stderr: 'pipe'

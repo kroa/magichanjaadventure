@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "wrangler types && vite build",
-		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
+		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4319",
 		"prepare": "svelte-kit sync && wrangler types || echo ''",
 		"gen": "wrangler types",
 		"check": "node scripts/clean.mjs && wrangler types && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -25,7 +25,9 @@
 		"db:query": "node scripts/db.mjs query",
 		"db:status": "node scripts/db.mjs status",
 		"scan:secrets": "node scripts/scan-secrets.mjs",
-		"clean": "node scripts/clean.mjs"
+		"clean": "node scripts/clean.mjs",
+		"build:pages": "node scripts/deploy-pages.mjs --dry",
+		"deploy:pages": "node scripts/deploy-pages.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

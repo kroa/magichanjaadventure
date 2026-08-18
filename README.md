@@ -34,8 +34,22 @@ npm run dev
 | `npm run db:migrate`   | 로컬 D1 마이그레이션 적용                           |
 | `npm run db:reset`     | 로컬 D1 초기화 (로컬 전용, 원격 거부)               |
 | `npm run db:query`     | 로컬 D1 에 SQL 실행                                 |
+| `npm run build:pages`  | Cloudflare Pages 용 빌드만 (배포 안 함)             |
+| `npm run deploy:pages` | Cloudflare Pages 로 빌드 + 배포                     |
 
 `npm run verify` 통과 = 커밋 가능 상태.
+
+### 배포 타깃이 둘인 이유
+
+- **Workers** (`wrangler.jsonc`) — 로컬 개발과 Playwright E2E 가 쓰는 기준 환경
+- **Pages** (`wrangler.pages.jsonc`) — 실제 배포
+
+두 설정의 **바인딩(D1 / R2 / vars)은 항상 같아야 한다.** 한쪽만 고치면 그 타깃에서 조용히 사라진다.
+
+### 디자인 확인
+
+`/styleguide` 에서 토큰 · 컴포넌트 · 캐릭터를 한 화면에서 볼 수 있다.
+E2E 를 돌리면 주요 화면 스크린샷이 `screenshots/<viewport>/` 에 모인다.
 
 ## 기술 스택
 

@@ -19,6 +19,30 @@ export interface LayoutIssue {
 	detail: string;
 }
 
+/**
+ * 끝나는 애니메이션이 모두 끝날 때까지 기다린다.
+ *
+ * 이게 없으면 등장 연출(예: 모달의 scale 0.85 → 1) 도중에 크기를 재게 되어
+ * 48px 버튼이 "41px 이라 너무 작다"로 잘못 신고된다. 실제로 그 오탐을 겪었다.
+ *
+ * idle 모션(캐릭터 숨쉬기, 별 반짝임)은 **무한 반복**이므로 기다리면 영영 끝나지 않는다.
+ * 그래서 반복 횟수가 유한한 애니메이션만 기다린다.
+ */
+export async function settleAnimations(page: Page, timeout = 3000): Promise<void> {
+	await page.evaluate(async (limit) => {
+		const finite = document.getAnimations().filter((a) => {
+			const timing = a.effect?.getTiming();
+			return timing != null && timing.iterations !== Infinity;
+		});
+		if (finite.length === 0) return;
+
+		await Promise.race([
+			Promise.all(finite.map((a) => a.finished.catch(() => undefined))),
+			new Promise((resolve) => setTimeout(resolve, limit))
+		]);
+	}, timeout);
+}
+
 /** 페이지 전체를 검사하고 발견된 문제 목록을 돌려준다. */
 export async function findLayoutIssues(
 	page: Page,
@@ -26,6 +50,8 @@ export async function findLayoutIssues(
 ): Promise<LayoutIssue[]> {
 	const minTap = options.minTapSize ?? 48;
 	const checkTaps = options.checkTapTargets ?? true;
+
+	await settleAnimations(page);
 
 	return page.evaluate(
 		({ minTap, checkTaps }) => {
@@ -81,6 +107,15 @@ export async function findLayoutIssues(
 				if (!hasOwnText) continue;
 
 				const s = getComputedStyle(el);
+
+				/*
+				 * 스크린리더 전용 텍스트(.sr-only)는 **의도적으로** 1px 로 잘라둔 것이다.
+				 * 잘림으로 신고하면 접근성을 챙길수록 린터가 시끄러워지는 역설이 생긴다.
+				 */
+				if (el.clientWidth <= 1 || el.clientHeight <= 1) continue;
+				if (s.clipPath && s.clipPath !== 'none') continue;
+				if (s.position === 'absolute' && parseFloat(s.width) <= 1) continue;
+
 				const clips =
 					/hidden|clip/.test(s.overflow) ||
 					/hidden|clip/.test(s.overflowX) ||
@@ -142,15 +177,31 @@ export async function findLayoutIssues(
 			}
 
 			// ── 5. 인터랙티브 요소 겹침 ────────────────────────────────────────
+			/*
+			 * 고정(fixed/sticky) 요소는 스크롤에 따라 본문 위를 지나가는 것이 **정상**이다.
+			 * (하단 네비게이션, 토스트 등)
+			 * 그래서 "둘 다 고정" 또는 "둘 다 일반"인 쌍만 비교한다.
+			 */
+			const isPinned = (el: Element): boolean => {
+				let node: Element | null = el;
+				while (node && node !== document.body) {
+					const pos = getComputedStyle(node).position;
+					if (pos === 'fixed' || pos === 'sticky') return true;
+					node = node.parentElement;
+				}
+				return false;
+			};
+
 			const boxes = Array.from(document.body.querySelectorAll('button, a[href], [role=button]'))
 				.filter((el) => isVisible(el) && !el.closest('[data-allow-overlap]'))
-				.map((el) => ({ el, r: el.getBoundingClientRect() }));
+				.map((el) => ({ el, r: el.getBoundingClientRect(), pinned: isPinned(el) }));
 
 			for (let i = 0; i < boxes.length; i++) {
 				for (let j = i + 1; j < boxes.length; j++) {
 					const a = boxes[i];
 					const b = boxes[j];
 					if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+					if (a.pinned !== b.pinned) continue;
 					const overlapW = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
 					const overlapH = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
 					if (overlapW > 4 && overlapH > 4) {

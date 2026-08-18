@@ -74,5 +74,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screens
-          path: test-results/screens/
+          path: screenshots/
           retention-days: 7
