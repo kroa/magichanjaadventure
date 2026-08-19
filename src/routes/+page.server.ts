@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { learnedCountByArea, totalLearned } from '$lib/server/db/hanja';
-import { evaluateAreaUnlocks } from '$lib/game/areas';
+import { evaluateAreaUnlocks, TOTAL_HANJA } from '$lib/game/areas';
 import { expToNextLevel } from '$lib/game/exp';
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 		user,
 		areas,
 		learned,
-		total: 500,
+		total: TOTAL_HANJA,
 		expToNext: expToNextLevel(user.level),
 		nextAreaId: nextArea.area.id
 	};

@@ -9,8 +9,8 @@
  * 근거 문서: docs/01-DATABASE.md §9
  */
 
-/** 게임 최대 레벨. 한자 500자를 다 모으면 도달하도록 잡았다. */
-export const MAX_LEVEL = 60;
+/** 게임 최대 레벨. 한자 1000자를 다 모으면 도달하도록 잡았다. */
+export const MAX_LEVEL = 80;
 
 /** 행동별 기본 EXP */
 export const EXP_REWARD = {

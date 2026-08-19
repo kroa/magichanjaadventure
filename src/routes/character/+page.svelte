@@ -6,7 +6,7 @@
 	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 	import Sparkle from '$lib/components/effects/Sparkle.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { CHARACTER_STATS, type CharacterClass } from '$lib/types/user';
+	import { CHARACTERS, STARTER_CLASSES, type CharacterClass } from '$lib/types/user';
 	import type { Mood } from '$lib/types/ui';
 
 	let { data, form } = $props();
@@ -30,10 +30,13 @@
 		Sprite: Component<{ size?: number; mood?: Mood; idle?: boolean; class?: string }>;
 	}
 
-	const CHOICES: Choice[] = [
-		{ cls: 'knight', Sprite: KnightSprite },
-		{ cls: 'wizard', Sprite: WizardSprite }
-	];
+	const SPRITE_BY_CLASS: Partial<Record<CharacterClass, Choice['Sprite']>> = {
+		knight: KnightSprite,
+		wizard: WizardSprite
+	};
+
+	// 시작 캐릭터는 2종. 나머지는 상점에서 보석으로 얻는다.
+	const CHOICES: Choice[] = STARTER_CLASSES.map((cls) => ({ cls, Sprite: SPRITE_BY_CLASS[cls]! }));
 
 	let picking = $state<CharacterClass | null>(null);
 </script>
@@ -62,7 +65,7 @@
 		>
 			<div class="grid w-full gap-4 sm:grid-cols-2">
 				{#each CHOICES as choice (choice.cls)}
-					{@const stats = CHARACTER_STATS[choice.cls]}
+					{@const stats = CHARACTERS[choice.cls]}
 					{@const active = picking === choice.cls}
 					{@const current = data.current === choice.cls}
 					<button

@@ -5,7 +5,7 @@ import { learnedCountByArea, pickQuizPool, pickDistractors } from '$lib/server/d
 import { evaluateAreaUnlocks, getArea } from '$lib/game/areas';
 import { buildQuestion, pickQuestionType, type Question } from '$lib/game/quiz';
 import { expToNextLevel } from '$lib/game/exp';
-import { CHARACTER_STATS } from '$lib/types/user';
+import { statsFor } from '$lib/server/db/shop';
 
 const BATTLE_QUESTIONS = 8;
 
@@ -30,7 +30,8 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		if (question) questions.push(question);
 	}
 
-	const stats = CHARACTER_STATS[locals.user.characterClass];
+	// 장비 보너스가 더해진 최종 능력치 (서버에서 계산한다)
+	const stats = await statsFor(db, locals.user.id, locals.user.characterClass);
 	// 문제 수 × 공격력보다 적의 HP 를 조금 낮게 잡는다.
 	// 몇 번 틀려도 이길 수 있어야 아이가 다시 도전한다.
 	const enemyHp = Math.round(stats.attack * BATTLE_QUESTIONS * 0.72);

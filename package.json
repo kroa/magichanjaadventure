@@ -27,7 +27,8 @@
 		"scan:secrets": "node scripts/scan-secrets.mjs",
 		"clean": "node scripts/clean.mjs",
 		"build:pages": "vite build",
-		"deploy:pages": "node scripts/deploy-pages.mjs"
+		"deploy:pages": "node scripts/deploy-pages.mjs",
+		"fonts": "node scripts/fetch-fonts.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

@@ -11,7 +11,8 @@
 		{ href: '/', label: '모험', icon: '🗺️' },
 		{ href: '/learn', label: '배우기', icon: '✨' },
 		{ href: '/quiz', label: '퀴즈', icon: '⚔️' },
-		{ href: '/collection', label: '도감', icon: '📖' }
+		{ href: '/collection', label: '도감', icon: '📖' },
+		{ href: '/shop', label: '상점', icon: '💎' }
 	];
 
 	function isActive(href: string): boolean {
@@ -47,7 +48,7 @@
 
 	ul {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(5, 1fr);
 		margin: 0;
 		padding: 0;
 		list-style: none;

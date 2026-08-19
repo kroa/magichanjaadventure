@@ -41,21 +41,25 @@ const { ACHIEVEMENTS } = await server.ssrLoadModule(
 );
 await server.close();
 
-if (HANJA_SEED.length !== 500) {
-	console.error(`[gen-seed] 한자가 500자가 아닙니다: ${HANJA_SEED.length}`);
+if (HANJA_SEED.length !== 1000) {
+	console.error(`[gen-seed] 한자가 1000자가 아닙니다: ${HANJA_SEED.length}`);
 	process.exit(1);
 }
 
 const lines = [
 	'-- ============================================================================',
-	'-- 콘텐츠 시드 — 한자 500자 + 업적',
+	'-- 콘텐츠 시드 — 한자 1000자 + 업적',
 	'--',
 	'-- ⚠️ 이 파일은 `node scripts/gen-seed.mjs` 가 생성한다. 직접 고치지 말 것.',
 	'--    데이터는 database/seed/*.ts 에서 고치고 다시 생성한다.',
 	'--    (그래야 database/seed/hanja.spec.ts 의 무결성 검사를 거친다)',
+	'--',
+	'-- DELETE 후 INSERT 가 아니라 **upsert** 를 쓴다.',
+	'--   user_hanja_progress 가 hanjas 를 참조하므로, 이미 플레이한 사용자가 있으면',
+	'--   DELETE 가 외래키 제약에 걸려 실패한다. 한자를 늘릴 때마다 운영 DB 를 비울 수는 없다.',
+	'--   ON CONFLICT DO UPDATE 는 기존 행을 지우지 않고 내용만 갱신하므로 진행도가 보존된다.',
 	'-- ============================================================================',
 	'',
-	'DELETE FROM hanjas;',
 	''
 ];
 
@@ -78,11 +82,26 @@ for (const h of HANJA_SEED) {
 				sql(h.description),
 				h.sortOrder
 			].join(', ') +
-			');'
+			') ON CONFLICT(id) DO UPDATE SET ' +
+			[
+				'character = excluded.character',
+				'reading = excluded.reading',
+				'meaning = excluded.meaning',
+				'difficulty = excluded.difficulty',
+				'grade_label = excluded.grade_label',
+				'level_required = excluded.level_required',
+				'area_id = excluded.area_id',
+				'category = excluded.category',
+				'stroke_count = excluded.stroke_count',
+				'example_words = excluded.example_words',
+				'description = excluded.description',
+				'sort_order = excluded.sort_order'
+			].join(', ') +
+			';'
 	);
 }
 
-lines.push('', 'DELETE FROM achievements;', '');
+lines.push('');
 
 for (const a of ACHIEVEMENTS) {
 	lines.push(
@@ -99,7 +118,18 @@ for (const a of ACHIEVEMENTS) {
 				a.gemReward,
 				a.sortOrder
 			].join(', ') +
-			');'
+			') ON CONFLICT(id) DO UPDATE SET ' +
+			[
+				'title = excluded.title',
+				'description = excluded.description',
+				'icon = excluded.icon',
+				'condition_type = excluded.condition_type',
+				'condition_value = excluded.condition_value',
+				'exp_reward = excluded.exp_reward',
+				'gem_reward = excluded.gem_reward',
+				'sort_order = excluded.sort_order'
+			].join(', ') +
+			';'
 	);
 }
 

@@ -8,17 +8,20 @@
 		<meta name="color-scheme" content="light" />
 
 		<!--
-			폰트는 전부 SIL OFL 라이선스다 (docs/06-ASSETS-LICENSE.md).
-			Jua = 제목/버튼, Noto Sans KR = 본문 및 한자 글리프.
+			폰트는 **자체 호스팅**한다 (static/fonts, `npm run fonts` 로 생성).
+			Jua = 제목/버튼, Noto Sans KR = 본문 및 한자 글리프. 둘 다 SIL OFL 1.1.
+
+			외부 도메인(fonts.googleapis.com)을 쓰지 않는 이유:
+			  · 아이 브라우저가 제3자에게 요청을 보내지 않는다
+			  · 그 도메인이 느리거나 막힌 환경에서도 글자가 제때 나온다
+			  · 렌더를 막는 외부 스타일시트가 사라진다
+
+			Google 의 unicode-range 서브셋 구조를 그대로 가져왔으므로 브라우저는
+			여전히 **필요한 조각만** 받는다 (전체 4.2MB 중 실제 로드는 보통 100KB 내외).
+
 			한자는 고딕 700 으로 쓴다. 명조는 획이 적은 한자의 가로획이 너무 얇아진다(실측 비교).
-			PHASE 19 에서 서브셋 self-host 로 전환한다.
 		-->
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			rel="stylesheet"
-			href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400..700&display=swap"
-		/>
+		<link rel="stylesheet" href="/fonts/fonts.css" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

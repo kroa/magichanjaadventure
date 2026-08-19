@@ -20,7 +20,8 @@
 		{ href: '/learn', icon: '✨', label: '한자 배우기', desc: '새 마법을 익혀요', tone: 'magic' },
 		{ href: '/quiz', icon: '⚔️', label: '한자 퀴즈', desc: '배운 걸 겨뤄요', tone: 'gold' },
 		{ href: '/collection', icon: '📖', label: '한자 도감', desc: '모은 걸 구경해요', tone: 'mint' },
-		{ href: '/battle', icon: '👹', label: '한자 대결', desc: '보스를 물리쳐요', tone: 'candy' }
+		{ href: '/battle', icon: '👹', label: '한자 대결', desc: '보스를 물리쳐요', tone: 'candy' },
+		{ href: '/shop', icon: '💎', label: '상점', desc: '캐릭터와 장비를 사요', tone: 'sky' }
 	] as const;
 
 	const greeting = $derived(

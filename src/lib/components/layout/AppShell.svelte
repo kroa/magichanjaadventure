@@ -31,7 +31,10 @@
 <LevelUpOverlay />
 
 <!-- 키보드 사용자가 네비게이션을 건너뛸 수 있게 -->
-<a href="#main" class="skip-link sr-only-focusable" data-allow-small>본문으로 건너뛰기</a>
+<!-- 포커스될 때만 보이는 접근성 링크. 다른 요소 위에 뜨는 것이 정상이다. -->
+<a href="#main" class="skip-link sr-only-focusable" data-allow-small data-allow-overlap
+	>본문으로 건너뛰기</a
+>
 
 <div class="shell" class:with-nav={nav}>
 	{#if hud}

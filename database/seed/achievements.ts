@@ -79,13 +79,24 @@ export const ACHIEVEMENTS: Achievement[] = [
 	{
 		id: 'collect_500',
 		title: '한자 마스터',
-		description: '한자 500자를 모두 모았어요',
+		description: '한자 500자를 모았어요',
 		icon: '👑',
 		conditionType: 'hanja_learned',
 		conditionValue: 500,
 		expReward: 2000,
 		gemReward: 200,
 		sortOrder: 6
+	},
+	{
+		id: 'collect_1000',
+		title: '한자 대현자',
+		description: '한자 1000자를 모두 모았어요',
+		icon: '🐉',
+		conditionType: 'hanja_learned',
+		conditionValue: 1000,
+		expReward: 5000,
+		gemReward: 500,
+		sortOrder: 7
 	},
 
 	{

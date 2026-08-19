@@ -6,12 +6,14 @@ import { GRADE_6II } from './grade-6ii';
 import { GRADE_6 } from './grade-6';
 import { GRADE_5II } from './grade-5ii';
 import { GRADE_5 } from './grade-5';
+import { GRADE_4II } from './grade-4ii';
+import { GRADE_4 } from './grade-4';
 
 /**
- * 한자 500자 = 한국어문회 배정한자 8급 ~ 5급 누적.
+ * 한자 1000자 = 한국어문회 배정한자 8급 ~ 4급 누적.
  *
  * 임의로 500자를 고르지 않은 이유는 docs/04-CONTENT-PLAN.md §1 에 있다.
- * 요약하면: 검증된 난이도 순서이고, 7개 급수가 7개 지역과 그대로 맞아떨어지며,
+ * 요약하면: 검증된 난이도 순서이고, 9개 급수가 9개 지역과 그대로 맞아떨어지며,
  * 아이가 게임에서 지역을 깨면 실제 한자능력검정 범위를 익힌 것이 된다.
  */
 
@@ -30,7 +32,9 @@ const BLOCKS: GradeBlock[] = [
 	{ label: '6급II', difficulty: 4, areaId: 4, levelRequired: 10, rows: GRADE_6II },
 	{ label: '6급', difficulty: 5, areaId: 5, levelRequired: 15, rows: GRADE_6 },
 	{ label: '5급II', difficulty: 6, areaId: 6, levelRequired: 21, rows: GRADE_5II },
-	{ label: '5급', difficulty: 7, areaId: 7, levelRequired: 28, rows: GRADE_5 }
+	{ label: '5급', difficulty: 7, areaId: 7, levelRequired: 28, rows: GRADE_5 },
+	{ label: '4급II', difficulty: 8, areaId: 8, levelRequired: 36, rows: GRADE_4II },
+	{ label: '4급', difficulty: 9, areaId: 9, levelRequired: 46, rows: GRADE_4 }
 ];
 
 function build(): HanjaSeed[] {

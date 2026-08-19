@@ -107,8 +107,38 @@ export const AREAS: Area[] = [
 		sky: 'linear-gradient(180deg,#FFE9B0 0%,#FFC93C 45%,#F5A623 100%)',
 		accent: '#F5A623',
 		emoji: '🏰'
+	},
+	{
+		id: 8,
+		name: '구름 나루',
+		grade: '4급 II',
+		hanjaCount: 272,
+		levelRequired: 36,
+		mood: '구름 위에 뜬 나루터. 배를 타고 더 높이 간다',
+		boss: { id: 'cloud_captain', name: '구름배 선장', hint: '어려운 한자를 잔뜩 싣고 다녀요' },
+		sky: 'linear-gradient(180deg,#CFE4F5 0%,#9FC7E8 50%,#6FA9E8 100%)',
+		accent: '#5BA8D6',
+		emoji: '⛵'
+	},
+	{
+		id: 9,
+		name: '한자 하늘섬',
+		grade: '4급',
+		hanjaCount: 228,
+		levelRequired: 46,
+		mood: '구름보다 높은 곳에 떠 있는 마지막 섬',
+		boss: { id: 'sky_dragon', name: '아기 구름용', hint: '1000자를 모두 아는 마지막 상대' },
+		sky: 'radial-gradient(120% 90% at 50% 10%,#5BA8D6 0%,#3E2590 60%,#1B1042 100%)',
+		accent: '#B29CFF',
+		emoji: '🐉'
 	}
 ];
+
+/**
+ * 전체 한자 수. 지역 정의에서 계산하므로 지역을 늘리면 자동으로 따라온다.
+ * (화면마다 숫자를 하드코딩하면 다음에 늘릴 때 흩어진 값을 찾아다녀야 한다)
+ */
+export const TOTAL_HANJA: number = AREAS.reduce((sum, area) => sum + area.hanjaCount, 0);
 
 export function getArea(id: number): Area | undefined {
 	return AREAS.find((a) => a.id === id);

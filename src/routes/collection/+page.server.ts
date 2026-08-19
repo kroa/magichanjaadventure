@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { learnedCountByArea, listAreaHanja } from '$lib/server/db/hanja';
-import { evaluateAreaUnlocks } from '$lib/game/areas';
+import { evaluateAreaUnlocks, TOTAL_HANJA } from '$lib/game/areas';
 import { expToNextLevel } from '$lib/game/exp';
 
 export const load: PageServerLoad = async ({ locals, platform, url }) => {
@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	const areaId = areas.some((a) => a.area.id === requested) ? requested : 1;
 
 	/*
-	 * 한 지역은 최대 100자다. 500자를 한 번에 보내지 않고 지역 단위로 나눠 보낸다.
+	 * 1000자를 한 번에 보내지 않고 지역 단위로 나눠 보낸다.
 	 * (성능 예산: 한자 데이터를 클라이언트에 전량 전송 금지 — docs/00-ARCHITECTURE.md §8)
 	 */
 	const hanja = await listAreaHanja(db, areaId, locals.user.id);
@@ -38,6 +38,6 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		areaId,
 		hanja,
 		learnedTotal,
-		grandTotal: 500
+		grandTotal: TOTAL_HANJA
 	};
 };

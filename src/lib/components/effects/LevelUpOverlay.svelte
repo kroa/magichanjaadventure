@@ -3,6 +3,7 @@
 	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
 	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 	import Button from '$lib/components/common/Button.svelte';
+	import { sound } from '$lib/sound/index.svelte';
 
 	/*
 	 * 레벨업 연출 (사양서 §19).
@@ -50,6 +51,8 @@
 			const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 			const { gsap } = await import('gsap');
 			if (killed) return;
+
+			sound.play('levelup');
 
 			const q = gsap.utils.selector(container);
 			const tl = gsap.timeline({

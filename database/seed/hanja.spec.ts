@@ -9,8 +9,8 @@ import { AREAS } from '../../src/lib/game/areas';
  * 화면이 깨지는 버그보다 심각하게 취급한다.
  */
 describe('한자 시드 데이터', () => {
-	it('정확히 500자다', () => {
-		expect(HANJA_SEED).toHaveLength(500);
+	it('정확히 1000자다', () => {
+		expect(HANJA_SEED).toHaveLength(1000);
 	});
 
 	it('중복된 한자가 없다', () => {
@@ -27,9 +27,9 @@ describe('한자 시드 데이터', () => {
 		expect(duplicates, `중복 한자: ${duplicates.join(' / ')}`).toEqual([]);
 	});
 
-	it('id 가 1부터 500까지 빠짐없이 이어진다', () => {
+	it('id 가 1부터 1000까지 빠짐없이 이어진다', () => {
 		const ids = HANJA_SEED.map((h) => h.id);
-		expect(ids).toEqual(Array.from({ length: 500 }, (_, i) => i + 1));
+		expect(ids).toEqual(Array.from({ length: 1000 }, (_, i) => i + 1));
 	});
 
 	it('각 지역의 한자 수가 지역 정의와 일치한다', () => {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ProgressBar from '$lib/components/common/ProgressBar.svelte';
+	import { sound } from '$lib/sound/index.svelte';
 
 	interface Props {
 		nickname: string;
@@ -47,6 +48,17 @@
 		<span aria-hidden="true">💎</span>
 		<span>{gems}</span>
 	</div>
+
+	<!-- 소리 켜기/끄기 (autoplay 정책상 첫 상호작용 뒤부터 실제로 들린다) -->
+	<button
+		type="button"
+		class="sound-toggle"
+		onclick={() => sound.toggle()}
+		aria-pressed={sound.enabled}
+		aria-label={sound.enabled ? '소리 끄기' : '소리 켜기'}
+	>
+		{sound.enabled ? '🔊' : '🔇'}
+	</button>
 </header>
 
 <style>
@@ -71,6 +83,19 @@
 
 	.level-badge .num {
 		font-size: 1.15rem;
+	}
+
+	.sound-toggle {
+		display: grid;
+		place-items: center;
+		width: var(--tap-min);
+		height: var(--tap-min);
+		flex-shrink: 0;
+		border: none;
+		border-radius: 9999px;
+		background: var(--color-magic-50);
+		font-size: 1.1rem;
+		cursor: pointer;
 	}
 
 	.gems {
