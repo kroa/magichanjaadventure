@@ -11,6 +11,8 @@
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
 	import BattleCanvas from '$lib/components/battle/BattleCanvas.svelte';
 	import { toasts } from '$lib/stores/toast.svelte';
+	import { announceReward } from '$lib/game/announce';
+	import { sound } from '$lib/sound/index.svelte';
 	import { expToNextLevel } from '$lib/game/exp';
 	import type { Mood } from '$lib/types/ui';
 	import type { BattleFinishResponse, QuizAnswerResponse } from '$lib/types/api';
@@ -96,6 +98,8 @@
 				hitTrigger += 1;
 			}
 
+			sound.play(payload.isCorrect ? 'correct' : 'wrong');
+
 			if (payload.reward) {
 				level = payload.reward.level;
 				exp = payload.reward.exp;
@@ -147,14 +151,13 @@
 			if (!response.ok) return;
 			const payload = (await response.json()) as BattleFinishResponse;
 
+			sound.play(kind === 'win' ? 'victory' : 'wrong');
+
 			if (payload.reward) {
 				level = payload.reward.level;
 				exp = payload.reward.exp;
 				gems = payload.reward.gems;
-				if (payload.reward.levelsGained > 0) toasts.reward(`레벨 ${payload.reward.level} 달성! 🎉`);
-				for (const a of payload.reward.unlockedAchievements) {
-					toasts.reward(`${a.icon} 업적 — ${a.title}`);
-				}
+				announceReward(payload.reward, data.user.characterClass);
 			}
 		} catch {
 			// 기록 실패가 결과 화면을 막지 않게 한다

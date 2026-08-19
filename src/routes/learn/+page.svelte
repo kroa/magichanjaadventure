@@ -8,6 +8,8 @@
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import HanjaReveal from '$lib/components/hanja/HanjaReveal.svelte';
 	import { toasts } from '$lib/stores/toast.svelte';
+	import { announceReward } from '$lib/game/announce';
+	import { sound } from '$lib/sound/index.svelte';
 	import { expToNextLevel } from '$lib/game/exp';
 	import type { RewardDto } from '$lib/types/api';
 
@@ -140,12 +142,8 @@
 							claimed = true;
 							reward = payload?.reward ?? null;
 
-							if (reward) {
-								if (reward.levelsGained > 0) toasts.reward(`레벨 ${reward.level} 달성! 🎉`);
-								for (const a of reward.unlockedAchievements) {
-									toasts.reward(`${a.icon} 업적 — ${a.title}`);
-								}
-							}
+							sound.play('discover');
+							announceReward(reward, data.user.characterClass);
 						};
 					}}
 				>

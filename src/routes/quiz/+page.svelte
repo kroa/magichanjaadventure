@@ -11,6 +11,8 @@
 	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
 	import { toasts } from '$lib/stores/toast.svelte';
+	import { announceReward } from '$lib/game/announce';
+	import { sound } from '$lib/sound/index.svelte';
 	import { expToNextLevel, isSpecialCombo } from '$lib/game/exp';
 	import type { Mood } from '$lib/types/ui';
 	import type { QuizAnswerResponse } from '$lib/types/api';
@@ -76,14 +78,13 @@
 				burst += 1;
 			}
 
+			sound.play(payload.isCorrect ? 'correct' : 'wrong');
+
 			if (payload.reward) {
 				level = payload.reward.level;
 				exp = payload.reward.exp;
 				gems = payload.reward.gems;
-				if (payload.reward.levelsGained > 0) toasts.reward(`레벨 ${payload.reward.level} 달성! 🎉`);
-				for (const a of payload.reward.unlockedAchievements) {
-					toasts.reward(`${a.icon} 업적 — ${a.title}`);
-				}
+				announceReward(payload.reward, data.user.characterClass);
 			}
 
 			if (isSpecialCombo(payload.combo)) toasts.success(`${payload.combo} 콤보! 🔥`);

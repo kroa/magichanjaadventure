@@ -1,8 +1,10 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import SkyBackground from './SkyBackground.svelte';
 	import BottomNav from './BottomNav.svelte';
 	import ToastHost from '$lib/components/common/ToastHost.svelte';
+	import LevelUpOverlay from '$lib/components/effects/LevelUpOverlay.svelte';
+	import { sound } from '$lib/sound/index.svelte';
 
 	interface Props {
 		/** 밤하늘 배경 (레벨업 / 보스) */
@@ -16,10 +18,17 @@
 	}
 
 	let { night = false, nav = true, hud, class: className = '', children }: Props = $props();
+
+	/*
+	 * 레벨업 연출은 여기 한 곳에만 마운트한다.
+	 * 학습·퀴즈·대결 어디서 레벨이 올라도 같은 연출이 나오고, 화면마다 복붙하지 않는다.
+	 */
+	onMount(() => sound.init());
 </script>
 
 <SkyBackground {night} />
 <ToastHost />
+<LevelUpOverlay />
 
 <!-- 키보드 사용자가 네비게이션을 건너뛸 수 있게 -->
 <a href="#main" class="skip-link sr-only-focusable" data-allow-small>본문으로 건너뛰기</a>

@@ -244,7 +244,10 @@ c:\magichanjaadventure
 
 ## 10. 열린 항목 (추후 판단)
 
-- Workers 무료 플랜 CPU 제한과 PBKDF2 iteration 실측 → PHASE 20
-- R2 공개 버킷 vs Worker 프록시 → PHASE 15에서 비용/캐시 기준으로 결정
+- ~~Workers 무료 플랜 CPU 제한과 PBKDF2 iteration 실측~~ → **해결.** PBKDF2 100k ≈ 148ms CPU 로 측정됐지만
+  운영 Cloudflare Pages 에서 가입·로그인이 정상 동작한다(로그인 149ms). 현재 설정을 유지한다.
+- ~~R2 공개 버킷 vs Worker 프록시~~ → **MVP 에서 R2 를 쓰지 않기로 결정.**
+  캐릭터·몬스터·배경을 전부 인라인 SVG 로 만들어 저장할 바이너리 에셋이 없다.
+  사운드를 넣더라도 수십 KB 라 `static/` 으로 충분하다. 사용자 업로드 같은 기능이 생기면 그때 연다.
 - 획순(필순) 애니메이션 데이터 500자 전량 확보는 MVP 범위 밖.
   MVP는 `stroke_count` + 정적 안내로 처리하고, 확장 시 라이선스가 명확한 데이터셋만 검토한다.
