@@ -8,6 +8,7 @@
 	import Sparkle from '$lib/components/effects/Sparkle.svelte';
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
 	import { isSpecialCombo } from '$lib/game/exp';
+	import { invalidateAll } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { announceReward } from '$lib/game/announce';
 	import { sound } from '$lib/sound/index.svelte';
@@ -28,6 +29,7 @@
 	let busy = $state(false);
 	let burst = $state(0);
 	let askedAt = $state(Date.now());
+	let restarting = $state(false);
 
 	const question = $derived(data.questions[index] ?? null);
 	const finished = $derived(index >= data.questions.length);
@@ -83,6 +85,26 @@
 		}
 	}
 
+	/**
+	 * 새 퀴즈를 시작한다.
+	 * 같은 URL 로 이동하면 컴포넌트가 재생성되지 않아 결과 화면이 남는다 — 대결과 같은 이유.
+	 */
+	async function restart() {
+		if (restarting) return;
+		restarting = true;
+		try {
+			await invalidateAll();
+			index = 0;
+			combo = 0;
+			correctCount = 0;
+			chosen = null;
+			result = null;
+			askedAt = Date.now();
+		} finally {
+			restarting = false;
+		}
+	}
+
 	function next() {
 		index += 1;
 		chosen = null;
@@ -109,7 +131,9 @@
 			description="한자를 먼저 배우면 그 한자로 퀴즈가 만들어져요."
 		>
 			{#snippet action()}
+				<!-- 집중 모드라 메뉴가 없다. 나갈 길을 여기서 반드시 제공한다. -->
 				<Button variant="magic" href="/learn">한자 배우러 가기</Button>
+				<Button variant="ghost" href="/">모험 지도로</Button>
 			{/snippet}
 		</EmptyState>
 	{:else if finished}
@@ -123,7 +147,7 @@
 				{data.questions.length}문제 중 <strong class="text-mint-600">{correctCount}문제</strong> 정답
 			</p>
 			<div class="flex flex-wrap justify-center gap-3">
-				<Button variant="magic" size="lg" href="/quiz" data-sveltekit-reload>한 판 더!</Button>
+				<Button variant="magic" size="lg" onclick={restart} loading={restarting}>한 판 더!</Button>
 				<Button variant="ghost" size="lg" href="/">모험 지도로</Button>
 			</div>
 		</div>

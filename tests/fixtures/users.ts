@@ -30,23 +30,36 @@ export const NICKNAME_MAX = 12;
  *
  * Playwright 는 병렬로 돌기 때문에 고정 닉네임을 쓰면 워커끼리 충돌한다.
  * `t_` 접두사는 정리 스크립트가 테스트 계정을 식별하는 표식이다.
+ *
+ * 이름을 12자에 맞추려면 반드시 자르게 되는데, **자르고 나면 서로 달랐던 이름이 같아질 수 있다.**
+ * 실제로 'shop' 과 'shopapi' 가 둘 다 `t_sho_...` 로 잘려 같은 계정이 되었고,
+ * 뒤에 실행된 테스트가 "이미 있는 닉네임" 으로 가입에 실패했다.
+ * 같은 워커에 배정될 때만 터져서 원인 파악이 오래 걸렸다.
+ *
+ * 그래서 잘리지 않는 **해시**로 고유성을 보장하고, 라벨은 읽기 편하라고 남겨 둔다.
  */
+function shortHash(input: string): string {
+	// FNV-1a — 짧고 결정적이면 충분하다 (보안 용도가 아니다)
+	let hash = 0x811c9dc5;
+	for (let i = 0; i < input.length; i++) {
+		hash ^= input.charCodeAt(i);
+		hash = Math.imul(hash, 0x01000193) >>> 0;
+	}
+	return hash.toString(36).padStart(5, '0').slice(-5);
+}
+
 export function makeTestUser(
 	label: string,
 	seed: number | string,
 	characterClass: CharacterClass = 'knight'
 ): TestUser {
 	const safe = label.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'u';
-	const suffix = String(seed)
-		.replace(/[^a-z0-9]/gi, '')
-		.toLowerCase();
 
-	// 접두사(2) + 구분자(1) 를 뺀 나머지를 라벨과 시드가 나눠 쓴다
-	const budget = NICKNAME_MAX - 3;
-	const seedPart = suffix.slice(-Math.min(6, budget - 1));
-	const labelPart = safe.slice(0, budget - seedPart.length);
+	// 접두사(2) + 해시(5) 를 뺀 나머지를 라벨이 쓴다
+	const hash = shortHash(`${label}:${seed}`);
+	const labelPart = safe.slice(0, NICKNAME_MAX - 2 - hash.length);
 
-	const nickname = `t_${labelPart}_${seedPart}`;
+	const nickname = `t_${labelPart}${hash}`;
 	if (nickname.length > NICKNAME_MAX) {
 		throw new Error(`테스트 닉네임이 ${NICKNAME_MAX}자를 넘습니다: ${nickname}`);
 	}

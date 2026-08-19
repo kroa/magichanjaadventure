@@ -151,10 +151,10 @@ test.describe('아이의 첫 모험', () => {
 		await captureScreen(page, testInfo, 'battle');
 		await expectHealthyLayout(page);
 
-		// 적 HP 가 줄거나(정답) 내 HP 가 줄어야(오답) 한다 — 어느 쪽이든 전투가 진행된다
-		const enemyBar = page.getByRole('progressbar', { name: /체력/ }).last();
+		// 적 에너지가 줄거나(정답) 내 에너지가 줄어야(오답) 한다 — 어느 쪽이든 전투가 진행된다
+		const enemyBar = page.getByRole('progressbar', { name: /에너지/ }).last();
 		const before = Number(await enemyBar.getAttribute('aria-valuenow'));
-		const myBar = page.getByRole('progressbar', { name: '내 체력' });
+		const myBar = page.getByRole('progressbar', { name: '내 에너지' });
 		const myBefore = Number(await myBar.getAttribute('aria-valuenow'));
 
 		await page.locator('button.option').first().click();

@@ -62,7 +62,7 @@
 				{#if bonus.attack > 0 || bonus.hp > 0}
 					지금 장비 보너스 —
 					<strong class="text-ember-500">공격 +{bonus.attack}</strong> ·
-					<strong class="text-mint-600">HP +{bonus.hp}</strong>
+					<strong class="text-mint-600">에너지 +{bonus.hp}</strong>
 				{/if}
 			</p>
 		</div>
@@ -96,7 +96,7 @@
 						<p class="text-center text-xs leading-snug text-ink-500">{info.blurb}</p>
 
 						<div class="flex gap-2">
-							<span class="stat bg-mint-100 text-mint-700">HP {info.hp}</span>
+							<span class="stat bg-mint-100 text-mint-700">에너지 {info.hp}</span>
 							<span class="stat bg-ember-100 text-ember-600">공격 {info.attack}</span>
 						</div>
 
@@ -151,7 +151,7 @@
 							<div class="flex flex-wrap items-center gap-2">
 								<h2 class="font-display text-ink-900">{item.name}</h2>
 								<Badge tone={item.kind === 'attack' ? 'ember' : 'mint'} size="sm">
-									{item.kind === 'attack' ? '공격' : 'HP'} +{item.value}
+									{item.kind === 'attack' ? '공격' : '에너지'} +{item.value}
 								</Badge>
 							</div>
 							<p class="mt-0.5 text-sm text-ink-500">{item.description}</p>

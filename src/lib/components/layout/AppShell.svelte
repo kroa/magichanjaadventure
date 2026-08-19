@@ -2,6 +2,7 @@
 	import { onMount, type Snippet } from 'svelte';
 	import SkyBackground from './SkyBackground.svelte';
 	import BottomNav from './BottomNav.svelte';
+	import TopNav from './TopNav.svelte';
 	import ToastHost from '$lib/components/common/ToastHost.svelte';
 	import LevelUpOverlay from '$lib/components/effects/LevelUpOverlay.svelte';
 	import { sound } from '$lib/sound/index.svelte';
@@ -9,7 +10,11 @@
 	interface Props {
 		/** 밤하늘 배경 (레벨업 / 보스) */
 		night?: boolean;
-		/** 하단 네비게이션 표시 (로그인/가입 화면에서는 숨긴다) */
+		/**
+		 * 주요 메뉴 표시 (모바일=하단 바 / 데스크톱=상단 바).
+		 * 로그인·가입처럼 아직 계정이 없거나, 퀴즈처럼 집중이 필요한 화면에서는 끈다.
+		 * 끄는 화면은 **반드시 자체 나가기 버튼을 둘 것.**
+		 */
 		nav?: boolean;
 		/** 화면 상단 고정 영역 (TopHud 등) */
 		hud?: Snippet;
@@ -35,6 +40,10 @@
 <a href="#main" class="skip-link sr-only-focusable" data-allow-small data-allow-overlap
 	>본문으로 건너뛰기</a
 >
+
+{#if nav}
+	<TopNav />
+{/if}
 
 <div class="shell" class:with-nav={nav}>
 	{#if hud}

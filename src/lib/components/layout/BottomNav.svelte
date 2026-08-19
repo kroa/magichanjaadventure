@@ -1,31 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { NAV_TABS, isTabActive } from './nav-tabs';
 
 	interface Props {
 		class?: string;
 	}
 
 	let { class: className = '' }: Props = $props();
-
-	const TABS = [
-		{ href: '/', label: '모험', icon: '🗺️' },
-		{ href: '/learn', label: '배우기', icon: '✨' },
-		{ href: '/quiz', label: '퀴즈', icon: '⚔️' },
-		{ href: '/collection', label: '도감', icon: '📖' },
-		{ href: '/shop', label: '상점', icon: '💎' }
-	];
-
-	function isActive(href: string): boolean {
-		const path = page.url.pathname;
-		return href === '/' ? path === '/' : path.startsWith(href);
-	}
 </script>
 
-<!-- 모바일 전용 하단 네비게이션. 데스크톱에서는 상단 액션이 그 역할을 한다. -->
+<!-- 모바일 전용 하단 네비게이션. 데스크톱에서는 TopNav 가 같은 역할을 한다. -->
 <nav class="bottom-nav glass sm:hidden {className}" aria-label="주요 메뉴">
 	<ul>
-		{#each TABS as tab (tab.href)}
-			{@const active = isActive(tab.href)}
+		{#each NAV_TABS as tab (tab.href)}
+			{@const active = isTabActive(tab.href, page.url.pathname)}
 			<li>
 				<a href={tab.href} class="tab" class:active aria-current={active ? 'page' : undefined}>
 					<span class="icon" aria-hidden="true">{tab.icon}</span>

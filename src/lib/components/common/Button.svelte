@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { HTMLButtonAttributes } from 'svelte/elements';
+	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 	import type { ButtonVariant, Size } from '$lib/types/ui';
 
 	interface Props extends Omit<HTMLButtonAttributes, 'class'> {
@@ -31,6 +31,12 @@
 	}: Props = $props();
 
 	const isDisabled = $derived(disabled || loading);
+
+	/*
+	 * <a> 와 <button> 은 이벤트 핸들러의 타입 인자(HTMLAnchorElement / HTMLButtonElement)가
+	 * 달라서 넘겨받은 속성을 그대로는 못 펼친다. 런타임 동작은 같으므로 여기서만 좁힌다.
+	 */
+	const anchorRest = $derived(rest as unknown as HTMLAnchorAttributes);
 
 	/**
 	 * 버튼 아래쪽의 진한 테두리(edge)가 "물리적으로 눌리는" 느낌을 만든다.
@@ -66,6 +72,11 @@
 </script>
 
 {#if href}
+	<!--
+		`{...rest}` 를 빠뜨리지 말 것.
+		예전에 이 줄이 없어서 링크형 버튼에 넘긴 속성(data-sveltekit-reload, data-testid 등)이
+		조용히 사라졌고, "다시 대결" 버튼이 아무 반응도 하지 않는 버그로 이어졌다.
+	-->
 	<a
 		{href}
 		class={classes}
@@ -73,6 +84,7 @@
 		aria-disabled={isDisabled || undefined}
 		tabindex={isDisabled ? -1 : undefined}
 		data-loading={loading || undefined}
+		{...anchorRest}
 	>
 		{#if loading}
 			<span class="spinner" aria-hidden="true"></span>

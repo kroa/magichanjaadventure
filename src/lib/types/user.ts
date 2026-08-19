@@ -32,14 +32,15 @@ export interface CharacterInfo {
  *
  * **밸런스 원칙: 어떤 선택도 "잘못된 선택"이 되면 안 된다.**
  * 비싼 캐릭터가 무조건 강한 것이 아니라 **플레이 리듬이 다르다.**
- * HP 가 높으면 틀려도 버티고, 공격력이 높으면 잘 맞힐 때 빨리 끝난다.
+ * 에너지가 많으면 틀려도 버티고, 공격이 세면 잘 맞힐 때 빨리 끝난다.
+ * (화면에는 "HP" 대신 "에너지"라고 쓴다 — 2학년이 HP 를 모른다)
  * 총합(hp/10 + attack)을 22 안팎으로 맞춰 두었다.
  */
 export const CHARACTERS: Record<CharacterClass, CharacterInfo> = {
 	knight: {
 		id: 'knight',
 		label: '한자 기사',
-		tagline: 'HP가 높아 틀려도 오래 버텨요',
+		tagline: '에너지가 많아 틀려도 오래 버텨요',
 		hp: 120,
 		attack: 10,
 		price: 0,
@@ -66,7 +67,7 @@ export const CHARACTERS: Record<CharacterClass, CharacterInfo> = {
 	sage: {
 		id: 'sage',
 		label: '한자 도사',
-		tagline: 'HP가 아주 높아 실수에 너그러워요',
+		tagline: '에너지가 아주 많아 실수에 너그러워요',
 		hp: 140,
 		attack: 9,
 		price: 120,
@@ -75,7 +76,7 @@ export const CHARACTERS: Record<CharacterClass, CharacterInfo> = {
 	fox: {
 		id: 'fox',
 		label: '한자 여우',
-		tagline: '공격력이 가장 높지만 체력은 약해요',
+		tagline: '공격이 가장 세지만 에너지는 적어요',
 		hp: 80,
 		attack: 16,
 		price: 200,

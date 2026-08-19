@@ -80,7 +80,7 @@
 					<Sparkle count={5} />
 					<KnightSprite {mood} size={150} />
 					<p class="mt-2 font-display text-ink-900">한자 기사</p>
-					<p class="text-sm text-ink-500">HP가 높아 틀려도 버틴다</p>
+					<p class="text-sm text-ink-500">에너지가 많아 틀려도 버틴다</p>
 				</div>
 				<div class="relative isolate text-center">
 					<Sparkle count={5} color="var(--color-mint-400)" />
@@ -184,12 +184,12 @@
 					<ProgressBar value={demoExp} max={340} tone="gold" size="lg" showValue label="경험치" />
 				</div>
 				<div>
-					<p class="mb-1.5 text-sm text-ink-500">내 HP</p>
-					<ProgressBar value={84} max={120} tone="mint" label="플레이어 체력" />
+					<p class="mb-1.5 text-sm text-ink-500">내 에너지</p>
+					<ProgressBar value={84} max={120} tone="mint" label="플레이어 에너지" />
 				</div>
 				<div>
-					<p class="mb-1.5 text-sm text-ink-500">몬스터 HP</p>
-					<ProgressBar value={38} max={100} tone="ember" label="몬스터 체력" />
+					<p class="mb-1.5 text-sm text-ink-500">몬스터 에너지</p>
+					<ProgressBar value={38} max={100} tone="ember" label="몬스터 에너지" />
 				</div>
 
 				<div class="flex flex-wrap gap-3">

@@ -192,8 +192,19 @@ export async function findLayoutIssues(
 				return false;
 			};
 
+			/*
+			 * 모달이 열려 있으면 브라우저가 배경 전체를 inert 로 만든다(`showModal()`).
+			 * 즉 모달 밖 버튼은 **화면에 보여도 누를 수 없다.** 겹쳐도 문제가 아니다.
+			 *
+			 * 이 예외가 없었을 때, sticky 상단 네비게이션과 모달 닫기 버튼이 겹친다고
+			 * 잘못 잡혔다. 둘 다 "고정"이라 기존의 고정/일반 구분으로는 걸러지지 않는다.
+			 * 실제로 겹쳐서 곤란한 경우만 남기려면 **지금 누를 수 있는 것끼리**만 비교해야 한다.
+			 */
+			const openModal = document.querySelector('dialog:modal');
+
 			const boxes = Array.from(document.body.querySelectorAll('button, a[href], [role=button]'))
 				.filter((el) => isVisible(el) && !el.closest('[data-allow-overlap]'))
+				.filter((el) => !openModal || openModal.contains(el))
 				.map((el) => ({ el, r: el.getBoundingClientRect(), pinned: isPinned(el) }));
 
 			for (let i = 0; i < boxes.length; i++) {

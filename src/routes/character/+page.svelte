@@ -83,7 +83,7 @@
 						<h2 class="text-display-sm text-ink-900">{stats.label}</h2>
 						<p class="text-sm text-ink-500">{stats.tagline}</p>
 						<div class="mt-1 flex gap-2">
-							<span class="stat bg-mint-100 text-mint-700">HP {stats.hp}</span>
+							<span class="stat bg-mint-100 text-mint-700">에너지 {stats.hp}</span>
 							<span class="stat bg-ember-100 text-ember-600">공격 {stats.attack}</span>
 						</div>
 						<span class="cta mt-2 font-display">
