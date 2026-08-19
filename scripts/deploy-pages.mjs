@@ -5,10 +5,10 @@
  *   node scripts/deploy-pages.mjs [--dry]
  *
  * 왜 스크립트인가:
- *  - `CF_TARGET=pages vite build` 형태의 인라인 환경변수는 Windows 셸에서 동작하지 않는다.
- *    cross-env 같은 의존성을 더하는 대신 여기서 process.env 를 세팅해 넘긴다.
- *  - 빌드와 배포가 **같은 설정 파일**(wrangler.pages.jsonc)을 보도록 강제한다.
- *    빌드는 Workers 설정으로, 배포는 Pages 설정으로 하는 실수가 가장 흔한 사고다.
+ *  - 빌드와 배포를 한 묶음으로 강제한다. 낡은 산출물을 올리는 사고가 가장 흔하다.
+ *  - `wrangler pages deploy` 는 커스텀 설정 경로를 받지 못하므로
+ *    프로젝트 이름·브랜치를 CLI 인자로 명시한다.
+ *  - D1/R2 바인딩은 루트 wrangler.jsonc(pages_build_output_dir 포함)에서 함께 올라간다.
  *
  * 주의: 이 스크립트는 **운영 배포**다. 실행 전 `npm run verify` 를 통과시킬 것.
  */
@@ -17,7 +17,6 @@ import { existsSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
 
-const PAGES_CONFIG = 'wrangler.pages.jsonc';
 const OUTPUT_DIR = '.svelte-kit/cloudflare';
 const PROJECT_NAME = 'magichanjaadventure';
 const PRODUCTION_BRANCH = 'main';
@@ -31,36 +30,25 @@ if (!existsSync(wranglerBin) || !existsSync(viteBin)) {
 	process.exit(1);
 }
 
-/** @param {string} bin @param {string[]} args @param {{env?: NodeJS.ProcessEnv, allowFailure?: boolean}} [opts] */
+/** @param {string} bin @param {string[]} args @param {{allowFailure?: boolean}} [opts] */
 function run(bin, args, opts = {}) {
-	const result = spawnSync(process.execPath, [bin, ...args], {
-		stdio: 'inherit',
-		env: { ...process.env, ...opts.env }
-	});
+	const result = spawnSync(process.execPath, [bin, ...args], { stdio: 'inherit' });
 	if (result.status !== 0 && !opts.allowFailure) process.exit(result.status ?? 1);
 	return result.status ?? 0;
 }
 
-// 이전 타깃(Workers)의 산출물이 섞이지 않도록 지우고 새로 빌드한다.
-if (existsSync(resolve(process.cwd(), OUTPUT_DIR))) {
-	rmSync(resolve(process.cwd(), OUTPUT_DIR), { recursive: true, force: true });
-}
+// 낡은 산출물이 섞이지 않도록 지우고 새로 빌드한다
+const outputPath = resolve(process.cwd(), OUTPUT_DIR);
+if (existsSync(outputPath)) rmSync(outputPath, { recursive: true, force: true });
 
-console.log('[deploy-pages] Pages 타깃으로 빌드...');
-run(viteBin, ['build'], { env: { CF_TARGET: 'pages' } });
+console.log('[deploy-pages] 빌드...');
+run(viteBin, ['build']);
 
 if (dryRun) {
 	console.log(`[deploy-pages] --dry 이므로 배포하지 않고 종료합니다. 산출물: ${OUTPUT_DIR}`);
 	process.exit(0);
 }
 
-/*
- * `wrangler pages deploy` 는 **커스텀 설정 파일 경로를 지원하지 않는다**
- * ("Pages does not support custom paths for the Wrangler configuration file").
- * 그래서 wrangler.pages.jsonc 는 **빌드(어댑터)** 에만 쓰고, 배포는 CLI 인자로 넘긴다.
- *
- * D1/R2 바인딩은 Pages 프로젝트 설정에서 연결한다 (PHASE 20에서 실제로 필요해질 때).
- */
 console.log('[deploy-pages] Pages 프로젝트 확인...');
 run(
 	wranglerBin,

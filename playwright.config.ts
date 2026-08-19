@@ -18,7 +18,14 @@ export default defineConfig({
 	fullyParallel: true,
 	forbidOnly: CI,
 	retries: CI ? 2 : 0,
-	workers: CI ? 2 : undefined,
+	/*
+	 * 워커 수를 제한한다.
+	 *
+	 * 로컬 `wrangler pages dev` 는 단일 프로세스인데 회원가입/로그인이
+	 * PBKDF2 100k(≈150ms CPU)를 돌린다. 워커를 CPU 수만큼 띄우면 서로 굶겨서
+	 * "가입 폼에서 안 넘어간다" 같은 엉뚱한 실패로 나타난다. 실제로 겪었다.
+	 */
+	workers: CI ? 2 : 3,
 
 	timeout: 45_000,
 	expect: { timeout: 10_000 },

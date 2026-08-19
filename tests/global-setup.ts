@@ -28,9 +28,21 @@ export default async function globalSetup(): Promise<void> {
 	}
 
 	console.log('[e2e] 로컬 D1 마이그레이션 적용...');
-	const result = spawnSync(process.execPath, ['scripts/db.mjs', 'migrate'], { stdio: 'inherit' });
-
-	if (result.status !== 0) {
+	const migrate = spawnSync(process.execPath, ['scripts/db.mjs', 'migrate'], { stdio: 'inherit' });
+	if (migrate.status !== 0) {
 		throw new Error('[e2e] 로컬 D1 마이그레이션 실패 — E2E 를 시작할 수 없습니다.');
+	}
+
+	/*
+	 * 지난 실행이 남긴 테스트 계정을 지운다.
+	 *
+	 * 이게 없으면 두 번째 실행부터 닉네임이 중복되어 가입이 실패하는데,
+	 * 화면에는 "가입 폼에 머물러 있음"으로만 보여서 원인이 엉뚱하게 읽힌다.
+	 */
+	const clean = spawnSync(process.execPath, ['scripts/db.mjs', 'clean-test'], { stdio: 'inherit' });
+	if (clean.status !== 0) {
+		throw new Error(
+			'[e2e] 테스트 계정 정리 실패 — 이전 실행 데이터가 남아 결과를 믿을 수 없습니다.'
+		);
 	}
 }

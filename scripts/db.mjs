@@ -76,6 +76,30 @@ function reset() {
 	console.log('[db.mjs] 로컬 D1 초기화 완료.');
 }
 
+/**
+ * 테스트 계정을 지운다 (로컬 전용).
+ *
+ * E2E 는 매 실행마다 계정을 새로 만든다. 정리하지 않으면 다음 실행에서
+ * 같은 닉네임이 중복되어 가입이 실패하고, 원인이 "닉네임 중복"이 아니라
+ * "화면이 안 뜬다"로 보여서 진단이 어려워진다. 실제로 그 함정에 빠졌다.
+ *
+ * 테스트 닉네임은 전부 `t_` 로 시작한다 (tests/fixtures/users.ts).
+ * GLOB 에서 `_` 는 리터럴이라 LIKE 의 와일드카드 문제를 피할 수 있다.
+ */
+function cleanTest() {
+	console.log('[db.mjs] 테스트 계정 정리...');
+	const sql = [
+		"DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE nickname_key GLOB 't_*')",
+		"DELETE FROM user_hanja_progress WHERE user_id IN (SELECT id FROM users WHERE nickname_key GLOB 't_*')",
+		"DELETE FROM user_achievements WHERE user_id IN (SELECT id FROM users WHERE nickname_key GLOB 't_*')",
+		"DELETE FROM quiz_results WHERE user_id IN (SELECT id FROM users WHERE nickname_key GLOB 't_*')",
+		"DELETE FROM battle_records WHERE user_id IN (SELECT id FROM users WHERE nickname_key GLOB 't_*')",
+		"DELETE FROM characters WHERE user_id IN (SELECT id FROM users WHERE nickname_key GLOB 't_*')",
+		"DELETE FROM users WHERE nickname_key GLOB 't_*'"
+	].join('; ');
+	wrangler(['d1', 'execute', BINDING, '--local', '--command', sql]);
+}
+
 function query() {
 	const sql = rest.join(' ').trim();
 	if (!sql) {
@@ -98,6 +122,9 @@ switch (command) {
 	case 'query':
 		query();
 		break;
+	case 'clean-test':
+		cleanTest();
+		break;
 	default:
 		console.log(
 			[
@@ -105,7 +132,8 @@ switch (command) {
 				'  node scripts/db.mjs migrate            로컬 D1 마이그레이션 적용',
 				'  node scripts/db.mjs status             마이그레이션 상태 확인',
 				'  node scripts/db.mjs reset              로컬 D1 초기화 후 재적용',
-				'  node scripts/db.mjs query "SELECT 1"   로컬 D1 SQL 실행'
+				'  node scripts/db.mjs query "SELECT 1"   로컬 D1 SQL 실행',
+				'  node scripts/db.mjs clean-test        테스트 계정(t_*) 정리'
 			].join('\n')
 		);
 		process.exit(command === 'help' ? 0 : 1);

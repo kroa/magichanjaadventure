@@ -1,0 +1,161 @@
+/**
+ * 지역(Area) = 한국어문회 급수 티어.
+ *
+ * 아이는 "6급 공부"를 하는 게 아니라 **"수정 동굴 탐험"**을 한다.
+ * 근거: docs/04-CONTENT-PLAN.md §2
+ */
+
+export interface Area {
+	id: number;
+	name: string;
+	grade: string;
+	/** 이 지역의 한자 수 */
+	hanjaCount: number;
+	levelRequired: number;
+	/** 분위기 한 줄 */
+	mood: string;
+	/** 지역 보스 */
+	boss: { id: string; name: string; hint: string };
+	/** 배경 그라디언트 (CSS) */
+	sky: string;
+	/** 지역 대표색 */
+	accent: string;
+	emoji: string;
+}
+
+export const AREAS: Area[] = [
+	{
+		id: 1,
+		name: '새싹 마을',
+		grade: '8급',
+		hanjaCount: 50,
+		levelRequired: 1,
+		mood: '햇살 가득한 들판에서 첫 마법을 배우는 곳',
+		boss: { id: 'acorn_bandit', name: '꼬마 도토리 도적', hint: '숫자와 방향을 좋아해요' },
+		sky: 'linear-gradient(180deg,#D6F5C9 0%,#C9E9FF 55%,#F6EEFF 100%)',
+		accent: '#7BC96F',
+		emoji: '🌱'
+	},
+	{
+		id: 2,
+		name: '반짝 시냇가',
+		grade: '7급 II',
+		hanjaCount: 50,
+		levelRequired: 3,
+		mood: '조약돌 사이로 물이 흐르는 맑은 개울',
+		boss: { id: 'droplet_trickster', name: '물방울 장난꾸러기', hint: '자연의 한자를 씁니다' },
+		sky: 'linear-gradient(180deg,#BEEBFF 0%,#D9F2FF 55%,#F2FBFF 100%)',
+		accent: '#4FC3F7',
+		emoji: '💧'
+	},
+	{
+		id: 3,
+		name: '바람 언덕',
+		grade: '7급',
+		hanjaCount: 50,
+		levelRequired: 6,
+		mood: '풍차가 돌고 민들레가 날리는 언덕',
+		boss: { id: 'cloud_puff', name: '구름 뭉치', hint: '하늘과 시간의 한자를 좋아해요' },
+		sky: 'linear-gradient(180deg,#CFE8FF 0%,#E4E0FF 55%,#FFF6E9 100%)',
+		accent: '#9BB8E8',
+		emoji: '🍃'
+	},
+	{
+		id: 4,
+		name: '무지개 다리',
+		grade: '6급 II',
+		hanjaCount: 75,
+		levelRequired: 10,
+		mood: '폭포 위 공중 섬을 잇는 무지개',
+		boss: { id: 'rainbow_fox', name: '무지개 여우', hint: '색과 모양의 한자를 부립니다' },
+		sky: 'linear-gradient(180deg,#FFE0F0 0%,#E4E0FF 50%,#D9F2FF 100%)',
+		accent: '#FF9EC4',
+		emoji: '🌈'
+	},
+	{
+		id: 5,
+		name: '수정 동굴',
+		grade: '6급',
+		hanjaCount: 75,
+		levelRequired: 15,
+		mood: '보라 수정과 빛나는 이끼가 가득한 동굴',
+		boss: { id: 'crystal_golem', name: '수정 아기 골렘', hint: '단단한 한자를 씁니다' },
+		sky: 'linear-gradient(180deg,#B7A6F5 0%,#8E7BE0 55%,#6742E8 100%)',
+		accent: '#9575FF',
+		emoji: '💎'
+	},
+	{
+		id: 6,
+		name: '별빛 신전',
+		grade: '5급 II',
+		hanjaCount: 100,
+		levelRequired: 21,
+		mood: '밤하늘 아래 떠다니는 룬과 기둥',
+		boss: { id: 'star_sprite', name: '별똥별 요정', hint: '어려운 한자를 반짝이며 던져요' },
+		sky: 'radial-gradient(120% 90% at 50% 10%,#3E2590 0%,#2B1A66 60%,#1B1042 100%)',
+		accent: '#FFD25E',
+		emoji: '✨'
+	},
+	{
+		id: 7,
+		name: '한자 왕성',
+		grade: '5급',
+		hanjaCount: 100,
+		levelRequired: 28,
+		mood: '구름 위에 솟은 황금빛 성',
+		boss: { id: 'brush_king', name: '붓 마왕', hint: '모든 한자를 알고 있어요' },
+		sky: 'linear-gradient(180deg,#FFE9B0 0%,#FFC93C 45%,#F5A623 100%)',
+		accent: '#F5A623',
+		emoji: '🏰'
+	}
+];
+
+export function getArea(id: number): Area | undefined {
+	return AREAS.find((a) => a.id === id);
+}
+
+/**
+ * 지역 해금 조건: **레벨 도달 AND 직전 지역 습득률 60%**.
+ *
+ * 레벨만 보면 쉬운 한자를 건너뛰고, 습득률만 보면 진도가 막힌다.
+ * 둘 다 요구하면 "조금만 더 모으면 다음 지역이 열린다"는 단기 목표가 생긴다.
+ */
+export const AREA_UNLOCK_RATIO = 0.6;
+
+export interface AreaUnlockState {
+	area: Area;
+	unlocked: boolean;
+	learned: number;
+	/** 잠긴 이유 (열려 있으면 null) */
+	lockedReason: string | null;
+}
+
+export function evaluateAreaUnlocks(
+	level: number,
+	learnedByArea: Record<number, number>
+): AreaUnlockState[] {
+	return AREAS.map((area) => {
+		const learned = learnedByArea[area.id] ?? 0;
+
+		if (area.id === 1) {
+			return { area, unlocked: true, learned, lockedReason: null };
+		}
+
+		const previous = AREAS[area.id - 2];
+		const previousLearned = learnedByArea[previous.id] ?? 0;
+		const needed = Math.ceil(previous.hanjaCount * AREA_UNLOCK_RATIO);
+
+		if (level < area.levelRequired) {
+			return { area, unlocked: false, learned, lockedReason: `레벨 ${area.levelRequired} 필요` };
+		}
+		if (previousLearned < needed) {
+			return {
+				area,
+				unlocked: false,
+				learned,
+				lockedReason: `${previous.name} 한자 ${needed}자 필요 (지금 ${previousLearned}자)`
+			};
+		}
+		return { area, unlocked: true, learned, lockedReason: null };
+	});
+}
