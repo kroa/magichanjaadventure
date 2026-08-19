@@ -73,7 +73,7 @@
 		</div>
 
 		{#if tab === 'character'}
-			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			<div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
 				{#each ALL_CLASSES as cls (cls)}
 					{@const info = CHARACTERS[cls]}
 					{@const Sprite = SPRITES[cls]}
@@ -81,19 +81,19 @@
 					{@const active = data.user.characterClass === cls}
 					{@const canAfford = data.user.gems >= info.price}
 					<article
-						class="card relative isolate flex flex-col items-center gap-2 rounded-card p-4 shadow-card"
+						class="card relative isolate flex flex-col items-center gap-1.5 rounded-card p-3 shadow-card sm:p-4"
 						class:active
 					>
 						{#if active}<Sparkle count={5} />{/if}
 
-						<Sprite size={120} mood={active ? 'cheer' : 'happy'} />
+						<Sprite size={92} mood={active ? 'cheer' : 'happy'} />
 
-						<div class="flex items-center gap-2">
-							<h2 class="font-display text-lg text-ink-900">{info.label}</h2>
+						<div class="flex flex-wrap items-center justify-center gap-1.5">
+							<h2 class="font-display text-ink-900">{info.label}</h2>
 							{#if active}<Badge tone="magic" fill="solid" size="sm">사용 중</Badge>{/if}
 						</div>
 
-						<p class="text-center text-sm text-ink-500">{info.blurb}</p>
+						<p class="text-center text-xs leading-snug text-ink-500">{info.blurb}</p>
 
 						<div class="flex gap-2">
 							<span class="stat bg-mint-100 text-mint-700">HP {info.hp}</span>

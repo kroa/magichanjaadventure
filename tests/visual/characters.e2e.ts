@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
 import { waitForFonts } from '../helpers/screens';
+import { gotoReady } from '../helpers/app';
 
 /**
  * 캐릭터 확대 검수.
@@ -12,7 +13,7 @@ test.describe('캐릭터 시트', () => {
 	test('표정별 캐릭터를 크게 남긴다', async ({ page }, testInfo) => {
 		test.skip(testInfo.project.name !== 'desktop', 'desktop 에서만 수집한다');
 
-		await page.goto('/styleguide');
+		await gotoReady(page, '/styleguide');
 		await waitForFonts(page);
 
 		const moods = ['기본', '신남', '놀람', '시무룩'];

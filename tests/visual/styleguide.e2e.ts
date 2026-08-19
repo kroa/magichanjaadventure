@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { expectHealthyLayout } from '../helpers/layout';
 import { captureScreen, waitForFonts } from '../helpers/screens';
+import { gotoReady } from '../helpers/app';
 
 /**
  * PHASE 2 디자인 시스템 검수.
@@ -10,7 +11,7 @@ import { captureScreen, waitForFonts } from '../helpers/screens';
  */
 test.describe('디자인 시스템', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/styleguide');
+		await gotoReady(page, '/styleguide');
 		await waitForFonts(page);
 	});
 
