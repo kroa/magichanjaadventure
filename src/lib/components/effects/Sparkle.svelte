@@ -27,7 +27,13 @@
 	const stars = $derived(SEEDS.slice(0, Math.min(count, SEEDS.length)));
 </script>
 
-<div class="pointer-events-none absolute inset-0 {className}" aria-hidden="true">
+<!--
+	`-z-10` 이 중요하다.
+	absolute 요소는 같은 부모의 static 형제보다 **위에** 그려진다. 그래서 z-index 없이 두면
+	장식용 반짝임이 제목·캐릭터를 덮어 글자가 잘린 것처럼 보인다(실제로 회원가입 화면에서 겪었다).
+	부모에 `isolate` 를 걸어 두면 음수 z-index 가 부모 밖으로 새지 않고 배경 바로 위에 머문다.
+-->
+<div class="pointer-events-none absolute inset-0 -z-10 {className}" aria-hidden="true">
 	{#each stars as star, i (i)}
 		<svg
 			class="star absolute"

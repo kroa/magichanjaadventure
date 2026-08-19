@@ -50,7 +50,9 @@
 
 	<div class="flex flex-col gap-6">
 		<!-- 캐릭터 무대 -->
-		<section class="stage relative overflow-hidden rounded-panel px-4 pt-5 pb-14 shadow-card">
+		<section
+			class="stage relative isolate overflow-hidden rounded-panel px-4 pt-5 pb-14 shadow-card"
+		>
 			<Sparkle count={7} />
 
 			<!-- 땅 -->

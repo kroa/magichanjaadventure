@@ -69,7 +69,7 @@
 						type="submit"
 						name="class"
 						value={choice.cls}
-						class="pick relative flex flex-col items-center gap-2 rounded-panel p-6 shadow-card"
+						class="pick relative isolate flex flex-col items-center gap-2 rounded-panel p-6 shadow-card"
 						class:active
 						class:current
 						disabled={picking !== null}

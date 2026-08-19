@@ -16,7 +16,7 @@
 
 <AppShell nav={false}>
 	<div class="mx-auto flex w-full max-w-md flex-col items-center gap-6 py-4">
-		<div class="relative text-center">
+		<div class="relative isolate text-center">
 			<Sparkle count={6} />
 			<h1 class="text-display-lg text-magic-700">마법한자탐험대</h1>
 			<p class="mt-1 text-ink-500">다시 만나서 반가워요!</p>

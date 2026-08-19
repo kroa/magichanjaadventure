@@ -125,7 +125,7 @@
 		</EmptyState>
 	{:else if finished}
 		<div class="flex flex-col items-center gap-4 py-6 text-center" data-testid="quiz-finished">
-			<div class="relative">
+			<div class="relative isolate">
 				<Sparkle count={8} />
 				<Hero size={170} mood="cheer" />
 			</div>
@@ -170,12 +170,12 @@
 
 			<!-- 문제 -->
 			<div
-				class="glass rounded-panel px-4 py-6 text-center shadow-card"
+				class="glass rounded-panel px-4 py-5 text-center shadow-card"
 				data-testid="quiz-question"
 			>
 				<p class="text-sm text-ink-500">{question.prompt}</p>
 				<p
-					class="mt-2 leading-none text-magic-800 {question.subjectIsHanja
+					class="mt-1 leading-none text-magic-800 {question.subjectIsHanja
 						? 'hanja text-hanja-hero'
 						: 'font-display text-display-lg'}"
 				>

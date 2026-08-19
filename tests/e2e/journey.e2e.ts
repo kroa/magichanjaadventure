@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { expectHealthyLayout } from '../helpers/layout';
 import { captureScreen, waitForFonts } from '../helpers/screens';
 import { makeTestUser } from '../fixtures/users';
@@ -12,12 +12,16 @@ import { gotoReady, waitForHydration } from '../helpers/app';
  * 구현 세부가 아니라 **사용자 행동**을 검증한다 (docs/03-TEST-STRATEGY.md §3).
  */
 
-async function signUp(page: Page, label: string, seed: string) {
+async function signUp(page: Page, label: string, seed: string, testInfo?: TestInfo) {
 	const user = makeTestUser(label, seed);
 	await gotoReady(page, '/register');
 	await page.getByLabel('닉네임').fill(user.nickname);
 	await page.getByLabel('비밀번호', { exact: true }).fill(user.password);
 	await page.getByLabel('비밀번호 확인').fill(user.password);
+	if (testInfo) {
+		await waitForFonts(page);
+		await captureScreen(page, testInfo, 'register');
+	}
 	await page.getByRole('button', { name: '모험 시작하기' }).click();
 	await page.waitForURL('**/character');
 	await waitForHydration(page);
@@ -45,7 +49,12 @@ async function learnHanja(page: Page, count: number) {
 
 test.describe('아이의 첫 모험', () => {
 	test('가입하고 캐릭터를 고르면 모험 지도에 도착한다', async ({ page }, testInfo) => {
-		const user = await signUp(page, 'start', `${testInfo.project.name}${testInfo.workerIndex}a`);
+		const user = await signUp(
+			page,
+			'start',
+			`${testInfo.project.name}${testInfo.workerIndex}a`,
+			testInfo
+		);
 
 		await expect(page.getByRole('heading', { name: '누구와 떠날까?' })).toBeVisible();
 		await waitForFonts(page);

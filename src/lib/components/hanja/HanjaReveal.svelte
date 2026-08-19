@@ -34,7 +34,7 @@
 </script>
 
 <div
-	class="reveal relative overflow-hidden rounded-panel px-5 py-8 text-center shadow-float"
+	class="reveal relative isolate overflow-hidden rounded-panel px-5 py-8 text-center shadow-float"
 	class:claimed
 	data-testid="hanja-reveal"
 	data-anim-state={claimed ? 'done' : 'idle'}

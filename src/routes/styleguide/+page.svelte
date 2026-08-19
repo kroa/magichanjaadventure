@@ -76,13 +76,13 @@
 		<!-- ── 캐릭터 ────────────────────────────────────────────────── -->
 		<Panel title="캐릭터" icon="🛡️">
 			<div class="flex flex-wrap items-end justify-center gap-8">
-				<div class="relative text-center">
+				<div class="relative isolate text-center">
 					<Sparkle count={5} />
 					<KnightSprite {mood} size={150} />
 					<p class="mt-2 font-display text-ink-900">한자 기사</p>
 					<p class="text-sm text-ink-500">HP가 높아 틀려도 버틴다</p>
 				</div>
-				<div class="relative text-center">
+				<div class="relative isolate text-center">
 					<Sparkle count={5} color="var(--color-mint-400)" />
 					<WizardSprite {mood} size={150} />
 					<p class="mt-2 font-display text-ink-900">한자 마법사</p>

@@ -28,7 +28,7 @@
 
 <AppShell nav={false}>
 	<div class="flex flex-col items-center gap-5 py-8 text-center">
-		<div class="relative">
+		<div class="relative isolate">
 			<Sparkle count={5} />
 			<MonsterSprite kind="cloud_puff" size={150} mood="surprised" />
 		</div>
