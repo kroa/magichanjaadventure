@@ -17,6 +17,21 @@
 /** 합쳐지는 방식. 아이에게 규칙을 설명할 때 쓴다. */
 export type FusionKind = '회의' | '형성' | '지사' | '모양';
 
+/**
+ * 부품이 결과 글자 안에서 **어떻게 배치되는가.**
+ *
+ * 이걸 데이터로 갖는 이유: 지금까지 화면은 `[ ] + [ ]` 였다.
+ * 그건 수식의 기하학이지 한자의 기하학이 아니다.
+ * 明은 日과 月이 좌우로 붙은 것이고, 間은 門이 日을 감싼 것이다.
+ * 칸을 실제 모양대로 놓으면 **설명 문장 없이도** 아이가 구조를 본다.
+ *
+ *  - lr      : 왼쪽 + 오른쪽 (明, 林, 好…)
+ *  - tb      : 위 + 아래 (星, 天, 泉, 看…)
+ *  - enclose : 앞의 것이 뒤의 것을 감싼다 (問, 聞, 間)
+ *  - mark    : 글자에 획을 하나 그어 표시한다 (本)
+ */
+export type FusionLayout = 'lr' | 'tb' | 'enclose' | 'mark';
+
 export interface FusionRecipe {
 	/** 재료. 순서는 뜻을 설명하기 좋은 차례로 적되, 맞출 때는 순서를 따지지 않는다. */
 	parts: string[];
@@ -28,6 +43,12 @@ export interface FusionRecipe {
 	 */
 	story: string;
 	kind: FusionKind;
+	/**
+	 * 부품이 놓이는 자리. **`parts` 의 순서가 곧 배치 순서다.**
+	 * lr 이면 parts[0] 이 왼쪽, tb 면 parts[0] 이 위, enclose 면 parts[0] 이 감싸는 쪽이다.
+	 * (맞추기는 `fuse()` 가 정렬해서 하므로 순서가 판정에 영향을 주지는 않는다.)
+	 */
+	layout: FusionLayout;
 	/**
 	 * 소리를 담당하는 부품.
 	 *
@@ -66,54 +87,68 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['日', '月'],
 		result: '明',
 		story: '해와 달이 함께 뜨면 세상이 환해져요.',
-		kind: '회의'
+		kind: '회의',
+		layout: 'lr'
 	},
 	{
 		parts: ['日', '生'],
 		result: '星',
 		story: '해처럼 빛나는 것이 밤하늘에 돋아나면 별이에요.',
-		kind: '형성'
+		kind: '형성',
+		layout: 'tb'
 	},
 	{
 		parts: ['日', '寺'],
 		result: '時',
 		story: '절에서 해를 보고 때를 알렸어요.',
-		kind: '형성'
+		kind: '형성',
+		layout: 'lr'
 	},
 
 	// ── 나무 무리 ────────────────────────────────────────────────
-	{ parts: ['木', '木'], result: '林', story: '나무가 둘이면 수풀이 돼요.', kind: '회의' },
+	{
+		parts: ['木', '木'],
+		result: '林',
+		story: '나무가 둘이면 수풀이 돼요.',
+		kind: '회의',
+		layout: 'lr'
+	},
 	{
 		parts: ['人', '木'],
 		result: '休',
 		story: '사람이 나무에 기대어 쉬고 있어요.',
 		kind: '회의',
+		layout: 'lr',
 		variantParts: ['人']
 	},
 	{
 		parts: ['木', '目'],
 		result: '相',
 		story: '나무를 눈으로 찬찬히 살펴봐요. 서로 마주 본다는 뜻이 됐어요.',
-		kind: '회의'
+		kind: '회의',
+		layout: 'lr'
 	},
 	{
 		parts: ['木', '交'],
 		result: '校',
 		story: '나무로 지은 집에서 아이들이 만나 배웠어요.',
 		kind: '형성',
+		layout: 'lr',
 		soundPart: '交'
 	},
 	{
 		parts: ['木', '子'],
 		result: '李',
 		story: '나무에 열매가 아이처럼 달렸어요. 오얏나무예요.',
-		kind: '형성'
+		kind: '형성',
+		layout: 'tb'
 	},
 	{
 		parts: ['木', '一'],
 		result: '本',
 		story: '나무 밑동에 줄을 그어 "여기가 뿌리"라고 표시했어요.',
-		kind: '지사'
+		kind: '지사',
+		layout: 'mark'
 	},
 
 	// ── 사람 무리 ────────────────────────────────────────────────
@@ -121,13 +156,15 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['女', '子'],
 		result: '好',
 		story: '어머니가 아이를 안고 있어요. 참 좋은 모습이지요.',
-		kind: '회의'
+		kind: '회의',
+		layout: 'lr'
 	},
 	{
 		parts: ['人', '言'],
 		result: '信',
 		story: '사람이 한 말은 지켜야 해요. 그래서 믿음이에요.',
 		kind: '회의',
+		layout: 'lr',
 		variantParts: ['人']
 	},
 	{
@@ -135,6 +172,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '位',
 		story: '사람이 서 있는 그곳이 자리예요.',
 		kind: '회의',
+		layout: 'lr',
 		variantParts: ['人']
 	},
 	{
@@ -142,13 +180,15 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '仁',
 		story: '사람과 사람 사이에 오가는 따뜻한 마음이에요.',
 		kind: '회의',
+		layout: 'lr',
 		variantParts: ['人']
 	},
 	{
 		parts: ['一', '大'],
 		result: '天',
 		story: '두 팔 벌린 사람 위에 한 줄. 그 위가 바로 하늘이에요.',
-		kind: '지사'
+		kind: '지사',
+		layout: 'tb'
 	},
 
 	// ── 문 무리 ──────────────────────────────────────────────────
@@ -157,6 +197,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '問',
 		story: '문 앞에서 입으로 "계세요?" 하고 물어요.',
 		kind: '형성',
+		layout: 'enclose',
 		soundPart: '門'
 	},
 	{
@@ -164,13 +205,15 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '聞',
 		story: '문에 귀를 대고 안에서 나는 소리를 들어요.',
 		kind: '형성',
+		layout: 'enclose',
 		soundPart: '門'
 	},
 	{
 		parts: ['門', '日'],
 		result: '間',
 		story: '닫힌 문틈으로 햇빛이 새어 들어와요. 그 틈이 사이예요.',
-		kind: '회의'
+		kind: '회의',
+		layout: 'enclose'
 	},
 
 	// ── 靑 무리: 소리를 담당하는 부품 ────────────────────────────
@@ -179,6 +222,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '淸',
 		story: '푸른빛이 도는 물은 아주 맑아요.',
 		kind: '형성',
+		layout: 'lr',
 		soundPart: '靑',
 		variantParts: ['水']
 	},
@@ -187,6 +231,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '情',
 		story: '마음이 푸르게 물들면 정이 들어요.',
 		kind: '형성',
+		layout: 'lr',
 		variantParts: ['心']
 	},
 	{
@@ -194,6 +239,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '請',
 		story: '말로 공손히 부탁하는 것이 청하는 거예요.',
 		kind: '형성',
+		layout: 'lr',
 		soundPart: '靑'
 	},
 
@@ -203,25 +249,29 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '泉',
 		story: '바위 틈에서 하얀 물이 솟아나요. 샘이에요.',
 		kind: '모양',
+		layout: 'tb',
 		variantParts: ['水']
 	},
 	{
 		parts: ['口', '鳥'],
 		result: '鳴',
 		story: '새가 입을 벌려 노래해요.',
-		kind: '회의'
+		kind: '회의',
+		layout: 'lr'
 	},
 	{
 		parts: ['魚', '羊'],
 		result: '鮮',
 		story: '갓 잡은 물고기와 양고기. 신선하고 곱다는 뜻이에요.',
-		kind: '회의'
+		kind: '회의',
+		layout: 'lr'
 	},
 	{
 		parts: ['手', '目'],
 		result: '看',
 		story: '눈 위에 손을 얹고 멀리 바라봐요.',
 		kind: '회의',
+		layout: 'tb',
 		variantParts: ['手']
 	}
 ];

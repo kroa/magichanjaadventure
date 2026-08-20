@@ -9,6 +9,9 @@
 	import ParticleBurst from '$lib/components/effects/ParticleBurst.svelte';
 	import { announceReward } from '$lib/game/announce';
 	import { sound } from '$lib/sound/index.svelte';
+	import { draggable } from '$lib/actions/draggable';
+	import GlyphFrame from '$lib/components/play/GlyphFrame.svelte';
+	import { mergeInto, popIn } from '$lib/anim/merge';
 	import { FUSION_RECIPES, allResultChars, fuse, recipeFor } from '$lib/game/fusion';
 	import type { RewardDto } from '$lib/types/api';
 
@@ -19,6 +22,10 @@
 	const TOTAL_DISCOVERABLE = allResultChars().length;
 
 	let slots = $state<string[]>([]);
+	/** 합쳐지는 연출에 쓸 DOM 참조 */
+	let slotEls = $state<(HTMLElement | null)[]>([]);
+	let anvil = $state<HTMLElement | null>(null);
+	let revealEl = $state<HTMLElement | null>(null);
 	let busy = $state(false);
 	let shake = $state(0);
 	let burst = $state(0);
@@ -39,6 +46,13 @@
 	 * **판정의 주인은 서버다** — 여기 결과는 애니메이션을 고르는 데만 쓴다.
 	 */
 	const looksValid = $derived(fuse(slots) !== null);
+
+	/*
+	 * 공방에는 목표가 없다. 그래서 칸 모양을 미리 알 수 없다.
+	 * 놓인 부품으로 만들 수 있는 조합이 보이면 그 모양으로 칸이 **변한다** —
+	 * 아이가 "어, 칸이 바뀌었네?" 하고 알아채는 것 자체가 단서가 된다.
+	 */
+	const frameLayout = $derived(fuse(slots)?.layout ?? 'lr');
 
 	/** 결과에서 조합법을 되찾아 "무엇과 무엇이 합쳐졌는지" 를 보여 준다 */
 	const madeRecipe = $derived(made ? recipeFor(made.character) : null);
@@ -104,13 +118,13 @@
 			</header>
 
 			<!-- 합체판 -->
-			<section class="board relative isolate" data-testid="fusion-board">
+			<section class="board relative isolate" bind:this={anvil} data-testid="fusion-board">
 				<Sparkle count={6} />
 				<ParticleBurst trigger={burst} />
 
 				{#if made}
 					<!-- 발견! 이 순간이 이 게임의 보상이다 -->
-					<div class="reveal" data-testid="fusion-reveal">
+					<div class="reveal" bind:this={revealEl} data-testid="fusion-reveal">
 						<p class="font-display text-sm text-magic-500">
 							{made.alreadyKnown ? '다시 만들었어요' : '새 한자를 만들었어요!'}
 						</p>
@@ -149,26 +163,13 @@
 						<Button variant="magic" size="md" onclick={closeReveal}>좋아!</Button>
 					</div>
 				{:else}
-					<div class="slots" class:shake={shake > 0} data-shake={shake}>
-						{#each Array(SLOTS) as _, i (i)}
-							{@const char = slots[i]}
-							{#if char}
-								<button
-									type="button"
-									class="slot filled hanja"
-									onclick={() => removeAt(i)}
-									aria-label="{char} 빼기"
-								>
-									{char}
-								</button>
-							{:else}
-								<span class="slot empty" aria-hidden="true"></span>
-							{/if}
-							{#if i < SLOTS - 1}
-								<span class="plus font-display" aria-hidden="true">+</span>
-							{/if}
-						{/each}
-					</div>
+					<GlyphFrame
+						layout={frameLayout}
+						values={Array.from({ length: SLOTS }, (_, i) => slots[i] ?? null)}
+						onRemove={removeAt}
+						{shake}
+						bind:slots={slotEls}
+					/>
 
 					<form
 						method="POST"
@@ -204,6 +205,14 @@
 									return;
 								}
 
+								/*
+								 * **조각이 실제로 만나는 것을 보여 준다.**
+								 * 예전에는 결과가 툭 나타나서, 합체라고 이름 붙였어도
+								 * 아이 눈에는 정답 판정과 구별되지 않았다.
+								 */
+								const flying = slotEls.filter((el): el is HTMLElement => !!el);
+								if (anvil) await mergeInto(flying, anvil);
+
 								burst += 1;
 								sound.play('discover');
 								made = {
@@ -217,6 +226,7 @@
 									announceReward(payload.reward, data.user.characterClass);
 								}
 								await update({ reset: false });
+								if (revealEl) void popIn(revealEl);
 							};
 						}}
 					>
@@ -255,6 +265,13 @@
 							type="button"
 							class="part"
 							onclick={() => place(part.character)}
+							use:draggable={{
+								dropSelector: '.cell, .frame',
+								value: part.character,
+								disabled: busy || !!made || slots.length >= SLOTS,
+								onLift: () => sound.play('click'),
+								onDrop: (character) => place(character)
+							}}
 							disabled={busy || !!made || slots.length >= SLOTS}
 						>
 							<span class="hanja text-2xl leading-none">{part.character}</span>
@@ -303,40 +320,6 @@
 		box-shadow: var(--shadow-card);
 	}
 
-	.slots {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-
-	.slot {
-		display: grid;
-		place-items: center;
-		width: 4.5rem;
-		height: 4.5rem;
-		border-radius: var(--radius-button);
-		font-size: 2.25rem;
-		line-height: 1;
-	}
-
-	.slot.empty {
-		border: 3px dashed var(--color-magic-200);
-		background: rgb(255 255 255 / 0.5);
-	}
-
-	.slot.filled {
-		border: 3px solid var(--color-magic-400);
-		background: #fff;
-		color: var(--color-magic-800);
-		cursor: pointer;
-		box-shadow: 0 4px 0 var(--color-magic-200);
-	}
-
-	.plus {
-		font-size: 1.5rem;
-		color: var(--color-magic-400);
-	}
-
 	.actions {
 		display: flex;
 		justify-content: center;
@@ -344,22 +327,6 @@
 	}
 
 	/* 실패했을 때. 짧게 흔들고 끝낸다 — 실패를 오래 붙들지 않는다 */
-	.shake {
-		animation: fusion-shake 0.32s ease;
-	}
-
-	@keyframes fusion-shake {
-		0%,
-		100% {
-			transform: translateX(0);
-		}
-		25% {
-			transform: translateX(-7px);
-		}
-		75% {
-			transform: translateX(7px);
-		}
-	}
 
 	.reveal {
 		display: grid;
@@ -439,6 +406,16 @@
 			border-color 0.15s ease;
 	}
 
+	/*
+	 * 끌고 있는 동안은 트랜지션을 끈다.
+	 * 안 그러면 오버슈트 이징이 손가락 추적을 150ms 뭉개서 조각이 미끄러지는 느낌이 난다.
+	 */
+	:global(.part[data-dragging]) {
+		transition: none;
+		cursor: grabbing;
+		filter: drop-shadow(0 8px 14px rgb(60 40 120 / 0.35));
+	}
+
 	.part:hover:not(:disabled) {
 		transform: translateY(-2px);
 		border-color: var(--color-magic-400);
@@ -472,13 +449,6 @@
 		.tray {
 			grid-area: tray;
 			align-self: start;
-		}
-
-		/* 화면이 넓으면 부품도 크게 잡아 준다 */
-		.slot {
-			width: 6rem;
-			height: 6rem;
-			font-size: 3rem;
 		}
 	}
 </style>

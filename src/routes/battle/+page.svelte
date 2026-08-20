@@ -18,6 +18,9 @@
 	import { announceReward } from '$lib/game/announce';
 	import { sound } from '$lib/sound/index.svelte';
 	import { fuse, recipeFor } from '$lib/game/fusion';
+	import { draggable } from '$lib/actions/draggable';
+	import { mergeInto } from '$lib/anim/merge';
+	import GlyphFrame from '$lib/components/play/GlyphFrame.svelte';
 	import { MAX_HINT, STAR_LABELS } from '$lib/game/seals';
 	import type { Mood } from '$lib/types/ui';
 	import type { RewardDto } from '$lib/types/api';
@@ -44,6 +47,9 @@
 	let playerHp = $state(data.playerHp);
 	let sealIndex = $state(0);
 	let slots = $state<string[]>([]);
+	/** 합쳐지는 연출에 쓸 자리 참조 */
+	let slotEls = $state<(HTMLElement | null)[]>([]);
+	let frameEl = $state<HTMLElement | null>(null);
 	let busy = $state(false);
 	let shake = $state(0);
 	let hint = $state(0);
@@ -70,7 +76,10 @@
 	const enemyMood = $derived<Mood>(outcome === 'win' ? 'sad' : 'happy');
 
 	/** 이 봉인의 정답 부품 (힌트를 켤 때만 쓴다) */
-	const answerParts = $derived(seal ? (recipeFor(seal.character)?.parts ?? []) : []);
+	const answerRecipe = $derived(seal ? recipeFor(seal.character) : null);
+	const answerParts = $derived(answerRecipe?.parts ?? []);
+	/** 칸이 이 글자의 실제 모양으로 나뉜다 — 그 자체가 가장 큰 단서다 */
+	const frameLayout = $derived(answerRecipe?.layout ?? 'lr');
 
 	/** 힌트로 빛나야 하는 부품 */
 	const glowing = $derived(
@@ -162,6 +171,14 @@
 				bounce();
 				return;
 			}
+
+			/*
+			 * **조각이 실제로 만나는 것을 보여 준다.**
+			 * 이게 없으면 "합체 대결" 인데 화면에는 합체가 없고,
+			 * 글자 두 개가 칸에 나타났다가 공이 날아가는 정답 판정으로만 보인다.
+			 */
+			const flying = slotEls.filter((el): el is HTMLElement => !!el);
+			if (frameEl) await mergeInto(flying, frameEl);
 
 			// 봉인 파괴
 			lastDamage = 1;
@@ -382,23 +399,15 @@
 					</div>
 					<p class="seal-story">{seal.story}</p>
 
-					<div class="slots" class:shake={shake > 0} data-shake={shake}>
-						{#each [0, 1] as i (i)}
-							{@const char = slots[i]}
-							{#if char}
-								<button
-									type="button"
-									class="slot filled hanja"
-									onclick={() => removeAt(i)}
-									aria-label="{char} 빼기"
-								>
-									{char}
-								</button>
-							{:else}
-								<span class="slot empty" aria-hidden="true"></span>
-							{/if}
-							{#if i === 0}<span class="plus font-display" aria-hidden="true">+</span>{/if}
-						{/each}
+					<div class="frame-wrap" bind:this={frameEl}>
+						<GlyphFrame
+							layout={frameLayout}
+							values={[slots[0] ?? null, slots[1] ?? null]}
+							onRemove={removeAt}
+							{shake}
+							size={116}
+							bind:slots={slotEls}
+						/>
 					</div>
 				</section>
 
@@ -411,6 +420,13 @@
 								class="part"
 								data-glow={glowing.includes(part.character) || undefined}
 								onclick={() => place(part.character)}
+								use:draggable={{
+									dropSelector: '.cell, .frame',
+									value: part.character,
+									disabled: busy || slots.length >= 2,
+									onLift: () => sound.play('click'),
+									onDrop: (character) => place(character)
+								}}
 								disabled={busy || slots.length >= 2}
 							>
 								<span class="hanja text-xl leading-none">{part.character}</span>
@@ -541,63 +557,17 @@
 		cursor: pointer;
 	}
 
+	/* 글자 틀은 카드 가운데에 둔다. 왼쪽에 붙어 있으면 카드가 비어 보인다 */
+	.frame-wrap {
+		display: flex;
+		justify-content: center;
+		margin-top: 0.5rem;
+	}
+
 	.seal-story {
 		margin-top: 0.25rem;
 		color: var(--color-ink-700);
 		font-size: 0.8rem;
-	}
-
-	.slots {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
-		margin-top: 0.5rem;
-	}
-
-	.slot {
-		display: grid;
-		place-items: center;
-		width: 3.25rem;
-		height: 3.25rem;
-		border-radius: var(--radius-button);
-		font-size: 1.75rem;
-		line-height: 1;
-	}
-
-	.slot.empty {
-		border: 3px dashed var(--color-magic-200);
-		background: rgb(255 255 255 / 0.5);
-	}
-
-	.slot.filled {
-		border: 3px solid var(--color-magic-400);
-		background: #fff;
-		color: var(--color-magic-800);
-		cursor: pointer;
-	}
-
-	.plus {
-		font-size: 1.25rem;
-		color: var(--color-magic-400);
-	}
-
-	/* 실패했을 때. 짧게 흔들고 끝낸다 */
-	.shake {
-		animation: seal-shake 0.32s ease;
-	}
-
-	@keyframes seal-shake {
-		0%,
-		100% {
-			transform: translateX(0);
-		}
-		25% {
-			transform: translateX(-7px);
-		}
-		75% {
-			transform: translateX(7px);
-		}
 	}
 
 	.tray {
@@ -626,6 +596,16 @@
 		transition:
 			transform 0.15s var(--ease-pop),
 			border-color 0.15s ease;
+	}
+
+	/*
+	 * 끌고 있는 동안은 트랜지션을 끈다.
+	 * 안 그러면 오버슈트 이징이 손가락 추적을 150ms 뭉개서 조각이 미끄러지는 느낌이 난다.
+	 */
+	:global(.part[data-dragging]) {
+		transition: none;
+		cursor: grabbing;
+		filter: drop-shadow(0 8px 14px rgb(60 40 120 / 0.35));
 	}
 
 	.part:hover:not(:disabled) {

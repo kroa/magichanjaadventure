@@ -82,7 +82,7 @@ test('안 되는 조합에 벌을 주지 않는다', async ({ page }, testInfo) 
 		.toBeGreaterThanOrEqual(before);
 
 	// 부품이 되돌아와 바로 다시 시도할 수 있어야 한다
-	await expect(page.locator('.slot.filled')).toHaveCount(0, { timeout: 5000 });
+	await expect(page.locator('.cell.filled')).toHaveCount(0, { timeout: 5000 });
 });
 
 test('패배 화면이 존재하지 않는다', async ({ page }, testInfo) => {

@@ -113,7 +113,7 @@ test('안 되는 조합에도 벌을 주지 않는다', async ({ page }, testInf
 	await expect(page.getByText(/틀렸|실패|아니에요|오답/)).toHaveCount(0);
 
 	// 부품이 되돌아와 바로 다시 시도할 수 있어야 한다
-	await expect(page.locator('.slot.filled')).toHaveCount(0, { timeout: 5000 });
+	await expect(page.locator('.cell.filled')).toHaveCount(0, { timeout: 5000 });
 
 	await place(page, '日');
 	await place(page, '月');
