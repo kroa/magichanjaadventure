@@ -3,6 +3,7 @@ import { expectHealthyLayout } from '../helpers/layout';
 import { captureScreen, waitForFonts } from '../helpers/screens';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
+import { breakAllSeals } from '../helpers/battle';
 
 /**
  * 아이가 실제로 걷는 길을 그대로 따라간다.
@@ -134,14 +135,15 @@ test.describe('아이의 첫 모험', () => {
 		await expectHealthyLayout(page);
 	});
 
-	test('대결 화면이 뜨고 공격이 동작한다', async ({ page }, testInfo) => {
+	test('대결 화면이 뜨고 봉인을 깰 수 있다', async ({ page }, testInfo) => {
 		await signUp(page, 'battle', `${testInfo.project.name}${testInfo.workerIndex}d`);
 		await pickWizard(page);
-		await learnHanja(page, 4);
 
+		// 합체 대결은 배운 한자를 요구하지 않는다 — 부품 서랍이 봉인에서 유도된다
 		await gotoReady(page, '/battle');
 		await waitForFonts(page);
 		await expect(page.getByTestId('battle-stage')).toBeVisible();
+		await expect(page.getByTestId('seal-card')).toBeVisible();
 
 		// PixiJS 이펙트 레이어가 실제로 초기화된다
 		await expect(page.getByTestId('battle-canvas')).toHaveAttribute('data-ready', 'true', {
@@ -151,21 +153,9 @@ test.describe('아이의 첫 모험', () => {
 		await captureScreen(page, testInfo, 'battle');
 		await expectHealthyLayout(page);
 
-		// 적 에너지가 줄거나(정답) 내 에너지가 줄어야(오답) 한다 — 어느 쪽이든 전투가 진행된다
-		const enemyBar = page.getByRole('progressbar', { name: /에너지/ }).last();
-		const before = Number(await enemyBar.getAttribute('aria-valuenow'));
-		const myBar = page.getByRole('progressbar', { name: '내 에너지' });
-		const myBefore = Number(await myBar.getAttribute('aria-valuenow'));
-
-		await page.locator('button.option').first().click();
-
-		await expect
-			.poll(async () => {
-				const enemyNow = Number(await enemyBar.getAttribute('aria-valuenow'));
-				const myNow = Number(await myBar.getAttribute('aria-valuenow'));
-				return enemyNow < before || myNow < myBefore;
-			})
-			.toBe(true);
+		// 도움을 끝까지 쓰면 한자를 몰라도 봉인이 깨진다
+		await breakAllSeals(page);
+		await expect(page.getByTestId('battle-outcome')).toContainText('승리');
 	});
 
 	test('로그아웃하고 다시 로그인할 수 있다', async ({ page }, testInfo) => {

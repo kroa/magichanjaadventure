@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
+import { breakAllSeals, clickPastOverlay } from '../helpers/battle';
 
 /**
  * "다시 대결 / 한 판 더" 회귀 테스트.
@@ -44,29 +45,16 @@ test('대결이 끝난 뒤 "다시 대결"을 누르면 새 대결이 시작된�
 	await gotoReady(page, '/battle');
 	await expect(page.getByTestId('battle-stage')).toBeVisible();
 
-	/*
-	 * 승패가 갈릴 때까지 계속 답한다 (정답이든 오답이든 언젠가 끝난다).
-	 * 답을 고르면 채점 결과가 뜨고 선택지가 잠기므로, '다음'을 눌러야 다시 풀 수 있다.
-	 */
+	await breakAllSeals(page);
+
 	const restart = page.getByRole('button', { name: '다시 대결' });
-	const next = page.getByRole('button', { name: /다음/ });
-
-	for (let i = 0; i < 40 && !(await restart.isVisible()); i++) {
-		const option = page.locator('button.option:not([disabled])').first();
-		if (await option.isVisible()) {
-			await option.click();
-			await expect(next.or(restart).first()).toBeVisible();
-		}
-		if (await next.isVisible()) await next.click();
-	}
-
 	await expect(restart, '대결이 끝나면 다시 대결 버튼이 보여야 한다').toBeVisible();
 
-	await restart.click();
+	await clickPastOverlay(page, '다시 대결');
 
-	// 결과 화면이 사라지고 다시 문제가 나와야 한다 — 이것이 이 테스트의 핵심이다
-	await expect(restart).toBeHidden({ timeout: 15_000 });
-	await expect(page.locator('button.option').first()).toBeVisible();
+	// 결과 화면이 사라지고 다시 봉인이 나와야 한다 — 이것이 이 테스트의 핵심이다
+	await expect(page.getByTestId('battle-outcome')).toBeHidden({ timeout: 15_000 });
+	await expect(page.getByTestId('seal-card')).toBeVisible();
 	await expect(page.getByTestId('battle-stage')).toBeVisible();
 });
 

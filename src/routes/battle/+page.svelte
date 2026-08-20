@@ -4,185 +4,266 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Chip from '$lib/components/common/Chip.svelte';
 	import ProgressBar from '$lib/components/common/ProgressBar.svelte';
-	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
 	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
+	import ArcherSprite from '$lib/components/art/ArcherSprite.svelte';
+	import SageSprite from '$lib/components/art/SageSprite.svelte';
+	import FoxSprite from '$lib/components/art/FoxSprite.svelte';
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
 	import BattleCanvas from '$lib/components/battle/BattleCanvas.svelte';
+	import Sparkle from '$lib/components/effects/Sparkle.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { announceReward } from '$lib/game/announce';
 	import { sound } from '$lib/sound/index.svelte';
+	import { fuse, recipeFor } from '$lib/game/fusion';
+	import { MAX_HINT, STAR_LABELS } from '$lib/game/seals';
 	import type { Mood } from '$lib/types/ui';
-	import type { BattleFinishResponse, QuizAnswerResponse } from '$lib/types/api';
+	import type { RewardDto } from '$lib/types/api';
 
 	let { data } = $props();
 
-	const Hero = $derived(data.user.characterClass === 'wizard' ? WizardSprite : KnightSprite);
+	const SPRITES = {
+		knight: KnightSprite,
+		wizard: WizardSprite,
+		archer: ArcherSprite,
+		sage: SageSprite,
+		fox: FoxSprite
+	} as const;
+	const Hero = $derived(SPRITES[data.user.characterClass ?? 'knight'] ?? KnightSprite);
 
-	/*
-	 * 넓은 화면에서는 무대를 좌우로 나누면서 세로 여유가 생긴다.
-	 * 그 공간을 비워 두지 말고 캐릭터를 키운다 — 대결의 주인공이 작으면 대결처럼 보이지 않는다.
-	 */
 	const wide = new MediaQuery('(min-width: 900px)');
-	const spriteSize = $derived(wide.current ? 210 : 110);
-	let sessionKey = $state(crypto.randomUUID());
-	let startedAt = $state(Date.now());
-	let restarting = $state(false);
+	const spriteSize = $derived(wide.current ? 150 : 92);
 
-	let index = $state(0);
-	// load 로 한 번만 초기화한다. 이후 값은 서버 응답으로만 바꾸고, 새 판은 전체 새로고침한다.
+	// ── 대결 상태 ────────────────────────────────────────────────
+	// 서버가 내려준 값으로 한 번만 초기화하고, 이후에는 이 화면이 관리한다.
+	// svelte-ignore state_referenced_locally
+	let seals = $state(data.seals.map((s) => ({ ...s })));
 	// svelte-ignore state_referenced_locally
 	let playerHp = $state(data.playerHp);
-	// svelte-ignore state_referenced_locally
-	let enemyHp = $state(data.enemyHp);
-	let combo = $state(0);
-	let maxCombo = $state(0);
-
-	let chosen = $state<string | null>(null);
-	let result = $state<{ isCorrect: boolean; answer: string } | null>(null);
+	let sealIndex = $state(0);
+	let slots = $state<string[]>([]);
 	let busy = $state(false);
+	let shake = $state(0);
+	let hint = $state(0);
+	let attempts = $state(0);
+	let madeThisBattle = $state<string[]>([]);
+	let discoveredNew = $state(false);
+	let outcome = $state<'fighting' | 'win'>('fighting');
+	let settled = $state(false);
+	let stars = $state(0);
+	let restarting = $state(false);
 
 	let attackTrigger = $state(0);
 	let hitTrigger = $state(0);
 	let victoryTrigger = $state(0);
 	let lastDamage = $state(0);
+	let startedAt = $state(Date.now());
 
-	let outcome = $state<'fighting' | 'win' | 'lose'>('fighting');
-	let settled = $state(false);
+	/** 지금 깨야 할 봉인 */
+	const seal = $derived(seals[sealIndex] ?? null);
+	const brokenCount = $derived(seals.filter((s) => s.broken).length);
+	const enemyHp = $derived(seals.length - brokenCount);
 
-	const question = $derived(data.questions[index] ?? null);
-	const heroMood = $derived<Mood>(
-		outcome === 'win'
-			? 'cheer'
-			: outcome === 'lose'
-				? 'sad'
-				: result?.isCorrect === false
-					? 'surprised'
-					: 'happy'
+	const heroMood = $derived<Mood>(outcome === 'win' ? 'cheer' : 'happy');
+	const enemyMood = $derived<Mood>(outcome === 'win' ? 'sad' : 'happy');
+
+	/** 이 봉인의 정답 부품 (힌트를 켤 때만 쓴다) */
+	const answerParts = $derived(seal ? (recipeFor(seal.character)?.parts ?? []) : []);
+
+	/** 힌트로 빛나야 하는 부품 */
+	const glowing = $derived(
+		hint <= 0 ? [] : answerParts.slice(0, hint === 1 ? 1 : answerParts.length)
 	);
-	const enemyMood = $derived<Mood>(
-		outcome === 'win' ? 'sad' : result?.isCorrect ? 'surprised' : 'happy'
-	);
 
-	async function answer(option: string) {
-		if (busy || result || !question || outcome !== 'fighting') return;
+	/**
+	 * 놓은 부품이 목표 글자의 재료인가.
+	 *
+	 * 맞으면 봉인 카드가 반짝인다. **틀려도 아무 말 하지 않는다** — 그냥 안 빛날 뿐이다.
+	 * 이게 있으면 "아무거나 눌러 보기" 가 곧 "이 부품이 이 글자에 쓰이나?" 라는 확인이 되어,
+	 * 마구 눌러 보는 것 자체가 분해 연습이 된다.
+	 */
+	const resonating = $derived(slots.length > 0 && slots.every((p) => answerParts.includes(p)));
+
+	function place(character: string) {
+		if (busy || outcome !== 'fighting' || slots.length >= 2) return;
+		slots = [...slots, character];
+		sound.play('click');
+		if (slots.length === 2) void tryAttack();
+	}
+
+	function removeAt(index: number) {
+		if (busy || outcome !== 'fighting') return;
+		slots = slots.filter((_, i) => i !== index);
+	}
+
+	/** 도움은 공짜다. 써도 별이 깎이지 않고 보스도 반격하지 않는다. */
+	function askHint() {
+		if (outcome !== 'fighting') return;
+		hint = Math.min(MAX_HINT, hint + 1);
+		sound.play('click');
+	}
+
+	async function tryAttack() {
+		if (busy || !seal) return;
+
+		/*
+		 * 조합표에 없는 조합은 **서버에 보내지도 않는다.**
+		 * 즉시 흔들고 되돌린다 — 기다림이 없어야 아이가 마음 놓고 계속 시도한다.
+		 * 그리고 아무 말도 하지 않는다. 여기서 "틀렸어요" 를 띄우면 이건 다시 시험지가 된다.
+		 */
+		if (!fuse(slots)) {
+			bounce();
+			return;
+		}
+
 		busy = true;
-		chosen = option;
-
+		attempts += 1;
 		try {
-			const response = await fetch('/api/quiz/answer', {
+			const response = await fetch('/api/battle/seal', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
-					hanjaId: question.hanjaId,
-					type: question.type,
-					chosen: option,
-					combo,
-					sessionKey
+					sessionKey: data.sessionKey,
+					areaId: data.area.id,
+					sealIndex,
+					parts: slots,
+					firstTry: attempts === 1 && hint === 0
 				})
 			});
-			if (!response.ok) throw new Error('채점 실패');
-			const payload = (await response.json()) as QuizAnswerResponse;
+			if (!response.ok) throw new Error('공격 실패');
+			const payload = (await response.json()) as {
+				ok: boolean;
+				reason?: string;
+				character?: string;
+				reading?: string;
+				meaning?: string;
+				story?: string;
+				isNew?: boolean;
+			};
 
-			combo = payload.combo;
-			maxCombo = Math.max(maxCombo, combo);
-			result = { isCorrect: payload.isCorrect, answer: payload.answer };
+			if (payload.character && !madeThisBattle.includes(payload.character)) {
+				madeThisBattle = [...madeThisBattle, payload.character];
+			}
+			if (payload.isNew) discoveredNew = true;
 
-			if (payload.isCorrect) {
-				// 콤보가 높을수록 세게 때린다 — 연속 정답의 보람
-				lastDamage = data.playerAttack + Math.floor(combo / 3) * 2;
-				enemyHp = Math.max(0, enemyHp - lastDamage);
-				attackTrigger += 1;
-			} else {
-				playerHp = Math.max(0, playerHp - data.enemyAttack);
-				hitTrigger += 1;
+			if (!payload.ok) {
+				/*
+				 * 만들긴 했지만 이 봉인의 목표가 아니다.
+				 * 한자는 진짜로 얻었고, 봉인에 금이 가서 도움이 한 칸 열린다.
+				 * **에너지는 깎이지 않고 보스도 반격하지 않는다.**
+				 */
+				if (payload.reason === 'not-target' && payload.character) {
+					sound.play('discover');
+					toasts.success(`${payload.character}! 만들었어요. 이 봉인은 다른 글자를 원해요.`, '🔮');
+					hint = Math.min(MAX_HINT, hint + 1);
+				}
+				bounce();
+				return;
 			}
 
-			sound.play(payload.isCorrect ? 'correct' : 'wrong');
+			// 봉인 파괴
+			lastDamage = 1;
+			attackTrigger += 1;
+			sound.play('discover');
+			seals = seals.map((s, i) => (i === sealIndex ? { ...s, broken: true } : s));
+			slots = [];
+
+			const remaining = seals.filter((s) => !s.broken);
+			if (remaining.length === 0) {
+				victoryTrigger += 1;
+				await finish();
+				return;
+			}
+
+			// 보스의 반격. 아이의 실패가 아니라 **성공에 대한 응답**이다
+			playerHp = Math.max(1, playerHp - Math.round(data.playerHp * 0.08));
+			hitTrigger += 1;
+
+			sealIndex = seals.findIndex((s) => !s.broken);
+			hint = 0;
+			attempts = 0;
 		} catch {
 			toasts.warn('연결이 잠깐 끊겼어요. 다시 눌러 주세요.');
-			chosen = null;
+			slots = [];
 		} finally {
 			busy = false;
 		}
 	}
 
-	async function next() {
-		chosen = null;
-		result = null;
-
-		if (enemyHp <= 0) return finish('win');
-		if (playerHp <= 0) return finish('lose');
-
-		if (index + 1 >= data.questions.length) {
-			// 문제를 다 썼는데 적이 살아 있으면 패배로 친다
-			return finish(enemyHp <= 0 ? 'win' : 'lose');
-		}
-		index += 1;
+	/** 부품을 서랍으로 되돌린다. 짧게 흔들고 끝 — 실패를 오래 붙들지 않는다. */
+	function bounce() {
+		shake += 1;
+		sound.play('click');
+		setTimeout(() => {
+			slots = [];
+		}, 320);
 	}
 
-	/**
-	 * 새 대결을 시작한다.
-	 *
-	 * 같은 URL 로 링크 이동하면 컴포넌트가 재생성되지 않아 결과 화면이 그대로 남는다.
-	 * 그래서 새 문제를 받아온 뒤 상태를 하나씩 되돌린다.
-	 */
-	async function restart() {
-		if (restarting) return;
-		restarting = true;
-		try {
-			await invalidateAll();
-
-			index = 0;
-			playerHp = data.playerHp;
-			enemyHp = data.enemyHp;
-			combo = 0;
-			maxCombo = 0;
-			chosen = null;
-			result = null;
-			outcome = 'fighting';
-			settled = false;
-			lastDamage = 0;
-			sessionKey = crypto.randomUUID();
-			startedAt = Date.now();
-		} finally {
-			restarting = false;
-		}
-	}
-
-	async function finish(kind: 'win' | 'lose') {
+	async function finish() {
 		if (settled) return;
 		settled = true;
-		outcome = kind;
-		if (kind === 'win') victoryTrigger += 1;
+		outcome = 'win';
 
 		try {
 			const response = await fetch('/api/battle/finish', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
-					sessionKey,
+					sessionKey: data.sessionKey,
 					npcId: data.area.boss.id,
 					areaId: data.area.id,
 					playerHpLeft: playerHp,
-					enemyHpLeft: enemyHp,
-					maxCombo,
+					enemyHpLeft: 0,
+					sealCount: seals.length,
+					discoveredNew,
 					durationMs: Date.now() - startedAt,
-					claimedWin: kind === 'win'
+					claimedWin: true
 				})
 			});
 			if (!response.ok) return;
-			const payload = (await response.json()) as BattleFinishResponse;
+			const payload = (await response.json()) as {
+				won: boolean;
+				stars: number;
+				reward: RewardDto | null;
+			};
 
-			sound.play(kind === 'win' ? 'victory' : 'wrong');
-
-			if (payload.reward) {
-				announceReward(payload.reward, data.user.characterClass);
-			}
+			stars = payload.stars ?? 0;
+			sound.play('victory');
+			if (payload.reward) announceReward(payload.reward, data.user.characterClass);
 		} catch {
 			// 기록 실패가 결과 화면을 막지 않게 한다
+		}
+	}
+
+	/**
+	 * 새 대결을 시작한다.
+	 *
+	 * 같은 URL 로 링크 이동하면 컴포넌트가 재생성되지 않아 결과 화면이 그대로 남는다.
+	 * 그래서 새 봉인을 받아온 뒤 상태를 하나씩 되돌린다.
+	 * **여기에 새 상태를 빠뜨리면 "다시 대결" 이 또 조용히 깨진다.**
+	 */
+	async function restart() {
+		if (restarting) return;
+		restarting = true;
+		try {
+			await invalidateAll();
+			seals = data.seals.map((s) => ({ ...s }));
+			playerHp = data.playerHp;
+			sealIndex = 0;
+			slots = [];
+			hint = 0;
+			attempts = 0;
+			madeThisBattle = [];
+			discoveredNew = false;
+			outcome = 'fighting';
+			settled = false;
+			stars = 0;
+			lastDamage = 0;
+			startedAt = Date.now();
+		} finally {
+			restarting = false;
 		}
 	}
 </script>
@@ -192,172 +273,174 @@
 </svelte:head>
 
 <!--
-	대결도 퀴즈와 같은 **집중 모드**다.
-	 - 하단 네비게이션과 상단 HUD 를 숨긴다: 세로 공간 170px 을 되찾고, 오터치도 막는다
-	   (레벨·보석은 모험 지도에서 보고, 레벨업은 전체 화면 연출로 크게 알려 준다)
-	 - 대신 헤더에 나가기 버튼을 둔다 (메뉴를 끈 화면에는 반드시 나갈 길이 있어야 한다)
-	 - 390×844 화면에서 마지막 보기가 화면 밖으로 밀려나 스크롤해야 했다. 그래서 격자로 묶었다.
+	합체 대결 — 보스의 봉인을 합체로 깬다.
+
+	**아이는 질 수 없다.** 이건 실수가 아니라 설계다.
+	 - 실패에 벌이 없다: 안 되는 조합은 흔들리고 되돌아올 뿐, 에너지도 안 깎이고 아무 말도 없다
+	 - 정답 부품이 항상 서랍에 있다: 서랍을 봉인에서 유도하므로 못 깨는 봉인이 생길 수 없다
+	 - 도움은 공짜다: 값을 매기면 아이는 도움을 안 청하고 막힌 채 앉아 있는다
+	 - 긴장은 별로 준다: 못 하면 잃는 것이 아니라, 잘하면 더 얻는 것으로
+	집중 모드라 메뉴를 숨기고 나가기 버튼을 둔다 (퀴즈·공방과 같은 규칙).
 -->
 <AppShell nav={false} night={data.area.id >= 6}>
-	{#if data.questions.length === 0}
-		<EmptyState
-			icon="⚔️"
-			title="아직 싸울 준비가 안 됐어요"
-			description="한자를 몇 개 배우면 그 한자로 대결할 수 있어요."
+	<div class="stage-grid">
+		<header class="flex items-center gap-2">
+			<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
+			<div class="areas flex gap-2 overflow-x-auto">
+				{#each data.areas as area (area.id)}
+					<Chip
+						selected={area.id === data.area.id}
+						onclick={() => (location.href = `/battle?area=${area.id}`)}
+					>
+						<span aria-hidden="true">{area.emoji}</span>
+						{area.name}
+					</Chip>
+				{/each}
+			</div>
+		</header>
+
+		<!-- 무대 -->
+		<div
+			class="stage relative overflow-hidden rounded-panel p-3 shadow-card"
+			style="--sky:{data.area.sky}"
+			data-testid="battle-stage"
 		>
-			{#snippet action()}
-				<Button variant="magic" href="/learn">한자 배우러 가기</Button>
-				<Button variant="ghost" href="/">모험 지도로</Button>
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<div class="stage-grid">
-			<!-- 나가기 + 지역 선택. 지역이 늘어나도 줄바꿈되지 않게 가로로 스크롤한다. -->
-			<header class="flex items-center gap-2">
-				<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
-				<div class="areas flex gap-2 overflow-x-auto">
-					{#each data.areas as area (area.id)}
-						<Chip
-							selected={area.id === data.area.id}
-							onclick={() => (location.href = `/battle?area=${area.id}`)}
-						>
-							<span aria-hidden="true">{area.emoji}</span>
-							{area.name}
-						</Chip>
-					{/each}
+			<BattleCanvas {attackTrigger} {hitTrigger} damage={lastDamage} {victoryTrigger} />
+
+			<div class="fight relative flex items-end justify-between gap-2">
+				<div class="flex w-[42%] flex-col items-center gap-1">
+					<Hero size={spriteSize} mood={heroMood} />
+					<ProgressBar
+						value={playerHp}
+						max={data.playerHp}
+						tone="mint"
+						size="sm"
+						label="내 에너지"
+						class="w-full"
+					/>
 				</div>
-			</header>
 
-			<!-- 배틀 무대 -->
-			<div
-				class="stage relative overflow-hidden rounded-panel p-4 shadow-card"
-				style="--sky:{data.area.sky}"
-				data-testid="battle-stage"
-			>
-				<BattleCanvas {attackTrigger} {hitTrigger} damage={lastDamage} {victoryTrigger} />
+				<span class="pb-8 font-display text-lg text-magic-500" aria-hidden="true">VS</span>
 
-				<div class="fight relative flex items-end justify-between gap-2">
-					<div class="flex w-[42%] flex-col items-center gap-2">
-						<Hero size={spriteSize} mood={heroMood} />
-						<ProgressBar
-							value={playerHp}
-							max={data.playerHp}
-							tone="mint"
-							size="sm"
-							label="내 에너지"
-							class="w-full"
-						/>
-						<span class="fighter-label font-display text-xs text-ink-700"
-							>{playerHp} / {data.playerHp}</span
-						>
-					</div>
-
-					<span class="pb-10 font-display text-xl text-magic-500" aria-hidden="true">VS</span>
-
-					<div class="flex w-[42%] flex-col items-center gap-2">
-						<MonsterSprite kind={data.area.boss.id} size={spriteSize} mood={enemyMood} />
-						<ProgressBar
-							value={enemyHp}
-							max={data.enemyHp}
-							tone="ember"
-							size="sm"
-							label="{data.area.boss.name} 에너지"
-							class="w-full"
-						/>
-						<span class="fighter-label font-display text-xs text-ink-700"
-							>{data.area.boss.name}</span
-						>
-					</div>
+				<div class="flex w-[42%] flex-col items-center gap-1">
+					<MonsterSprite kind={data.area.boss.id} size={spriteSize} mood={enemyMood} />
+					<ProgressBar
+						value={enemyHp}
+						max={seals.length}
+						tone="ember"
+						size="sm"
+						label="{data.area.boss.name} 에너지"
+						class="w-full"
+					/>
+					<span class="seal-dots font-display text-xs" aria-hidden="true">
+						{#each seals as s, i (i)}
+							<span class="dot" class:broken={s.broken}></span>
+						{/each}
+					</span>
 				</div>
 			</div>
+		</div>
 
-			{#if outcome !== 'fighting'}
-				<div
-					class="outcome flex flex-col items-center justify-center gap-3 py-4 text-center"
-					data-testid="battle-outcome"
-				>
-					{#if outcome === 'win'}
-						<h2 class="text-display-lg text-gold-600">승리!</h2>
-						<p class="text-ink-700">{data.area.boss.name}을(를) 물리쳤어요! +50 EXP · 💎5</p>
-					{:else}
-						<h2 class="text-display-lg text-ink-700">아쉬워요</h2>
-						<p class="text-ink-500">한자를 조금 더 익히고 다시 도전해 볼까요?</p>
-					{/if}
-					<div class="flex flex-wrap justify-center gap-3">
-						<Button variant="magic" size="lg" onclick={restart} loading={restarting}
-							>다시 대결</Button
-						>
-						<Button variant="gold" size="lg" href="/learn">한자 배우기</Button>
-						<Button variant="ghost" size="lg" href="/">모험 지도</Button>
-					</div>
+		{#if outcome === 'win'}
+			<div
+				class="outcome flex flex-col items-center justify-center gap-3 text-center"
+				data-testid="battle-outcome"
+			>
+				<h2 class="text-display-lg text-gold-600">승리!</h2>
+				<p class="stars" aria-label="별 {stars}개">
+					{#each [0, 1, 2] as i (i)}
+						<span class="star" class:on={i < stars}>★</span>
+					{/each}
+				</p>
+				<ul class="star-list">
+					{#each STAR_LABELS as label, i (i)}
+						<li class:done={i < stars}>{label}</li>
+					{/each}
+				</ul>
+				{#if madeThisBattle.length > 0}
+					<p class="made">
+						만든 한자
+						{#each madeThisBattle as ch (ch)}<span class="hanja">{ch}</span>{/each}
+					</p>
+				{/if}
+				<div class="flex flex-wrap justify-center gap-3">
+					<Button variant="magic" size="lg" onclick={restart} loading={restarting}>다시 대결</Button
+					>
+					<Button variant="gold" size="lg" href="/fusion">합체 공방</Button>
+					<Button variant="ghost" size="lg" href="/">모험 지도</Button>
 				</div>
-			{:else if question}
-				<div class="play">
-					<div class="glass rounded-panel px-4 py-3 text-center shadow-card">
-						<div class="mb-1 flex items-center justify-center gap-2">
-							<Badge tone="magic" size="sm">{index + 1} / {data.questions.length}</Badge>
-							{#if combo >= 2}<Badge tone="gold" fill="solid" size="sm">🔥 {combo}</Badge>{/if}
-						</div>
-						<p class="text-sm text-ink-500">{question.prompt}</p>
-						<p
-							class="mt-1 leading-none text-magic-800 {question.subjectIsHanja
-								? 'hanja text-hanja-card'
-								: 'font-display text-display-md'}"
-						>
-							{question.subject}
-						</p>
+			</div>
+		{:else if seal}
+			<div class="play">
+				<!-- 봉인 카드: 목표를 숨기지 않는다. 이야기도 처음부터 보여 준다 -->
+				<section class="seal-card relative isolate" class:resonating data-testid="seal-card">
+					<Sparkle count={4} />
+					<div class="seal-head">
+						<span class="hanja seal-char">{seal.character}</span>
+						<span class="font-display text-base text-ink-900">{seal.meaning} {seal.reading}</span>
+						<button type="button" class="help" onclick={askHint} aria-label="도와줘">?</button>
 					</div>
+					<p class="seal-story">{seal.story}</p>
 
-					<div class="grid gap-2">
-						{#each question.options as option (option)}
-							{@const isAnswer = result && option === result.answer}
+					<div class="slots" class:shake={shake > 0} data-shake={shake}>
+						{#each [0, 1] as i (i)}
+							{@const char = slots[i]}
+							{#if char}
+								<button
+									type="button"
+									class="slot filled hanja"
+									onclick={() => removeAt(i)}
+									aria-label="{char} 빼기"
+								>
+									{char}
+								</button>
+							{:else}
+								<span class="slot empty" aria-hidden="true"></span>
+							{/if}
+							{#if i === 0}<span class="plus font-display" aria-hidden="true">+</span>{/if}
+						{/each}
+					</div>
+				</section>
+
+				<!-- 부품 서랍 -->
+				<section class="tray" aria-label="부품 서랍">
+					<div class="parts">
+						{#each data.tray as part (part.character)}
 							<button
 								type="button"
-								class="option rounded-button px-5 font-display text-lg"
-								class:correct={isAnswer}
-								class:wrong={result && chosen === option && !result.isCorrect}
-								disabled={!!result || busy}
-								onclick={() => answer(option)}
+								class="part"
+								data-glow={glowing.includes(part.character) || undefined}
+								onclick={() => place(part.character)}
+								disabled={busy || slots.length >= 2}
 							>
-								<span class={question.type === 'character' ? 'hanja text-3xl' : ''}>{option}</span>
-								{#if isAnswer}<span aria-hidden="true">⭕</span>{/if}
-								{#if result && chosen === option && !result.isCorrect}<span aria-hidden="true"
-										>❌</span
-									>{/if}
+								<span class="hanja text-xl leading-none">{part.character}</span>
+								<span class="font-display text-[0.6rem] text-ink-500">
+									{part.meaning}
+									{part.reading}
+								</span>
 							</button>
 						{/each}
 					</div>
-				</div>
+				</section>
+			</div>
 
-				<!--
-					답을 고른 뒤 '다음'을 누르려고 스크롤을 내려야 하면 리듬이 끊긴다.
-					화면 아래에 붙여 두어 손가락이 있던 자리에서 바로 이어지게 한다.
-				-->
-				<div class="result-bar">
-					{#if result}
-						<Button variant="magic" size="lg" fullWidth onclick={next}>
-							{result.isCorrect ? '공격 성공! 다음' : '다음'}
-						</Button>
-					{/if}
-				</div>
-			{/if}
-		</div>
-	{/if}
+			<div class="status-bar">
+				<Badge tone="magic" size="sm">봉인 {brokenCount} / {seals.length}</Badge>
+			</div>
+		{/if}
+	</div>
 </AppShell>
 
 <style>
 	/*
 	 * 한 화면에 담기 위한 격자.
-	 * 헤더·무대는 자기 높이만큼, 남는 공간은 보기 영역이 흡수하고,
-	 * '다음' 버튼은 항상 화면 아래에 붙는다.
-	 *
-	 * 390×844 에서 이 격자가 없을 때 문서 높이가 952px 이라
-	 * 마지막 보기를 보려면 스크롤을 내려야 했다.
+	 * 모바일 뷰포트는 390×664 다 (844 는 screen 값이라 실제보다 크다).
+	 * 머리글·무대·상태줄은 제 높이, 남는 공간은 봉인 카드와 서랍이 나눠 갖는다.
 	 */
 	.stage-grid {
 		display: grid;
 		grid-template-rows: auto auto 1fr auto;
-		gap: 0.6rem;
+		gap: 0.5rem;
 		min-height: calc(100dvh - 4rem);
 	}
 
@@ -372,11 +455,10 @@
 		background: rgb(255 255 255 / 0.85);
 		color: var(--color-ink-500);
 		text-decoration: none;
-		font-size: 1rem;
 		box-shadow: var(--shadow-soft);
 	}
 
-	/* 스크롤 막대가 세로 공간을 먹지 않게 숨긴다 (칩은 손가락으로 밀어서 넘긴다) */
+	/* 스크롤 막대가 세로 공간을 먹지 않게 숨긴다 */
 	.areas {
 		scrollbar-width: none;
 	}
@@ -385,23 +467,233 @@
 		display: none;
 	}
 
+	.stage {
+		display: grid;
+		align-content: center;
+		background: var(--sky);
+		min-height: 150px;
+	}
+
+	.seal-dots {
+		display: flex;
+		gap: 0.25rem;
+	}
+
+	.dot {
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 9999px;
+		background: var(--color-ember-400, #ff8b8b);
+	}
+
+	.dot.broken {
+		background: rgb(255 255 255 / 0.55);
+	}
+
 	.play {
 		display: flex;
 		min-height: 0;
 		flex-direction: column;
-		gap: 0.6rem;
+		gap: 0.5rem;
 	}
 
-	.result-bar {
-		position: sticky;
-		bottom: 0;
-		padding-bottom: env(safe-area-inset-bottom);
+	.seal-card {
+		padding: 0.6rem 0.75rem 0.75rem;
+		border-radius: var(--radius-panel);
+		background: linear-gradient(180deg, #eef4ff 0%, #f6ecff 100%);
+		box-shadow: var(--shadow-card);
+		transition: box-shadow 0.2s ease;
+	}
+
+	/* 놓은 부품이 이 글자의 재료일 때. 틀렸다고 말하는 대신 맞았을 때만 반응한다 */
+	.seal-card.resonating {
+		box-shadow:
+			0 0 0 3px var(--color-gold-400),
+			var(--shadow-card);
+	}
+
+	.seal-head {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.seal-char {
+		font-size: 2.5rem;
+		line-height: 1;
+		color: var(--color-magic-800);
+	}
+
+	.help {
+		display: grid;
+		margin-left: auto;
+		place-items: center;
+		/* 아이 손가락 기준 하한선 */
+		width: var(--tap-min);
+		height: var(--tap-min);
+		flex-shrink: 0;
+		border: 3px solid var(--color-gold-400);
+		border-radius: 9999px;
+		background: #fff;
+		color: var(--color-gold-700);
+		font-size: 1.1rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.seal-story {
+		margin-top: 0.25rem;
+		color: var(--color-ink-700);
+		font-size: 0.8rem;
+	}
+
+	.slots {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		margin-top: 0.5rem;
+	}
+
+	.slot {
+		display: grid;
+		place-items: center;
+		width: 3.25rem;
+		height: 3.25rem;
+		border-radius: var(--radius-button);
+		font-size: 1.75rem;
+		line-height: 1;
+	}
+
+	.slot.empty {
+		border: 3px dashed var(--color-magic-200);
+		background: rgb(255 255 255 / 0.5);
+	}
+
+	.slot.filled {
+		border: 3px solid var(--color-magic-400);
+		background: #fff;
+		color: var(--color-magic-800);
+		cursor: pointer;
+	}
+
+	.plus {
+		font-size: 1.25rem;
+		color: var(--color-magic-400);
+	}
+
+	/* 실패했을 때. 짧게 흔들고 끝낸다 */
+	.shake {
+		animation: seal-shake 0.32s ease;
+	}
+
+	@keyframes seal-shake {
+		0%,
+		100% {
+			transform: translateX(0);
+		}
+		25% {
+			transform: translateX(-7px);
+		}
+		75% {
+			transform: translateX(7px);
+		}
+	}
+
+	.tray {
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	.parts {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(3.75rem, 1fr));
+		gap: 0.35rem;
+	}
+
+	.part {
+		display: grid;
+		place-items: center;
+		gap: 0.05rem;
+		/* 아이 손가락 기준 하한선보다 넉넉하게 */
+		min-height: 3.25rem;
+		padding: 0.3rem 0.15rem;
+		border: 3px solid var(--color-magic-200);
+		border-radius: var(--radius-button);
+		background: #fff;
+		color: var(--color-ink-900);
+		cursor: pointer;
+		transition:
+			transform 0.15s var(--ease-pop),
+			border-color 0.15s ease;
+	}
+
+	.part:hover:not(:disabled) {
+		transform: translateY(-2px);
+		border-color: var(--color-magic-400);
+	}
+
+	/* 도움을 눌렀을 때 빛나는 부품 */
+	.part[data-glow] {
+		border-color: var(--color-gold-400);
+		box-shadow: 0 0 0 3px rgb(255 209 102 / 0.45);
+	}
+
+	.part:disabled {
+		cursor: default;
+		opacity: 0.55;
+	}
+
+	.status-bar {
+		display: flex;
+		justify-content: center;
+	}
+
+	.stars {
+		display: flex;
+		gap: 0.25rem;
+		font-size: 2rem;
+		line-height: 1;
+	}
+
+	.star {
+		color: var(--color-magic-200);
+	}
+
+	.star.on {
+		color: var(--color-gold-500);
+	}
+
+	.star-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		color: var(--color-ink-500);
+		font-size: 0.75rem;
+	}
+
+	.star-list li.done {
+		color: var(--color-mint-700);
+		font-weight: 700;
+	}
+
+	.made {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		color: var(--color-ink-700);
+		font-size: 0.8rem;
+	}
+
+	.made .hanja {
+		font-size: 1.4rem;
+		color: var(--color-magic-800);
 	}
 
 	/*
-	 * 넓은 화면(노트북 1280×800)은 **가로가 남고 세로가 모자란다.**
-	 * 세로로만 쌓으면 966px 이 되어 보기가 화면 밖으로 밀린다.
-	 * 그래서 무대와 문제를 좌우로 나눠 세로 높이를 절반 가까이 줄인다.
+	 * 넓은 화면은 가로가 남고 세로가 모자란다 (1280×800).
+	 * 무대와 봉인을 좌우로 나눠 세로를 아낀다.
 	 */
 	@media (min-width: 900px) {
 		.stage-grid {
@@ -421,11 +713,7 @@
 
 		.stage {
 			grid-area: stage;
-		}
-
-		/* 무대가 커진 만큼 이름·체력 숫자도 같이 키운다 */
-		.fighter-label {
-			font-size: 1rem;
+			align-self: center;
 		}
 
 		.play {
@@ -437,55 +725,12 @@
 			grid-area: play;
 		}
 
-		.result-bar {
+		.status-bar {
 			grid-area: bar;
 		}
-	}
 
-	.stage {
-		display: grid;
-		align-content: center;
-		background: var(--sky);
-		min-height: 200px;
-	}
-
-	@media (min-height: 780px) {
-		.stage {
-			min-height: 260px;
+		.seal-char {
+			font-size: 3.5rem;
 		}
-	}
-
-	.option {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		/* 아이 손가락 기준 하한선(48px)보다는 넉넉하게 유지한다 */
-		min-height: 3.25rem;
-		border: 3px solid var(--color-magic-200);
-		border-radius: var(--radius-button);
-		background: #fff;
-		color: var(--color-ink-900);
-		cursor: pointer;
-		transition:
-			transform 0.15s var(--ease-pop),
-			border-color 0.15s ease,
-			background 0.15s ease;
-	}
-	.option:hover:not(:disabled) {
-		transform: translateY(-2px);
-		border-color: var(--color-magic-400);
-	}
-	.option:disabled {
-		cursor: default;
-	}
-	.option.correct {
-		border-color: var(--color-mint-500);
-		background: var(--color-mint-100);
-	}
-	.option.wrong {
-		border-color: var(--color-ember-500);
-		background: var(--color-ember-100);
-		animation: var(--animate-shake);
 	}
 </style>

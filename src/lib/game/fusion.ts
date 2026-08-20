@@ -15,7 +15,7 @@
  */
 
 /** 합쳐지는 방식. 아이에게 규칙을 설명할 때 쓴다. */
-export type FusionKind = '회의' | '형성' | '지사';
+export type FusionKind = '회의' | '형성' | '지사' | '모양';
 
 export interface FusionRecipe {
 	/** 재료. 순서는 뜻을 설명하기 좋은 차례로 적되, 맞출 때는 순서를 따지지 않는다. */
@@ -29,10 +29,26 @@ export interface FusionRecipe {
 	story: string;
 	kind: FusionKind;
 	/**
-	 * 소리를 담당하는 부품 (형성자만).
-	 * 靑이 들어간 글자는 전부 '청' 으로 읽힌다 — 아이가 스스로 규칙을 발견하게 하는 장치다.
+	 * 소리를 담당하는 부품.
+	 *
+	 * **한국 한자음이 실제로 같을 때만 적는다.** 예전에 生→星, 寺→時, 子→李, 靑→情 처럼
+	 * 음이 다른데도 "소리를 맡아요" 라고 가르치고 있었다. 중국어에서는 형성이지만
+	 * 우리 음으로는 어긋난 것들이라, 아이에게는 반례를 규칙이라고 알려 주는 셈이었다.
+	 * 이제 `reading(soundPart) === reading(result)` 를 테스트가 강제한다.
 	 */
 	soundPart?: string;
+
+	/**
+	 * 결과 글자 안에서 **모양이 바뀌어 들어가는** 부품.
+	 *
+	 * 人은 休 안에서 亻, 水는 淸 안에서 氵, 心은 情 안에서 忄이 된다.
+	 * 이걸 표시해 두지 않으면 "부품이 글자 안에 그대로 들어 있다" 는 이 게임의 약속이
+	 * 24개 중 8개에서 말없이 깨진다. 아이는 淸 안에서 水를 찾다가 못 찾고 혼란스러워한다.
+	 *
+	 *  - 공방: 합체 연출에서 "몸을 바꿔서 들어가요" 라고 알려 준다
+	 *  - 대결: 봉인 후보에서 뺀다. 대결은 어려운 걸 가르치는 자리가 아니다
+	 */
+	variantParts?: string[];
 }
 
 /**
@@ -56,15 +72,13 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['日', '生'],
 		result: '星',
 		story: '해처럼 빛나는 것이 밤하늘에 돋아나면 별이에요.',
-		kind: '형성',
-		soundPart: '生'
+		kind: '형성'
 	},
 	{
 		parts: ['日', '寺'],
 		result: '時',
 		story: '절에서 해를 보고 때를 알렸어요.',
-		kind: '형성',
-		soundPart: '寺'
+		kind: '형성'
 	},
 
 	// ── 나무 무리 ────────────────────────────────────────────────
@@ -73,7 +87,8 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['人', '木'],
 		result: '休',
 		story: '사람이 나무에 기대어 쉬고 있어요.',
-		kind: '회의'
+		kind: '회의',
+		variantParts: ['人']
 	},
 	{
 		parts: ['木', '目'],
@@ -92,8 +107,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['木', '子'],
 		result: '李',
 		story: '나무에 열매가 아이처럼 달렸어요. 오얏나무예요.',
-		kind: '형성',
-		soundPart: '子'
+		kind: '형성'
 	},
 	{
 		parts: ['木', '一'],
@@ -113,19 +127,22 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['人', '言'],
 		result: '信',
 		story: '사람이 한 말은 지켜야 해요. 그래서 믿음이에요.',
-		kind: '회의'
+		kind: '회의',
+		variantParts: ['人']
 	},
 	{
 		parts: ['人', '立'],
 		result: '位',
 		story: '사람이 서 있는 그곳이 자리예요.',
-		kind: '회의'
+		kind: '회의',
+		variantParts: ['人']
 	},
 	{
 		parts: ['人', '二'],
 		result: '仁',
 		story: '사람과 사람 사이에 오가는 따뜻한 마음이에요.',
-		kind: '회의'
+		kind: '회의',
+		variantParts: ['人']
 	},
 	{
 		parts: ['一', '大'],
@@ -162,14 +179,15 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '淸',
 		story: '푸른빛이 도는 물은 아주 맑아요.',
 		kind: '형성',
-		soundPart: '靑'
+		soundPart: '靑',
+		variantParts: ['水']
 	},
 	{
 		parts: ['心', '靑'],
 		result: '情',
 		story: '마음이 푸르게 물들면 정이 들어요.',
 		kind: '형성',
-		soundPart: '靑'
+		variantParts: ['心']
 	},
 	{
 		parts: ['言', '靑'],
@@ -184,7 +202,8 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['白', '水'],
 		result: '泉',
 		story: '바위 틈에서 하얀 물이 솟아나요. 샘이에요.',
-		kind: '회의'
+		kind: '모양',
+		variantParts: ['水']
 	},
 	{
 		parts: ['口', '鳥'],
@@ -202,7 +221,8 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		parts: ['手', '目'],
 		result: '看',
 		story: '눈 위에 손을 얹고 멀리 바라봐요.',
-		kind: '회의'
+		kind: '회의',
+		variantParts: ['手']
 	}
 ];
 
@@ -245,3 +265,17 @@ export function allResultChars(): string[] {
 export function recipeFor(result: string): FusionRecipe | null {
 	return FUSION_RECIPES.find((r) => r.result === result) ?? null;
 }
+
+/** 모양이 바뀌는 부품이 있는 조합인가 */
+export function hasVariant(recipe: FusionRecipe): boolean {
+	return (recipe.variantParts?.length ?? 0) > 0;
+}
+
+/**
+ * 대결의 봉인으로 쓸 수 있는 조합.
+ *
+ * 모양이 바뀌는 부품이 든 것은 뺀다. 淸 을 보여 주고 "부품 두 개를 찾아봐" 라고 하면
+ * 아이는 淸 안에서 水 를 찾다가 못 찾는다. 그건 어려운 게 아니라 **말이 안 되는** 것이다.
+ * 변형은 공방에서 이야기와 함께 배우고, 대결에서는 약속이 그대로 지켜지는 것만 낸다.
+ */
+export const SEAL_RECIPES: FusionRecipe[] = FUSION_RECIPES.filter((r) => !hasVariant(r));

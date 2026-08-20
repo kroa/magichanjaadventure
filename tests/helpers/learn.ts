@@ -28,6 +28,22 @@ export async function learnHanja(page: Page, count: number): Promise<void> {
 	await dismissLevelUp(page);
 }
 
+/**
+ * 레벨업 오버레이가 **나타날 수도 있는** 상황에서 잠깐 기다렸다가 닫는다.
+ *
+ * 보상이 서버 응답 뒤에 도착하므로, 곧바로 확인하면 아직 안 떠 있어서 그냥 지나친다.
+ * 그리고 그 직후에 떠올라 다음 클릭을 가로챈다 — 원인 불명의 타임아웃으로 보인다.
+ */
+export async function settleLevelUp(page: Page, wait = 4000): Promise<void> {
+	const overlay = page.getByTestId('levelup-overlay');
+	try {
+		await overlay.waitFor({ state: 'visible', timeout: wait });
+	} catch {
+		return; // 레벨이 안 올랐다. 정상이다
+	}
+	await dismissLevelUp(page);
+}
+
 /** 레벨업 오버레이가 떠 있으면 연출이 끝나기를 기다렸다가 닫는다. */
 export async function dismissLevelUp(page: Page): Promise<void> {
 	const overlay = page.getByTestId('levelup-overlay');

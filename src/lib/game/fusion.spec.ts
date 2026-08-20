@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
 	FUSION_RECIPES,
+	SEAL_RECIPES,
+	hasVariant,
 	allPartChars,
 	allResultChars,
 	fuse,
@@ -19,6 +21,7 @@ import { HANJA_SEED } from '../../../database/seed/hanja';
  */
 
 const CHARS = new Set(HANJA_SEED.map((h) => h.character));
+const READING = new Map(HANJA_SEED.map((h) => [h.character, h.reading]));
 
 describe('조합표', () => {
 	it('부품이 전부 우리 한자 1000자 안에 있다', () => {
@@ -73,20 +76,54 @@ describe('조합표', () => {
 		}
 	});
 
-	it('형성자는 소리 부품을 밝히고, 그 부품이 실제 재료에 들어 있다', () => {
+	it('소리 부품은 재료 안에 있고, 한국 한자음이 실제로 같다', () => {
+		/*
+		 * 예전에 生(생)→星(성), 寺(사)→時(시), 子(자)→李(리), 靑(청)→情(정) 에
+		 * "소리를 맡아요" 를 붙여 두었다. 중국어로는 형성이지만 우리 음으로는 어긋난 것들이라,
+		 * 아이에게 **반례를 규칙이라고** 가르치고 있었다. 이제 음이 같을 때만 허용한다.
+		 */
 		for (const recipe of FUSION_RECIPES) {
-			if (recipe.kind !== '형성') {
-				expect(
-					recipe.soundPart,
-					`${recipe.result} 는 형성자가 아닌데 소리 부품이 있다`
-				).toBeUndefined();
-				continue;
-			}
-			expect(recipe.soundPart, `${recipe.result} 의 소리 부품이 없다`).toBeTruthy();
+			if (!recipe.soundPart) continue;
 			expect(recipe.parts, `${recipe.result} 의 소리 부품이 재료에 없다`).toContain(
 				recipe.soundPart
 			);
+
+			const partReading = READING.get(recipe.soundPart);
+			const resultReading = READING.get(recipe.result);
+			expect(
+				partReading,
+				`${recipe.result}: ${recipe.soundPart}(${partReading}) 와 음이 다른데 소리 부품이라고 하고 있다`
+			).toBe(resultReading);
 		}
+	});
+
+	it('모양이 바뀌는 부품은 반드시 재료 안에 있다', () => {
+		for (const recipe of FUSION_RECIPES) {
+			for (const variant of recipe.variantParts ?? []) {
+				expect(recipe.parts, `${recipe.result} 의 변형 부품 ${variant} 이 재료에 없다`).toContain(
+					variant
+				);
+			}
+		}
+	});
+
+	it('부수가 모양을 바꾸는 조합은 전부 표시되어 있다', () => {
+		// 이 표시를 지우면 아이가 淸 안에서 水 를 찾다가 막힌다
+		const KNOWN_VARIANTS = ['休', '信', '位', '仁', '淸', '情', '看', '泉'];
+		for (const result of KNOWN_VARIANTS) {
+			const recipe = recipeFor(result);
+			expect(recipe, `${result} 조합이 사라졌다`).toBeTruthy();
+			expect(hasVariant(recipe!), `${result} 는 부수가 모양을 바꾸는데 표시가 없다`).toBe(true);
+		}
+	});
+
+	it('봉인 후보에는 모양이 바뀌는 조합이 없다', () => {
+		// 대결은 어려운 것을 가르치는 자리가 아니다
+		for (const recipe of SEAL_RECIPES) {
+			expect(hasVariant(recipe), `${recipe.result} 가 봉인 후보에 들어 있다`).toBe(false);
+		}
+		// 그래도 충분히 남아야 대결이 성립한다
+		expect(SEAL_RECIPES.length).toBeGreaterThanOrEqual(12);
 	});
 });
 

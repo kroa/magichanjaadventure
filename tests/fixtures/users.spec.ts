@@ -10,7 +10,24 @@ import { makeTestUser, NICKNAME_MAX, TEST_PASSWORD } from './users';
  * 실제로 'shop' 과 'shopapi' 가 같은 이름으로 잘려서 그 일을 겪었다.
  */
 describe('makeTestUser', () => {
-	const LABELS = ['shop', 'shopapi', 'start', 'quiz', 'quizag', 'battle', 'again', 'exit', 'qexit'];
+	const LABELS = [
+		'shop',
+		'shopapi',
+		'start',
+		'quiz',
+		'quizag',
+		'battle',
+		'again',
+		'exit',
+		'qexit',
+		'btl',
+		'btlwin',
+		'btlfail',
+		'btlnolose',
+		'btlstar',
+		'btldex',
+		'btlapi'
+	];
 	const SEEDS = ['desktop0', 'desktop1', 'tablet0', 'tablet1', 'mobile0', 'mobile1'];
 
 	it('닉네임 길이 제한을 넘지 않는다', () => {

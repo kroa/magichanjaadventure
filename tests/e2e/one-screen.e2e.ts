@@ -36,9 +36,10 @@ async function readyToPlay(page: Page, label: string, seed: string) {
 	}
 }
 
-for (const { path, label } of [
-	{ path: '/quiz', label: '퀴즈' },
-	{ path: '/battle', label: '대결' }
+for (const { path, label, tile } of [
+	{ path: '/quiz', label: '퀴즈', tile: 'button.option' },
+	// 대결은 4지선다가 아니라 부품 서랍이다
+	{ path: '/battle', label: '대결', tile: 'button.part' }
 ]) {
 	test(`${label} 화면은 스크롤 없이 모든 보기를 보여준다`, async ({ page }, testInfo) => {
 		await readyToPlay(page, `os${label}`, `${testInfo.project.name}${testInfo.workerIndex}`);
@@ -50,7 +51,7 @@ for (const { path, label } of [
 		expect(viewport).not.toBeNull();
 		const height = viewport!.height;
 
-		const options = page.locator('button.option');
+		const options = page.locator(tile);
 		await expect(options.first()).toBeVisible();
 		const count = await options.count();
 		expect(count).toBeGreaterThan(1);
@@ -63,24 +64,29 @@ for (const { path, label } of [
 			`${label}: 마지막 보기가 화면(${height}px) 밖에 있다 — 스크롤해야 보인다`
 		).toBeLessThanOrEqual(height);
 	});
-
-	test(`${label}에서 답을 고르면 다음 버튼이 바로 화면에 있다`, async ({ page }, testInfo) => {
-		await readyToPlay(page, `nx${label}`, `${testInfo.project.name}${testInfo.workerIndex}`);
-
-		await gotoReady(page, path);
-		await settleAnimations(page);
-
-		await page.locator('button.option').first().click();
-
-		const next = page.getByRole('button', { name: /다음|결과 보기/ });
-		await expect(next).toBeVisible();
-
-		const viewport = page.viewportSize()!;
-		const box = await next.boundingBox();
-		expect(box).not.toBeNull();
-		expect(
-			Math.round(box!.y + box!.height),
-			`${label}: 다음 버튼을 보려면 스크롤해야 한다`
-		).toBeLessThanOrEqual(viewport.height);
-	});
 }
+
+/*
+ * '다음' 버튼은 퀴즈에만 있다.
+ * 대결은 부품 두 개를 놓는 순간 바로 판정하므로 누를 버튼이 없다 —
+ * 아이가 한 번 더 눌러야 하는 단계를 없앤 것이 의도다.
+ */
+test('퀴즈에서 답을 고르면 다음 버튼이 바로 화면에 있다', async ({ page }, testInfo) => {
+	await readyToPlay(page, 'nx퀴즈', `${testInfo.project.name}${testInfo.workerIndex}`);
+
+	await gotoReady(page, '/quiz');
+	await settleAnimations(page);
+
+	await page.locator('button.option').first().click();
+
+	const next = page.getByRole('button', { name: /다음|결과 보기/ });
+	await expect(next).toBeVisible();
+
+	const viewport = page.viewportSize()!;
+	const box = await next.boundingBox();
+	expect(box).not.toBeNull();
+	expect(
+		Math.round(box!.y + box!.height),
+		`퀴즈: 다음 버튼을 보려면 스크롤해야 한다`
+	).toBeLessThanOrEqual(viewport.height);
+});
