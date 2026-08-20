@@ -18,6 +18,13 @@
 	/** 대시보드가 아니라 "오늘 뭐 하지?"를 묻는 화면이다. */
 	const ACTIONS = [
 		{ href: '/learn', icon: '✨', label: '한자 배우기', desc: '새 마법을 익혀요', tone: 'magic' },
+		{
+			href: '/fusion',
+			icon: '🧪',
+			label: '합체 공방',
+			desc: '부품을 붙여 새 한자를 만들어요',
+			tone: 'candy'
+		},
 		{ href: '/quiz', icon: '⚔️', label: '한자 퀴즈', desc: '배운 걸 겨뤄요', tone: 'gold' },
 		{ href: '/collection', icon: '📖', label: '한자 도감', desc: '모은 걸 구경해요', tone: 'mint' },
 		{ href: '/battle', icon: '👹', label: '한자 대결', desc: '보스를 물리쳐요', tone: 'candy' },

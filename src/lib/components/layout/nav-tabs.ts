@@ -14,6 +14,7 @@ export interface NavTab {
 export const NAV_TABS: NavTab[] = [
 	{ href: '/', label: '모험', icon: '🗺️' },
 	{ href: '/learn', label: '배우기', icon: '✨' },
+	{ href: '/fusion', label: '합체', icon: '🧪' },
 	{ href: '/quiz', label: '퀴즈', icon: '⚔️' },
 	{ href: '/collection', label: '도감', icon: '📖' },
 	{ href: '/shop', label: '상점', icon: '💎' }

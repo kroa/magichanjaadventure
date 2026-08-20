@@ -36,7 +36,9 @@
 
 	ul {
 		display: grid;
-		grid-template-columns: repeat(5, 1fr);
+		/* 칸 수를 고정하지 않는다 — 탭이 늘거나 줄어도 CSS 를 같이 고칠 필요가 없다 */
+		grid-auto-flow: column;
+		grid-auto-columns: 1fr;
 		margin: 0;
 		padding: 0;
 		list-style: none;
@@ -65,7 +67,8 @@
 	}
 
 	.tab .label {
-		font-size: 0.7rem;
+		font-size: 0.66rem;
+		white-space: nowrap;
 	}
 
 	.tab:hover .icon,
