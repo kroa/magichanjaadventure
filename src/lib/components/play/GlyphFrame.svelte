@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { FusionLayout } from '$lib/game/fusion';
+	import PictoGlyph from './PictoGlyph.svelte';
+	import { fadeStage } from '$lib/art/pictographs';
 
 	interface Props {
 		/** 부품이 놓이는 방식 */
@@ -13,9 +15,19 @@
 		size?: number;
 		/** 자리 참조를 밖으로 넘긴다 (합쳐지는 연출에 쓴다) */
 		slots?: (HTMLElement | null)[];
+		/** 각 자리에 놓인 부품의 숙련도 — 그림으로 그릴지 글자로 그릴지 가른다 */
+		mastery?: Record<string, number>;
 	}
 
-	let { layout, values, onRemove, shake = 0, size = 132, slots = $bindable([]) }: Props = $props();
+	let {
+		layout,
+		values,
+		onRemove,
+		shake = 0,
+		size = 132,
+		slots = $bindable([]),
+		mastery = {}
+	}: Props = $props();
 </script>
 
 <!--
@@ -40,13 +52,17 @@
 		{#if value}
 			<button
 				type="button"
-				class="cell filled hanja"
+				class="cell filled"
 				bind:this={slots[i]}
 				data-cell={i}
 				onclick={() => onRemove?.(i)}
 				aria-label="{value} 빼기"
 			>
-				{value}
+				<PictoGlyph
+					character={value}
+					stage={fadeStage(mastery[value])}
+					size={size * (layout === 'enclose' && i === 1 ? 0.3 : 0.4)}
+				/>
 			</button>
 		{:else}
 			<span class="cell empty" data-cell={i} aria-hidden="true"></span>

@@ -21,6 +21,8 @@
 	import { draggable } from '$lib/actions/draggable';
 	import { mergeInto } from '$lib/anim/merge';
 	import GlyphFrame from '$lib/components/play/GlyphFrame.svelte';
+	import PictoGlyph from '$lib/components/play/PictoGlyph.svelte';
+	import { fadeStage } from '$lib/art/pictographs';
 	import { MAX_HINT, STAR_LABELS } from '$lib/game/seals';
 	import type { Mood } from '$lib/types/ui';
 	import type { RewardDto } from '$lib/types/api';
@@ -59,6 +61,13 @@
 	let outcome = $state<'fighting' | 'win'>('fighting');
 	let settled = $state(false);
 	let stars = $state(0);
+	/** 방금 깬 봉인 — 뜻·음·이야기를 여기서 처음 보여 준다 */
+	let justBroke = $state<{
+		character: string;
+		reading: string;
+		meaning: string;
+		story: string;
+	} | null>(null);
 	let restarting = $state(false);
 
 	let attackTrigger = $state(0);
@@ -80,6 +89,10 @@
 	const answerParts = $derived(answerRecipe?.parts ?? []);
 	/** 칸이 이 글자의 실제 모양으로 나뉜다 — 그 자체가 가장 큰 단서다 */
 	const frameLayout = $derived(answerRecipe?.layout ?? 'lr');
+	/** 부품별 숙련도 — 칸 안의 조각도 그림으로 그릴지 여기서 정한다 */
+	const masteryMap = $derived(
+		Object.fromEntries(data.tray.map((p) => [p.character, p.mastery])) as Record<string, number>
+	);
 
 	/** 힌트로 빛나야 하는 부품 */
 	const glowing = $derived(
@@ -186,6 +199,13 @@
 			sound.play('discover');
 			seals = seals.map((s, i) => (i === sealIndex ? { ...s, broken: true } : s));
 			slots = [];
+			// 글자가 무엇이었는지는 **지금** 알려 준다. 만든 것에 대한 보상이다
+			justBroke = {
+				character: payload.character!,
+				reading: payload.reading!,
+				meaning: payload.meaning!,
+				story: payload.story!
+			};
 
 			const remaining = seals.filter((s) => !s.broken);
 			if (remaining.length === 0) {
@@ -272,6 +292,7 @@
 			slots = [];
 			hint = 0;
 			attempts = 0;
+			justBroke = null;
 			madeThisBattle = [];
 			discoveredNew = false;
 			outcome = 'fighting';
@@ -392,23 +413,46 @@
 				<!-- 봉인 카드: 목표를 숨기지 않는다. 이야기도 처음부터 보여 준다 -->
 				<section class="seal-card relative isolate" class:resonating data-testid="seal-card">
 					<Sparkle count={4} />
+					<!--
+						**글자만 두고 설명을 뺐다.**
+						예전에는 목표 위에 뜻·음·이야기가 전부 적혀 있었다. 답이 인쇄되어 있으면
+						아이가 하는 일은 "적힌 답의 재료 찾기" 가 되고, 그건 다시 시험지다.
+						뜻·음·이야기는 봉인을 깬 **뒤에** 보상으로 나온다.
+						막히면 ( ? ) 를 누르면 된다 — 공짜다.
+					-->
 					<div class="seal-head">
 						<span class="hanja seal-char">{seal.character}</span>
-						<span class="font-display text-base text-ink-900">{seal.meaning} {seal.reading}</span>
 						<button type="button" class="help" onclick={askHint} aria-label="도와줘">?</button>
 					</div>
-					<p class="seal-story">{seal.story}</p>
 
-					<div class="frame-wrap" bind:this={frameEl}>
-						<GlyphFrame
-							layout={frameLayout}
-							values={[slots[0] ?? null, slots[1] ?? null]}
-							onRemove={removeAt}
-							{shake}
-							size={116}
-							bind:slots={slotEls}
-						/>
-					</div>
+					{#if justBroke}
+						<!--
+							**여기가 이 게임의 배움이 일어나는 순간이다.**
+							아이는 방금 해 그림과 달 그림을 붙였고, 그것이 明이며 "밝을 명" 이라는 것을
+							지금 처음 안다. 먼저 알려 주고 맞히게 하는 것과 순서가 반대다.
+						-->
+						<div class="broke" data-testid="seal-broke">
+							<span class="hanja broke-char">{justBroke.character}</span>
+							<span class="font-display text-lg text-ink-900">
+								{justBroke.meaning}
+								{justBroke.reading}
+							</span>
+							<p class="broke-story">{justBroke.story}</p>
+							<Button variant="magic" size="md" onclick={() => (justBroke = null)}>좋아!</Button>
+						</div>
+					{:else}
+						<div class="frame-wrap" bind:this={frameEl}>
+							<GlyphFrame
+								layout={frameLayout}
+								values={[slots[0] ?? null, slots[1] ?? null]}
+								onRemove={removeAt}
+								{shake}
+								size={116}
+								mastery={masteryMap}
+								bind:slots={slotEls}
+							/>
+						</div>
+					{/if}
 				</section>
 
 				<!-- 부품 서랍 -->
@@ -418,6 +462,7 @@
 							<button
 								type="button"
 								class="part"
+								data-part={part.character}
 								data-glow={glowing.includes(part.character) || undefined}
 								onclick={() => place(part.character)}
 								use:draggable={{
@@ -429,11 +474,23 @@
 								}}
 								disabled={busy || slots.length >= 2}
 							>
-								<span class="hanja text-xl leading-none">{part.character}</span>
-								<span class="font-display text-[0.6rem] text-ink-500">
-									{part.meaning}
-									{part.reading}
-								</span>
+								<!--
+									글자가 아니라 **그림**으로 보여 준다. 뜻·음 글씨도 여기서 뺐다.
+									아이가 처음 만나는 부품에 `날 일` 이라고 써 붙이면 그건 교재지 게임이 아니다.
+									익숙해지면(mastery) 그림이 조용히 글자로 바뀐다.
+								-->
+								<PictoGlyph
+									character={part.character}
+									stage={fadeStage(part.mastery)}
+									size={34}
+									label="{part.meaning} {part.reading}"
+								/>
+								{#if fadeStage(part.mastery) === 2}
+									<span class="font-display text-[0.6rem] text-ink-500">
+										{part.meaning}
+										{part.reading}
+									</span>
+								{/if}
 							</button>
 						{/each}
 					</div>
@@ -528,10 +585,17 @@
 			var(--shadow-card);
 	}
 
+	/* 목표 글자를 가운데 위에 두고 바로 아래에 칸을 놓는다 — "이걸 만들어라" 가 한눈에 읽힌다 */
 	.seal-head {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		position: relative;
+		display: grid;
+		place-items: center;
+	}
+
+	.help {
+		position: absolute;
+		top: 0;
+		right: 0;
 	}
 
 	.seal-char {
@@ -542,7 +606,6 @@
 
 	.help {
 		display: grid;
-		margin-left: auto;
 		place-items: center;
 		/* 아이 손가락 기준 하한선 */
 		width: var(--tap-min);
@@ -561,11 +624,25 @@
 	.frame-wrap {
 		display: flex;
 		justify-content: center;
-		margin-top: 0.5rem;
+		margin-top: 0.35rem;
 	}
 
-	.seal-story {
-		margin-top: 0.25rem;
+	.broke {
+		display: grid;
+		justify-items: center;
+		gap: 0.3rem;
+		padding: 0.4rem 0 0.2rem;
+		text-align: center;
+	}
+
+	.broke-char {
+		font-size: 3.5rem;
+		line-height: 1;
+		color: var(--color-magic-800);
+	}
+
+	.broke-story {
+		max-width: 20rem;
 		color: var(--color-ink-700);
 		font-size: 0.8rem;
 	}

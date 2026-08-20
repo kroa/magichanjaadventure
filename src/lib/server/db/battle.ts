@@ -54,10 +54,40 @@ export interface BattleSeal {
 	broken: boolean;
 }
 
+export interface TrayPart {
+	character: string;
+	reading: string;
+	meaning: string;
+	/**
+	 * 아이가 이 부품을 얼마나 겪었는가.
+	 * 그림으로 보여 줄지 글자로 보여 줄지가 여기서 갈린다 — 0 이면 아직 그림 단계다.
+	 */
+	mastery: number;
+}
+
 export interface BattlePlan {
 	seals: BattleSeal[];
 	/** 부품 서랍. 봉인이 요구하는 부품이 **반드시** 전부 들어 있다 */
-	tray: { character: string; reading: string; meaning: string }[];
+	tray: TrayPart[];
+}
+
+/** 이 아이가 각 한자를 얼마나 익혔는지 (없으면 0 = 처음 보는 것) */
+async function masteryOf(
+	db: D1Database,
+	userId: string,
+	chars: string[]
+): Promise<Map<string, number>> {
+	if (chars.length === 0) return new Map();
+	const holes = chars.map(() => '?').join(',');
+	const { results } = await db
+		.prepare(
+			`SELECT h.character AS character, p.mastery AS mastery
+			 FROM user_hanja_progress p JOIN hanjas h ON h.id = p.hanja_id
+			 WHERE p.user_id = ? AND h.character IN (${holes})`
+		)
+		.bind(userId, ...chars)
+		.all<{ character: string; mastery: number }>();
+	return new Map(results.map((r) => [r.character, r.mastery ?? 0]));
 }
 
 /** 한자 여러 자를 한 번에 조회한다 */
@@ -101,6 +131,7 @@ export async function planFor(
 	const trayChars = trayFrom(seedOf(userId, sessionKey), recipes);
 
 	const info = await lookup(db, [...new Set([...recipes.map((r) => r.result), ...trayChars])]);
+	const mastery = await masteryOf(db, userId, trayChars);
 
 	return {
 		seals: recipes.map((recipe, index) => {
@@ -119,7 +150,8 @@ export async function planFor(
 			return {
 				character,
 				reading: hanja?.reading ?? '',
-				meaning: hanja?.meaning ?? ''
+				meaning: hanja?.meaning ?? '',
+				mastery: mastery.get(character) ?? 0
 			};
 		})
 	};

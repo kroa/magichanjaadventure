@@ -28,6 +28,8 @@ export interface WorkshopPart {
 	reading: string;
 	meaning: string;
 	hanjaId: number;
+	/** 그림으로 보여 줄지 글자로 보여 줄지를 가르는 값 */
+	mastery: number;
 }
 
 export interface WorkshopState {
@@ -51,14 +53,15 @@ export async function loadWorkshop(db: D1Database, userId: string): Promise<Work
 
 	const { results } = await db
 		.prepare(
-			`SELECT h.character AS character
+			`SELECT h.character AS character, p.mastery AS mastery
 			 FROM user_hanja_progress p JOIN hanjas h ON h.id = p.hanja_id
 			 WHERE p.user_id = ?`
 		)
 		.bind(userId)
-		.all<{ character: string }>();
+		.all<{ character: string; mastery: number }>();
 
 	const learned = new Set(results.map((r) => r.character));
+	const masteryOf = new Map(results.map((r) => [r.character, r.mastery ?? 0]));
 	const ownedPartChars = partChars.filter((c) => learned.has(c));
 	const byChar = await charsToHanja(db, ownedPartChars);
 
@@ -70,7 +73,8 @@ export async function loadWorkshop(db: D1Database, userId: string): Promise<Work
 				character: h.character,
 				reading: h.reading,
 				meaning: h.meaning,
-				hanjaId: h.id
+				hanjaId: h.id,
+				mastery: masteryOf.get(h.character) ?? 0
 			})),
 		lockedPartCount: partChars.length - ownedPartChars.length,
 		discovered: resultChars.filter((c) => learned.has(c))

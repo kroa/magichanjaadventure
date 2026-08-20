@@ -20,6 +20,13 @@ export async function breakAllSeals(page: Page, maxSeals = 6): Promise<void> {
 		if (state === 'win') break;
 		if (state === 'gone') break;
 
+		/*
+		 * 봉인을 깨면 "무슨 글자였는지" 를 보여 주는 화면이 뜬다.
+		 * **합체 연출이 끝난 뒤에** 뜨므로 waitForTurn 다음에 확인해야 한다.
+		 * 앞에서 보면 아직 안 떠 있어 그냥 지나치고, 그 뒤에 떠올라 칸을 가린다.
+		 */
+		await dismissReveal(page);
+
 		const help = page.getByRole('button', { name: '도와줘' });
 		// 사다리 꼭대기까지 올린다 (정답 부품이 빛난다)
 		await help.click();
@@ -31,11 +38,17 @@ export async function breakAllSeals(page: Page, maxSeals = 6): Promise<void> {
 		 * 서랍에 그 타일이 하나뿐이라 하나만 빛나고, 그걸 두 번 눌러야 한다.
 		 */
 		await expect(glowing, '도움을 다 써도 부품이 빛나지 않는다').not.toHaveCount(0);
-		const chars = (await glowing.allTextContents()).map((raw) => raw.trim().charAt(0));
+		/*
+		 * **글자로 찾지 않는다.** 타일에는 이제 글자가 없다 — 그림만 있다.
+		 * 그게 이 게임의 요점이므로, 테스트는 data-part 속성으로 짚는다.
+		 */
+		const chars = (
+			await glowing.evaluateAll((els) => els.map((el) => el.getAttribute('data-part') ?? ''))
+		).filter(Boolean);
 
 		for (let slot = 0; slot < 2; slot++) {
 			const ch = chars[Math.min(slot, chars.length - 1)];
-			const tile = page.locator('button.part').filter({ hasText: ch }).first();
+			const tile = page.locator(`button.part[data-part="${ch}"]`).first();
 			await expect(tile).toBeEnabled({ timeout: 15_000 });
 			await tile.click();
 			/*
@@ -48,6 +61,7 @@ export async function breakAllSeals(page: Page, maxSeals = 6): Promise<void> {
 		}
 	}
 
+	await dismissReveal(page);
 	await expect(outcome).toBeVisible({ timeout: 20_000 });
 
 	/*
@@ -58,6 +72,14 @@ export async function breakAllSeals(page: Page, maxSeals = 6): Promise<void> {
 
 	// 승리 보상으로 레벨이 오르면 레벨업 연출이 결과 화면 전체를 덮는다
 	await settleLevelUp(page);
+}
+
+/** 봉인을 깬 뒤 나오는 "이 글자였어요" 화면을 넘긴다 */
+async function dismissReveal(page: Page): Promise<void> {
+	const broke = page.getByTestId('seal-broke');
+	if (!(await broke.isVisible().catch(() => false))) return;
+	await broke.getByRole('button', { name: '좋아!' }).click();
+	await expect(broke).toBeHidden({ timeout: 10_000 });
 }
 
 /**

@@ -37,7 +37,8 @@ async function signUpAndLearn(page: Page, label: string, seed: string, count: nu
 
 /** 부품 서랍에서 한자 하나를 골라 합체판에 올린다. */
 async function place(page: Page, character: string) {
-	await page.locator('button.part').filter({ hasText: character }).first().click();
+	// 타일에는 글자가 없다(그림뿐). data-part 로 짚는다
+	await page.locator(`button.part[data-part="${character}"]`).first().click();
 }
 
 test('부품 두 개를 붙이면 새 한자가 만들어진다', async ({ page }, testInfo) => {

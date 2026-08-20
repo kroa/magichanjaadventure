@@ -11,6 +11,8 @@
 	import { sound } from '$lib/sound/index.svelte';
 	import { draggable } from '$lib/actions/draggable';
 	import GlyphFrame from '$lib/components/play/GlyphFrame.svelte';
+	import PictoGlyph from '$lib/components/play/PictoGlyph.svelte';
+	import { fadeStage } from '$lib/art/pictographs';
 	import { mergeInto, popIn } from '$lib/anim/merge';
 	import { FUSION_RECIPES, allResultChars, fuse, recipeFor } from '$lib/game/fusion';
 	import type { RewardDto } from '$lib/types/api';
@@ -53,6 +55,10 @@
 	 * 아이가 "어, 칸이 바뀌었네?" 하고 알아채는 것 자체가 단서가 된다.
 	 */
 	const frameLayout = $derived(fuse(slots)?.layout ?? 'lr');
+	/** 부품별 숙련도 — 칸 안의 조각도 그림으로 그릴지 여기서 정한다 */
+	const masteryMap = $derived(
+		Object.fromEntries(data.parts.map((p) => [p.character, p.mastery])) as Record<string, number>
+	);
 
 	/** 결과에서 조합법을 되찾아 "무엇과 무엇이 합쳐졌는지" 를 보여 준다 */
 	const madeRecipe = $derived(made ? recipeFor(made.character) : null);
@@ -168,6 +174,7 @@
 						values={Array.from({ length: SLOTS }, (_, i) => slots[i] ?? null)}
 						onRemove={removeAt}
 						{shake}
+						mastery={masteryMap}
 						bind:slots={slotEls}
 					/>
 
@@ -264,6 +271,7 @@
 						<button
 							type="button"
 							class="part"
+							data-part={part.character}
 							onclick={() => place(part.character)}
 							use:draggable={{
 								dropSelector: '.cell, .frame',
@@ -274,11 +282,23 @@
 							}}
 							disabled={busy || !!made || slots.length >= SLOTS}
 						>
-							<span class="hanja text-2xl leading-none">{part.character}</span>
-							<span class="font-display text-[0.65rem] text-ink-500">
-								{part.meaning}
-								{part.reading}
-							</span>
+							<!--
+									글자가 아니라 **그림**으로 보여 준다. 뜻·음 글씨도 여기서 뺐다.
+									아이가 처음 만나는 부품에 `날 일` 이라고 써 붙이면 그건 교재지 게임이 아니다.
+									익숙해지면(mastery) 그림이 조용히 글자로 바뀐다.
+								-->
+							<PictoGlyph
+								character={part.character}
+								stage={fadeStage(part.mastery)}
+								size={38}
+								label="{part.meaning} {part.reading}"
+							/>
+							{#if fadeStage(part.mastery) === 2}
+								<span class="font-display text-[0.6rem] text-ink-500">
+									{part.meaning}
+									{part.reading}
+								</span>
+							{/if}
 						</button>
 					{/each}
 				</div>
