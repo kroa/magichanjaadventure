@@ -329,3 +329,21 @@ export function hasVariant(recipe: FusionRecipe): boolean {
  * 변형은 공방에서 이야기와 함께 배우고, 대결에서는 약속이 그대로 지켜지는 것만 낸다.
  */
 export const SEAL_RECIPES: FusionRecipe[] = FUSION_RECIPES.filter((r) => !hasVariant(r));
+
+/**
+ * 이 조각들 중에서 **붙는 한 쌍**을 찾는다.
+ *
+ * 목표를 화면에 안 보여 주는 대신 도움 버튼이 이 쌍을 빛낸다.
+ * 정답을 알려 주는 것이 아니라 "이 둘은 친구야" 를 알려 주는 것이라,
+ * 아이는 여전히 자기 손으로 붙여야 한다. 마지막 손가락은 항상 아이 것이다.
+ */
+export function findJoinablePair<T extends { character: string }>(
+	pieces: readonly T[]
+): [T, T] | null {
+	for (let i = 0; i < pieces.length; i++) {
+		for (let j = i + 1; j < pieces.length; j++) {
+			if (fuse([pieces[i].character, pieces[j].character])) return [pieces[i], pieces[j]];
+		}
+	}
+	return null;
+}

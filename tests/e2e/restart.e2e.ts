@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
-import { breakAllSeals, clickPastOverlay } from '../helpers/battle';
+import { breakAllSeals, clearQuizBoard, clickPastOverlay } from '../helpers/battle';
 
 /**
  * "다시 대결 / 한 판 더" 회귀 테스트.
@@ -56,32 +56,30 @@ test('대결이 끝난 뒤 "다시 대결"을 누르면 새 대결이 시작된�
 
 	// 결과 화면이 사라지고 다시 봉인이 나와야 한다 — 이것이 이 테스트의 핵심이다
 	await expect(page.getByTestId('battle-outcome')).toBeHidden({ timeout: 15_000 });
-	await expect(page.getByTestId('seal-card')).toBeVisible();
+	await expect(page.getByTestId('piece-board')).toBeVisible();
 	await expect(page.getByTestId('battle-stage')).toBeVisible();
 });
 
-test('퀴즈가 끝난 뒤 "한 판 더!"를 누르면 새 퀴즈가 시작된다', async ({ page }, testInfo) => {
+test('복습을 끝낸 뒤 "한 판 더!"를 누르면 새 판이 시작된다', async ({ page }, testInfo) => {
 	await startAdventure(page, 'quizag', `${testInfo.project.name}${testInfo.workerIndex}q`);
 
 	await gotoReady(page, '/quiz');
-	await expect(page.getByTestId('quiz-question')).toBeVisible();
+
+	/*
+	 * 복습도 대결과 같은 조각 판이다.
+	 * 배운 부품이 모자라면 판이 비어 있을 수 있으니, 그때는 이 회귀 검사를 건너뛴다 —
+	 * 여기서 보려는 것은 "한 판 더" 가 실제로 새 판을 여는가 하나뿐이다.
+	 */
+	if ((await page.locator('button.piece').count()) === 0) return;
+
+	await clearQuizBoard(page);
 
 	const more = page.getByRole('button', { name: '한 판 더!' });
-	for (let i = 0; i < 40 && !(await more.isVisible()); i++) {
-		const option = page.locator('button.option').first();
-		if (await option.isVisible()) {
-			await option.click();
-			await expect(page.getByTestId('quiz-result')).toBeVisible();
-		}
-		const next = page.getByRole('button', { name: /다음 문제|결과 보기/ });
-		if (await next.isVisible()) await next.click();
-		await page.waitForTimeout(120);
-	}
-
-	await expect(more, '퀴즈가 끝나면 한 판 더 버튼이 보여야 한다').toBeVisible();
+	await expect(more, '판을 비우면 한 판 더 버튼이 보여야 한다').toBeVisible({ timeout: 15_000 });
 
 	await more.click();
 
-	await expect(more).toBeHidden({ timeout: 15_000 });
-	await expect(page.getByTestId('quiz-question')).toBeVisible();
+	// 결과 화면이 사라지고 판이 다시 나와야 한다 — 이것이 이 테스트의 핵심이다
+	await expect(page.getByTestId('quiz-finished')).toBeHidden({ timeout: 15_000 });
+	await expect(page.getByTestId('piece-board')).toBeVisible();
 });

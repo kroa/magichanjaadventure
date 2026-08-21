@@ -65,10 +65,22 @@ export interface TrayPart {
 	mastery: number;
 }
 
+export interface BoardPiece {
+	id: number;
+	character: string;
+	mastery: number;
+}
+
 export interface BattlePlan {
 	seals: BattleSeal[];
-	/** 부품 서랍. 봉인이 요구하는 부품이 **반드시** 전부 들어 있다 */
-	tray: TrayPart[];
+	/**
+	 * 판에 흩어 놓을 조각.
+	 *
+	 * **이번 봉인들이 요구하는 조각이 정확히 그만큼만 있다.** 미끼도, 남는 것도 없다.
+	 * 그래서 목표를 인쇄해 보여 줄 필요가 없다 — 붙는 것끼리 붙이면 판이 비고, 그게 승리다.
+	 * 예전처럼 "정답 + 미끼 12칸" 을 늘어놓으면 그림으로 바꿔도 결국 객관식이다.
+	 */
+	pieces: BoardPiece[];
 }
 
 /** 이 아이가 각 한자를 얼마나 익혔는지 (없으면 0 = 처음 보는 것) */
@@ -128,7 +140,11 @@ export async function planFor(
 ): Promise<BattlePlan> {
 	const recipes = derive(userId, sessionKey, areaId);
 	const broken = await brokenIndexes(db, userId, sessionKey);
-	const trayChars = trayFrom(seedOf(userId, sessionKey), recipes);
+	/*
+	 * 조각은 봉인들의 재료를 **그대로 펼친 것**이다 (木+木=林 처럼 같은 글자가 둘이면 조각도 둘).
+	 * 서랍+미끼 구조를 버린 이유는 위 BattlePlan 주석에 적어 두었다.
+	 */
+	const trayChars = recipes.flatMap((r) => r.parts);
 
 	const info = await lookup(db, [...new Set([...recipes.map((r) => r.result), ...trayChars])]);
 	const mastery = await masteryOf(db, userId, trayChars);
@@ -145,15 +161,11 @@ export async function planFor(
 				broken: broken.has(index)
 			};
 		}),
-		tray: trayChars.map((character) => {
-			const hanja = info.get(character);
-			return {
-				character,
-				reading: hanja?.reading ?? '',
-				meaning: hanja?.meaning ?? '',
-				mastery: mastery.get(character) ?? 0
-			};
-		})
+		pieces: trayChars.map((character, id) => ({
+			id,
+			character,
+			mastery: mastery.get(character) ?? 0
+		}))
 	};
 }
 
@@ -180,16 +192,18 @@ export async function attack(
 	userId: string,
 	sessionKey: string,
 	areaId: number,
-	sealIndex: number,
 	parts: string[],
 	firstTry: boolean
 ): Promise<AttackOutcome> {
 	const recipe = fuse(parts);
 	if (!recipe) return { ok: false, reason: 'no-recipe' };
 
+	/*
+	 * **어느 봉인인지는 서버가 찾는다.** 화면은 조각 두 개만 보낸다.
+	 * 목표를 화면에 내려주지 않으니 클라이언트가 봉인 번호를 알 이유도 없다.
+	 */
 	const recipes = derive(userId, sessionKey, areaId);
-	const target = recipes[sealIndex];
-	if (!target) return { ok: false, reason: 'unknown-seal' };
+	const sealIndex = recipes.findIndex((r) => r.result === recipe.result);
 
 	const row = await db
 		.prepare('SELECT * FROM hanjas WHERE character = ?')
@@ -210,9 +224,8 @@ export async function attack(
 		.run();
 	const isNew = (inserted.meta?.changes ?? 0) > 0;
 
-	if (recipe.result !== target.result) {
-		return { ok: false, reason: 'not-target' };
-	}
+	// 조합표에는 있지만 이번 봉인이 아니다 — 한자는 얻었으니 헛수고는 아니다
+	if (sealIndex < 0) return { ok: false, reason: 'not-target' };
 
 	// 봉인 파괴 기록. PRIMARY KEY 가 중복 정산을 막는다
 	const broke = await db

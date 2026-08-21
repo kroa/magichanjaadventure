@@ -44,8 +44,11 @@ test('한자를 하나도 안 배워도 대결에 들어갈 수 있다', async (
 	await startBattle(page, 'btl', `${testInfo.project.name}${testInfo.workerIndex}`);
 	await waitForFonts(page);
 
-	await expect(page.getByTestId('seal-card')).toBeVisible();
-	await expect(page.locator('button.part')).toHaveCount(12);
+	await expect(page.getByTestId('piece-board')).toBeVisible();
+	// 조각은 이번 봉인들의 재료가 정확히 그만큼만 있다 (미끼 없음)
+	await expect(page.locator('button.piece')).toHaveCount(6);
+	// 목표를 인쇄해 보여 주지 않는다 — 그게 이 화면이 객관식이 아닌 이유다
+	await expect(page.getByTestId('seal-card')).toHaveCount(0);
 
 	await captureScreen(page, testInfo, 'battle');
 	await expectHealthyLayout(page);
@@ -75,9 +78,10 @@ test('안 되는 조합에 벌을 주지 않는다', async ({ page }, testInfo) 
 	 * 서랍 앞쪽 두 개를 그냥 눌러 본다. 조합표에 없을 가능성이 높다.
 	 * 무슨 일이 일어나든 **에너지가 줄거나 혼내는 말이 나와서는 안 된다.**
 	 */
-	const parts = page.locator('button.part');
-	await parts.nth(0).click();
-	await parts.nth(1).click();
+	const pieces = page.locator('button.piece');
+	const total = await pieces.count();
+	await pieces.nth(0).click();
+	await pieces.nth(1).click();
 
 	await expect(page.getByText(/틀렸|실패|아니에요|오답|다시 해|잘못/)).toHaveCount(0);
 
@@ -85,23 +89,32 @@ test('안 되는 조합에 벌을 주지 않는다', async ({ page }, testInfo) 
 		.poll(async () => Number(await energy.getAttribute('aria-valuenow')))
 		.toBeGreaterThanOrEqual(before);
 
-	// 부품이 되돌아와 바로 다시 시도할 수 있어야 한다
-	await expect(page.locator('.cell.filled')).toHaveCount(0, { timeout: 5000 });
+	// 안 붙었으면 조각이 그대로 남아 바로 다시 시도할 수 있어야 한다
+	await expect.poll(async () => await pieces.count()).toBeGreaterThanOrEqual(total - 2);
 });
 
 test('패배 화면이 존재하지 않는다', async ({ page }, testInfo) => {
 	await startBattle(page, 'btlnolose', `${testInfo.project.name}${testInfo.workerIndex}`);
 
-	// 아무거나 여러 번 눌러도 대결이 끝나거나 아이가 지지 않는다
-	const parts = page.locator('button.part');
-	for (let i = 0; i < 6; i++) {
-		await parts.nth(i % 12).click();
-		await parts.nth((i + 5) % 12).click();
-		await page.waitForTimeout(120);
+	/*
+	 * 아무거나 여러 번 붙여 봐도 아이가 지지 않는다.
+	 * 붙는 조합이 나오면 조각이 사라지므로, 누를 때마다 **다시 세어서** 짚는다.
+	 * 고정된 nth 로 누르면 사라진 자리를 누르려다 엉뚱한 타임아웃이 난다.
+	 */
+	const pieces = page.locator('button.piece');
+	for (let i = 0; i < 5; i++) {
+		// 번호로 짚는다. 위치(nth)로 짚으면 조각이 사라진 자리를 누르려다 멈춘다
+		const ids = await pieces.evaluateAll((els) =>
+			els.map((el) => el.getAttribute('data-piece-id') ?? '')
+		);
+		if (ids.length < 2) break;
+		for (const id of [ids[0], ids[ids.length - 1]]) {
+			await page.locator(`button.piece[data-piece-id="${id}"]`).click();
+		}
+		await page.waitForTimeout(600);
 	}
 
 	await expect(page.getByText(/아쉬워요|졌|패배/)).toHaveCount(0);
-	await expect(page.getByTestId('seal-card')).toBeVisible();
 });
 
 test('이기면 별과 만든 한자가 나오고, 다시 대결이 동작한다', async ({ page }, testInfo) => {
@@ -118,7 +131,7 @@ test('이기면 별과 만든 한자가 나오고, 다시 대결이 동작한다
 	await clickPastOverlay(page, '다시 대결');
 
 	await expect(outcome).toBeHidden({ timeout: 15_000 });
-	await expect(page.getByTestId('seal-card')).toBeVisible();
+	await expect(page.getByTestId('piece-board')).toBeVisible();
 });
 
 test('만든 한자는 도감에 들어간다', async ({ page }, testInfo) => {
@@ -154,7 +167,7 @@ test('서버가 목표가 아닌 봉인 파괴를 인정하지 않는다', async
 	const response = await request.post(`${baseURL}/api/battle/seal`, {
 		headers: { cookie: cookieHeader, origin: baseURL, 'content-type': 'application/json' },
 		// 세션 키를 지어내면 봉인이 유도되지 않는다
-		data: { sessionKey: 'made-up-session', areaId: 1, sealIndex: 0, parts: ['日', '月'] }
+		data: { sessionKey: 'made-up-session', areaId: 1, parts: ['日', '月'] }
 	});
 
 	const body = (await response.json()) as { ok: boolean; reason?: string };

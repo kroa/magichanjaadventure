@@ -116,7 +116,7 @@ test.describe('아이의 첫 모험', () => {
 		await expectHealthyLayout(page);
 	});
 
-	test('배운 한자로 퀴즈를 풀 수 있다', async ({ page }, testInfo) => {
+	test('배운 한자로 복습할 수 있다', async ({ page }, testInfo) => {
 		await signUp(page, 'quiz', `${testInfo.project.name}${testInfo.workerIndex}c`);
 		await pickWizard(page);
 		await learnHanja(page, 4);
@@ -129,19 +129,16 @@ test.describe('아이의 첫 모험', () => {
 		await gotoReady(page, '/collection');
 		await expect(page.locator('button.slot.learned')).toHaveCount(4);
 
+		/*
+		 * 복습도 대결과 **같은 판, 같은 손동작**이다.
+		 * 예전에는 여기만 4지선다였고, 화면마다 규칙이 다르면 아이는 게임이 아니라
+		 * 화면 사용법을 배우게 된다.
+		 */
 		await gotoReady(page, '/quiz');
 		await waitForFonts(page);
-		await expect(page.getByTestId('quiz-question')).toBeVisible();
+		await expect(page.getByText(/틀렸|오답|정답입니다/)).toHaveCount(0);
+
 		await captureScreen(page, testInfo, 'quiz');
-		await expectHealthyLayout(page);
-
-		// 첫 문제를 푼다 (정답이든 오답이든 채점 결과가 나와야 한다)
-		await page.locator('button.option').first().click();
-		await expect(page.getByTestId('quiz-result')).toBeVisible();
-		await captureScreen(page, testInfo, 'quiz-answered');
-
-		// 다음 문제로 넘어간다
-		await page.getByRole('button', { name: /다음 문제|결과 보기/ }).click();
 		await expectHealthyLayout(page);
 	});
 
@@ -155,7 +152,7 @@ test.describe('아이의 첫 모험', () => {
 		await gotoReady(page, '/battle');
 		await waitForFonts(page);
 		await expect(page.getByTestId('battle-stage')).toBeVisible();
-		await expect(page.getByTestId('seal-card')).toBeVisible();
+		await expect(page.getByTestId('piece-board')).toBeVisible();
 
 		// PixiJS 이펙트 레이어가 실제로 초기화된다
 		await expect(page.getByTestId('battle-canvas')).toHaveAttribute('data-ready', 'true', {

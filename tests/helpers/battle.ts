@@ -2,63 +2,48 @@ import { expect, type Page } from '@playwright/test';
 import { settleLevelUp } from './learn';
 
 /**
- * 봉인을 전부 깨고 승리한다.
+ * 판을 비워 승리한다.
  *
  * **한자를 한 자도 모르는 로봇이 100% 완주할 수 있어야 한다.**
  * 그게 가능하다는 것 자체가 이 대결의 핵심 계약이다:
- * 도움 버튼을 끝까지 누르면 정답 부품이 빛나고, 그것만 누르면 반드시 깨진다.
+ * 도움 버튼을 누르면 붙는 짝이 빛나고, 그 둘을 차례로 누르면 반드시 붙는다.
  * 이 헬퍼가 막히면 아이도 막힌다는 뜻이다.
  *
- * 조급하게 누르지 않는 것이 중요하다. 합체 연출이 도는 동안 타일이 잠기는데,
- * 잠긴 채로 누르면 `place()` 가 조용히 무시해서 **한참 뒤 엉뚱한 곳에서** 실패한다.
+ * 드래그가 아니라 탭 두 번(고르기 → 붙이기)을 쓴다. 끌기가 서툰 아이도 쓰는 경로이고,
+ * 테스트에서 훨씬 안정적이다.
  */
-export async function breakAllSeals(page: Page, maxSeals = 6): Promise<void> {
+export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 	const outcome = page.getByTestId('battle-outcome');
 
-	for (let i = 0; i < maxSeals; i++) {
-		const state = await waitForTurn(page);
-		if (state === 'win') break;
-		if (state === 'gone') break;
-
-		/*
-		 * 봉인을 깨면 "무슨 글자였는지" 를 보여 주는 화면이 뜬다.
-		 * **합체 연출이 끝난 뒤에** 뜨므로 waitForTurn 다음에 확인해야 한다.
-		 * 앞에서 보면 아직 안 떠 있어 그냥 지나치고, 그 뒤에 떠올라 칸을 가린다.
-		 */
+	for (let round = 0; round < maxRounds; round++) {
+		// 봉인을 깨면 "무슨 글자였는지" 화면이 뜬다. 넘겨야 판이 다시 보인다
 		await dismissReveal(page);
+		if (await outcome.isVisible().catch(() => false)) break;
 
+		if ((await page.locator('button.piece').count()) === 0) break;
+
+		// 도움을 누르면 붙는 짝이 빛난다
 		const help = page.getByRole('button', { name: '도와줘' });
-		// 사다리 꼭대기까지 올린다 (정답 부품이 빛난다)
-		await help.click();
+		if (!(await help.isVisible().catch(() => false))) break;
 		await help.click();
 
-		const glowing = page.locator('button.part[data-glow]');
 		/*
-		 * 빛나는 타일이 **하나일 수도 있다.** 木+木=林 처럼 같은 부품을 두 번 쓰는 조합은
-		 * 서랍에 그 타일이 하나뿐이라 하나만 빛나고, 그걸 두 번 눌러야 한다.
+		 * 여기서 `expect(...).toHaveCount()` 로 폴링하면 계속 0 이 나온다.
+		 * 판이 다시 그려지는 사이에 힌트가 잠깐 꺼졌다 켜지는데, 폴링이 그 틈만 계속 집어낸다.
+		 * 아이 손 속도로 한 박자 쉬었다가 읽으면 그대로 잡힌다 — 그래서 명시적으로 기다린다.
 		 */
-		await expect(glowing, '도움을 다 써도 부품이 빛나지 않는다').not.toHaveCount(0);
-		/*
-		 * **글자로 찾지 않는다.** 타일에는 이제 글자가 없다 — 그림만 있다.
-		 * 그게 이 게임의 요점이므로, 테스트는 data-part 속성으로 짚는다.
-		 */
-		const chars = (
-			await glowing.evaluateAll((els) => els.map((el) => el.getAttribute('data-part') ?? ''))
-		).filter(Boolean);
+		await page.waitForTimeout(600);
+		const ids = await page
+			.locator('button.piece[data-hint]')
+			.evaluateAll((els) => els.map((el) => el.getAttribute('data-piece-id') ?? ''));
+		expect(ids.length, '도움을 눌러도 붙는 짝이 빛나지 않는다').toBe(2);
 
-		for (let slot = 0; slot < 2; slot++) {
-			const ch = chars[Math.min(slot, chars.length - 1)];
-			const tile = page.locator(`button.part[data-part="${ch}"]`).first();
-			await expect(tile).toBeEnabled({ timeout: 15_000 });
-			await tile.click();
-			/*
-			 * 첫 클릭만 확인한다. 두 번째를 놓는 순간 판정이 돌아 칸이 곧바로 비워지므로,
-			 * 거기서 "칸이 2개 찼는가" 를 세면 성공했을 때 오히려 실패한다.
-			 */
-			if (slot === 0) {
-				await expect(page.locator('.cell.filled')).toHaveCount(1, { timeout: 10_000 });
-			}
+		for (const id of ids) {
+			await page.locator(`button.piece[data-piece-id="${id}"]`).click();
 		}
+
+		// 합체 연출 + 서버 왕복이 끝날 때까지 기다린다
+		await page.waitForTimeout(1600);
 	}
 
 	await dismissReveal(page);
@@ -66,7 +51,7 @@ export async function breakAllSeals(page: Page, maxSeals = 6): Promise<void> {
 
 	/*
 	 * 결과 화면은 서버 응답을 **기다리지 않고** 먼저 뜬다.
-	 * 별이 켜지는 것이 정산이 끝났다는 유일한 증거다 — 봉인을 다 깼으면 별이 최소 하나다.
+	 * 별이 켜지는 것이 정산이 끝났다는 유일한 증거다 — 판을 비웠으면 별이 최소 하나다.
 	 */
 	await expect(outcome.getByLabel(/별 [1-3]개/)).toBeVisible({ timeout: 15_000 });
 
@@ -80,25 +65,6 @@ async function dismissReveal(page: Page): Promise<void> {
 	if (!(await broke.isVisible().catch(() => false))) return;
 	await broke.getByRole('button', { name: '좋아!' }).click();
 	await expect(broke).toBeHidden({ timeout: 10_000 });
-}
-
-/**
- * 다음 봉인을 두드릴 수 있을 때까지 기다린다.
- *
- * 셋 중 하나가 나온다: 이겼거나('win'), 부품을 누를 수 있거나('ready'),
- * 화면이 통째로 사라졌거나('gone' — 이 경우 호출한 쪽이 판단한다).
- */
-async function waitForTurn(page: Page): Promise<'win' | 'ready' | 'gone'> {
-	const outcome = page.getByTestId('battle-outcome');
-	const firstTile = page.locator('button.part').first();
-	const deadline = Date.now() + 20_000;
-
-	while (Date.now() < deadline) {
-		if (await outcome.isVisible().catch(() => false)) return 'win';
-		if (await firstTile.isEnabled().catch(() => false)) return 'ready';
-		await page.waitForTimeout(150);
-	}
-	return 'gone';
 }
 
 /**
@@ -120,4 +86,40 @@ export async function clickPastOverlay(page: Page, name: string): Promise<void> 
 	}
 	await settleLevelUp(page, 6000);
 	await button.click();
+}
+
+/**
+ * 복습 판을 비운다.
+ *
+ * 대결과 같은 조작이므로 절차도 같다 — 도움을 눌러 짝을 빛내고, 그 둘을 누른다.
+ * 다른 점은 보스가 없어 "봉인" 대신 "다 풀었어요" 로 끝난다는 것뿐이다.
+ */
+export async function clearQuizBoard(page: Page, maxRounds = 6): Promise<void> {
+	const done = page.getByTestId('quiz-finished');
+
+	for (let round = 0; round < maxRounds; round++) {
+		const made = page.getByTestId('quiz-made');
+		if (await made.isVisible().catch(() => false)) {
+			await made.getByRole('button', { name: '좋아!' }).click();
+			await expect(made).toBeHidden({ timeout: 10_000 });
+		}
+		if (await done.isVisible().catch(() => false)) break;
+		if ((await page.locator('button.piece').count()) === 0) break;
+
+		const help = page.getByRole('button', { name: '도와줘' });
+		if (!(await help.isVisible().catch(() => false))) break;
+		await help.click();
+
+		// 폴링이 아니라 한 박자 기다렸다 읽는다 (대결 헬퍼와 같은 이유)
+		await page.waitForTimeout(600);
+		const ids = await page
+			.locator('button.piece[data-hint]')
+			.evaluateAll((els) => els.map((el) => el.getAttribute('data-piece-id') ?? ''));
+		if (ids.length !== 2) break;
+
+		for (const id of ids) {
+			await page.locator(`button.piece[data-piece-id="${id}"]`).click();
+		}
+		await page.waitForTimeout(1400);
+	}
 }

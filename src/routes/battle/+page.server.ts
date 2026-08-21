@@ -52,7 +52,7 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		},
 		areas: open.map((a) => ({ id: a.area.id, name: a.area.name, emoji: a.area.emoji })),
 		seals: plan.seals,
-		tray: plan.tray,
+		pieces: plan.pieces,
 		playerHp: stats.hp,
 		playerAttack: stats.attack
 	};

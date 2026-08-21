@@ -1,31 +1,80 @@
 import { redirect } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
-import { pickQuizPool, pickDistractors } from '$lib/server/db/hanja';
-import { buildQuestion, pickQuestionType, type Question } from '$lib/game/quiz';
+import { loadWorkshop, tryFuse } from '$lib/server/db/fusion';
+import { SEAL_RECIPES } from '$lib/game/fusion';
 import { expToNextLevel } from '$lib/game/exp';
 
-const QUESTION_COUNT = 10;
+/** 한 판에 낼 조합 수 */
+const ROUND_SIZE = 3;
 
+/**
+ * 복습 — **4지선다를 걷어냈다.**
+ *
+ * 예전에는 배운 한자로 객관식 문제를 만들어 냈다. 그건 시험이지 놀이가 아니고,
+ * 대결·공방과 조작 방식도 달라서 아이가 화면마다 규칙을 새로 배워야 했다.
+ *
+ * 지금은 **이미 만들어 본 조합**의 조각을 판에 흩어 놓는다. 아이는 다시 밀어서 붙인다.
+ * 같은 손동작으로 복습이 되고, 무엇을 만드는지 미리 알려 주지 않으니 인출 연습이 된다.
+ */
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	if (!locals.user) redirect(303, '/login');
 	if (!locals.user.characterClass) redirect(303, '/character');
 
 	const db = getDb(platform);
-	const pool = await pickQuizPool(db, locals.user.id, QUESTION_COUNT);
+	const workshop = await loadWorkshop(db, locals.user.id);
+	const owned = new Set(workshop.parts.map((p) => p.character));
+	const discovered = new Set(workshop.discovered);
+	const masteryOf = new Map(workshop.parts.map((p) => [p.character, p.mastery]));
 
-	const questions: Question[] = [];
-	for (const hanja of pool) {
-		const distractors = await pickDistractors(db, hanja.areaId, hanja.id, 6);
-		const type = pickQuestionType(hanja, 0);
-		const question = buildQuestion(hanja, distractors, type);
-		if (question) questions.push(question);
-	}
+	/*
+	 * 만들 수 있는 조합 중에서 고른다.
+	 * **이미 만들어 본 것을 먼저** 낸다 — 복습이 목적이므로 처음 보는 것보다 낫다.
+	 */
+	const makeable = SEAL_RECIPES.filter((r) => r.parts.every((p) => owned.has(p)));
+	const ordered = [
+		...makeable.filter((r) => discovered.has(r.result)),
+		...makeable.filter((r) => !discovered.has(r.result))
+	].slice(0, ROUND_SIZE);
 
 	return {
 		user: locals.user,
 		expToNext: expToNextLevel(locals.user.level),
-		questions,
-		sessionKey: crypto.randomUUID()
+		pieces: ordered
+			.flatMap((r) => r.parts)
+			.map((character, id) => ({
+				id,
+				character,
+				mastery: masteryOf.get(character) ?? 0
+			})),
+		total: ordered.length
 	};
+};
+
+export const actions: Actions = {
+	/**
+	 * 조각 두 개를 붙인다.
+	 *
+	 * 판정은 서버가 한다. 아이가 정말 그 부품을 배웠는지까지 다시 확인하므로,
+	 * 요청을 직접 만들어도 아무 한자나 가질 수 없다 (공방과 같은 규칙이다).
+	 */
+	fuse: async ({ request, platform, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const db = getDb(platform);
+
+		const form = await request.formData();
+		const parts = form.getAll('part').map(String);
+		if (parts.length < 2 || parts.length > 4) return { ok: false as const };
+
+		const outcome = await tryFuse(db, locals.user.id, parts);
+		if (!outcome.ok) return { ok: false as const, reason: outcome.reason };
+
+		return {
+			ok: true as const,
+			character: outcome.result.character,
+			reading: outcome.result.reading,
+			meaning: outcome.result.meaning,
+			story: outcome.story
+		};
+	}
 };

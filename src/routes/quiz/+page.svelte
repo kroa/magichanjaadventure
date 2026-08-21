@@ -2,253 +2,191 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Button from '$lib/components/common/Button.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
-	import ProgressBar from '$lib/components/common/ProgressBar.svelte';
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
-	import ParticleBurst from '$lib/components/effects/ParticleBurst.svelte';
-	import Sparkle from '$lib/components/effects/Sparkle.svelte';
-	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
-	import { isSpecialCombo } from '$lib/game/exp';
+	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
-	import { announceReward } from '$lib/game/announce';
 	import { sound } from '$lib/sound/index.svelte';
-	import { spriteFor } from '$lib/game/characters';
-	import type { Mood } from '$lib/types/ui';
-	import type { QuizAnswerResponse } from '$lib/types/api';
+	import type { FusionRecipe } from '$lib/game/fusion';
 
 	let { data } = $props();
 
-	const Hero = $derived(spriteFor(data.user.characterClass));
+	const wide = new MediaQuery('(min-width: 900px)');
+	const boardHeight = $derived(wide.current ? 320 : 270);
 
-	let index = $state(0);
-	let combo = $state(0);
-	let correctCount = $state(0);
+	// svelte-ignore state_referenced_locally
+	let pieces = $state<Piece[]>(data.pieces.map((p) => ({ ...p })));
+	// svelte-ignore state_referenced_locally
+	let total = $state(data.total);
 
-	let chosen = $state<string | null>(null);
-	let result = $state<{ isCorrect: boolean; answer: string; expGained: number } | null>(null);
-	let busy = $state(false);
-	let burst = $state(0);
-	let askedAt = $state(Date.now());
+	let made = $state<string[]>([]);
+	let hintTick = $state(0);
+	let finished = $state(false);
 	let restarting = $state(false);
 
-	const question = $derived(data.questions[index] ?? null);
-	const finished = $derived(index >= data.questions.length);
-	const heroMood = $derived<Mood>(result ? (result.isCorrect ? 'cheer' : 'sad') : 'happy');
-	const enemyMood = $derived<Mood>(result?.isCorrect ? 'surprised' : 'happy');
-	const isLast = $derived(index + 1 === data.questions.length);
+	/** 방금 만든 것 — 뜻·음·이야기를 여기서 보여 준다 */
+	let justMade = $state<{
+		character: string;
+		reading: string;
+		meaning: string;
+		story: string;
+	} | null>(null);
 
-	async function answer(option: string) {
-		if (busy || result || !question) return;
-		busy = true;
-		chosen = option;
-
-		try {
-			const response = await fetch('/api/quiz/answer', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					hanjaId: question.hanjaId,
-					type: question.type,
-					chosen: option,
-					combo,
-					answerMs: Date.now() - askedAt,
-					sessionKey: data.sessionKey
-				})
-			});
-
-			if (!response.ok) throw new Error('채점에 실패했어요');
-			const payload = (await response.json()) as QuizAnswerResponse;
-
-			// 화면에 반영하는 값은 전부 서버가 확정한 것이다
-			combo = payload.combo;
-			result = {
-				isCorrect: payload.isCorrect,
-				answer: payload.answer,
-				expGained: payload.breakdown.total
-			};
-
-			if (payload.isCorrect) {
-				correctCount += 1;
-				burst += 1;
-			}
-
-			sound.play(payload.isCorrect ? 'correct' : 'wrong');
-
-			announceReward(payload.reward, data.user.characterClass);
-
-			if (isSpecialCombo(payload.combo)) toasts.success(`${payload.combo} 콤보! 🔥`);
-		} catch {
-			toasts.warn('연결이 잠깐 끊겼어요. 다시 눌러 주세요.');
-			chosen = null;
-		} finally {
-			busy = false;
-		}
+	function askHint() {
+		hintTick += 1;
+		sound.play('click');
 	}
 
 	/**
-	 * 새 퀴즈를 시작한다.
-	 * 같은 URL 로 이동하면 컴포넌트가 재생성되지 않아 결과 화면이 남는다 — 대결과 같은 이유.
+	 * 조각 두 개가 붙었다. 서버가 다시 확인한다.
+	 *
+	 * 복습이므로 **되는 조합이면 무엇이든 인정한다** — 대결처럼 "이번 목표" 가 따로 없다.
 	 */
+	async function handleMerge(recipe: FusionRecipe, used: Piece[]): Promise<boolean> {
+		void recipe;
+		const body = new FormData();
+		for (const piece of used) body.append('part', piece.character);
+
+		try {
+			const response = await fetch('?/fuse', { method: 'POST', body });
+			if (!response.ok) throw new Error('실패');
+			const raw = (await response.json()) as { type: string; data?: string };
+
+			/*
+			 * SvelteKit 액션 응답은 devalue 로 감싸여 온다.
+			 * 화면이 이걸 직접 풀지 않도록 성공 여부만 보고, 자세한 내용은 다시 읽어 온다.
+			 */
+			if (raw.type !== 'success') return false;
+			const payload = JSON.parse(raw.data ?? '[]');
+			const ok = Array.isArray(payload) ? payload.includes(true) : false;
+			if (!ok) return false;
+
+			sound.play('discover');
+			return true;
+		} catch {
+			toasts.warn('연결이 잠깐 끊겼어요. 다시 해 보세요.');
+			return false;
+		}
+	}
+
 	async function restart() {
 		if (restarting) return;
 		restarting = true;
 		try {
 			await invalidateAll();
-			index = 0;
-			combo = 0;
-			correctCount = 0;
-			chosen = null;
-			result = null;
-			askedAt = Date.now();
+			pieces = data.pieces.map((p) => ({ ...p }));
+			total = data.total;
+			made = [];
+			justMade = null;
+			finished = false;
+			hintTick = 0;
 		} finally {
 			restarting = false;
 		}
 	}
-
-	function next() {
-		index += 1;
-		chosen = null;
-		result = null;
-		askedAt = Date.now();
-	}
 </script>
 
 <svelte:head>
-	<title>한자 퀴즈 · 마법한자탐험대</title>
+	<title>복습 · 마법한자탐험대</title>
 </svelte:head>
 
 <!--
-	퀴즈는 **집중 모드**다.
-	 - 하단 네비게이션을 숨긴다: 문제를 푸는 중 오터치를 막고, 화면 세로 공간 72px 을 되찾는다
-	 - 대신 헤더에 나가기 버튼을 둔다
-	 - 결과/다음 버튼은 sticky 로 항상 화면 안에 있다 (스크롤해서 찾지 않아도 된다)
+	복습 — 대결과 **같은 판, 같은 손동작.**
+
+	예전에는 여기만 4지선다였다. 화면마다 규칙이 다르면 아이는 게임을 배우는 것이 아니라
+	화면 사용법을 배우게 된다. 지금은 조각을 밀어 붙이는 동작 하나로 앱 전체가 통일된다.
+	다른 점은 보스가 없다는 것뿐이다.
 -->
-<AppShell nav={false} class="quiz-shell">
-	{#if data.questions.length === 0}
-		<EmptyState
-			icon="✨"
-			title="아직 퀴즈를 낼 한자가 없어요"
-			description="한자를 먼저 배우면 그 한자로 퀴즈가 만들어져요."
-		>
-			{#snippet action()}
-				<!-- 집중 모드라 메뉴가 없다. 나갈 길을 여기서 반드시 제공한다. -->
-				<Button variant="magic" href="/learn">한자 배우러 가기</Button>
-				<Button variant="ghost" href="/">모험 지도로</Button>
-			{/snippet}
-		</EmptyState>
-	{:else if finished}
-		<div class="flex flex-col items-center gap-4 py-4 text-center" data-testid="quiz-finished">
-			<div class="relative isolate">
-				<Sparkle count={8} />
-				<Hero size={150} mood="cheer" />
-			</div>
-			<h1 class="text-display-lg text-magic-700">모험 끝!</h1>
-			<p class="text-ink-700">
-				{data.questions.length}문제 중 <strong class="text-mint-600">{correctCount}문제</strong> 정답
-			</p>
-			<div class="flex flex-wrap justify-center gap-3">
-				<Button variant="magic" size="lg" onclick={restart} loading={restarting}>한 판 더!</Button>
-				<Button variant="ghost" size="lg" href="/">모험 지도로</Button>
-			</div>
-		</div>
-	{:else if question}
-		<div class="stage-grid">
-			<!-- 헤더: 나가기 · 진행도 · 콤보 · 젬 -->
-			<header class="flex items-center gap-2">
-				<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
-				<ProgressBar
-					value={index}
-					max={data.questions.length}
-					tone="magic"
-					size="sm"
-					label="퀴즈 진행도"
-					class="flex-1"
-				/>
-				<span class="shrink-0 font-display text-sm text-ink-500">
-					{index + 1}/{data.questions.length}
-				</span>
-				{#if combo >= 2}
-					<Badge tone="gold" fill="solid" size="sm">🔥{combo}</Badge>
-				{/if}
-			</header>
-
-			<!-- 대결 무대 + 문제를 한 카드로 합쳤다 (카드 두 개는 세로 공간을 너무 먹는다) -->
-			<section class="arena relative isolate overflow-hidden rounded-panel shadow-card">
-				<ParticleBurst trigger={burst} />
-
-				<div class="flex items-end justify-between px-3 pt-3">
-					<Hero size={72} mood={heroMood} />
-					<span class="pb-4 font-display text-lg text-magic-400" aria-hidden="true">VS</span>
-					<MonsterSprite size={72} mood={enemyMood} />
-				</div>
-
-				<div class="px-4 pb-4 text-center" data-testid="quiz-question">
-					<p class="text-sm text-ink-500">{question.prompt}</p>
-					<p
-						class="leading-none text-magic-800 {question.subjectIsHanja
-							? 'hanja text-hanja-quiz'
-							: 'font-display text-display-lg'}"
-					>
-						{question.subject}
-					</p>
-				</div>
-			</section>
-
-			<!-- 보기: 모바일에서 1열 세로 스택 (2×2 그리드는 오답 터치를 유발한다) -->
-			<div class="grid content-start gap-2.5">
-				{#each question.options as option (option)}
-					{@const isAnswer = result && option === result.answer}
-					{@const isChosen = chosen === option}
-					<button
-						type="button"
-						class="option rounded-button px-5 font-display text-lg"
-						class:correct={isAnswer}
-						class:wrong={result && isChosen && !result.isCorrect}
-						disabled={!!result || busy}
-						onclick={() => answer(option)}
-					>
-						<span class={question.type === 'character' ? 'hanja text-3xl' : ''}>{option}</span>
-						{#if isAnswer}<span aria-hidden="true">⭕</span>{/if}
-						{#if result && isChosen && !result.isCorrect}<span aria-hidden="true">❌</span>{/if}
-					</button>
-				{/each}
-			</div>
-
-			<!--
-				결과 바는 sticky 다. 답을 고르면 **스크롤하지 않아도** 바로 다음으로 갈 수 있다.
-				(예전엔 보기 아래에 있어서 아이가 버튼을 찾아 내려야 했다)
-			-->
-			{#if result}
-				<footer class="result-bar" data-testid="quiz-result">
-					<p
-						class="font-display text-base {result.isCorrect ? 'text-mint-600' : 'text-ember-500'}"
-						role="status"
-					>
-						{#if result.isCorrect}
-							정답이에요! +{result.expGained} EXP
-						{:else}
-							정답은 <strong>{result.answer}</strong> 예요
-						{/if}
-					</p>
-					<Button variant="magic" size="lg" onclick={next} fullWidth>
-						{isLast ? '결과 보기' : '다음 문제'}
-					</Button>
-				</footer>
+<AppShell nav={false}>
+	<div class="quiz-grid">
+		<header class="flex items-center gap-2">
+			<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
+			<Badge tone="magic" size="sm">복습 {made.length} / {total}</Badge>
+			{#if !finished && pieces.length > 0}
+				<button type="button" class="help" onclick={askHint} aria-label="도와줘">?</button>
 			{/if}
-		</div>
-	{/if}
+		</header>
+
+		{#if data.pieces.length === 0}
+			<EmptyState
+				icon="✨"
+				title="아직 복습할 것이 없어요"
+				description="공방에서 한자를 몇 개 만들어 보면 여기서 다시 만나요."
+			>
+				{#snippet action()}
+					<Button variant="magic" href="/fusion">합체 공방으로</Button>
+					<Button variant="ghost" href="/">모험 지도로</Button>
+				{/snippet}
+			</EmptyState>
+		{:else if finished}
+			<div class="done" data-testid="quiz-finished">
+				<h2 class="text-display-lg text-gold-600">다 풀었어요!</h2>
+				{#if made.length > 0}
+					<p class="made">
+						{#each made as ch (ch)}<span class="hanja">{ch}</span>{/each}
+					</p>
+				{/if}
+				<div class="flex flex-wrap justify-center gap-3">
+					<Button variant="magic" size="lg" onclick={restart} loading={restarting}>한 판 더!</Button
+					>
+					<Button variant="gold" size="lg" href="/battle">대결하러 가기</Button>
+					<Button variant="ghost" size="lg" href="/">모험 지도로</Button>
+				</div>
+			</div>
+		{:else if justMade}
+			<div class="reveal" data-testid="quiz-made">
+				<span class="hanja reveal-char">{justMade.character}</span>
+				<span class="font-display text-lg text-ink-900">
+					{justMade.meaning}
+					{justMade.reading}
+				</span>
+				<p class="reveal-story">{justMade.story}</p>
+				<Button
+					variant="magic"
+					size="md"
+					onclick={() => {
+						justMade = null;
+						if (pieces.length === 0) finished = true;
+					}}
+				>
+					좋아!
+				</Button>
+			</div>
+		{:else}
+			<div class="play">
+				<PieceBoard
+					bind:pieces
+					{hintTick}
+					height={boardHeight}
+					onmerge={async (recipe, used) => {
+						const ok = await handleMerge(recipe, used);
+						if (ok) {
+							made = [...made, recipe.result];
+							justMade = {
+								character: recipe.result,
+								reading: '',
+								meaning: '',
+								story: recipe.story
+							};
+						}
+						return ok;
+					}}
+					oncleared={() => {
+						if (!justMade) finished = true;
+					}}
+				/>
+			</div>
+		{/if}
+	</div>
 </AppShell>
 
 <style>
-	/*
-	 * 한 화면에 담기 위한 격자.
-	 * 헤더·무대·보기는 자기 높이만큼, 남는 공간은 보기 영역이 흡수한다.
-	 */
-	.stage-grid {
+	.quiz-grid {
 		display: grid;
-		grid-template-rows: auto auto 1fr auto;
-		gap: 0.75rem;
-		min-height: calc(100dvh - 3rem);
+		grid-template-rows: auto 1fr;
+		gap: 0.6rem;
+		min-height: calc(100dvh - 4rem);
 	}
 
 	.exit {
@@ -262,67 +200,65 @@
 		background: rgb(255 255 255 / 0.85);
 		color: var(--color-ink-500);
 		text-decoration: none;
-		font-size: 1rem;
 		box-shadow: var(--shadow-soft);
 	}
 
-	.arena {
-		background: linear-gradient(180deg, #dff1ff 0%, #f2e9ff 100%);
+	.help {
+		display: grid;
+		place-items: center;
+		width: var(--tap-min);
+		height: var(--tap-min);
+		flex-shrink: 0;
+		margin-left: auto;
+		border: 3px solid var(--color-gold-400);
+		border-radius: 9999px;
+		background: #fff;
+		color: var(--color-gold-700);
+		font-size: 1.1rem;
+		font-weight: 700;
+		cursor: pointer;
 	}
 
-	.option {
+	.play {
+		display: grid;
+		min-height: 0;
+		align-content: center;
+	}
+
+	.done,
+	.reveal {
+		display: grid;
+		align-content: center;
+		justify-items: center;
+		gap: 0.5rem;
+		padding: 1rem;
+		border-radius: var(--radius-panel);
+		background: linear-gradient(180deg, #eef4ff 0%, #f6ecff 100%);
+		box-shadow: var(--shadow-card);
+		text-align: center;
+	}
+
+	.reveal-char {
+		font-size: 3.5rem;
+		line-height: 1;
+		color: var(--color-magic-800);
+	}
+
+	.reveal-story {
+		max-width: 20rem;
+		color: var(--color-ink-700);
+		font-size: 0.85rem;
+	}
+
+	.made {
 		display: flex;
-		align-items: center;
+		flex-wrap: wrap;
 		justify-content: center;
 		gap: 0.5rem;
-		/* 아이 손가락 기준 하한선보다 넉넉하게 */
-		min-height: 3.25rem;
-		border: 3px solid var(--color-magic-200);
-		border-radius: var(--radius-button);
-		background: #fff;
-		color: var(--color-ink-900);
-		cursor: pointer;
-		transition:
-			transform 0.15s var(--ease-pop),
-			border-color 0.15s ease,
-			background 0.15s ease;
 	}
 
-	.option:hover:not(:disabled) {
-		transform: translateY(-2px);
-		border-color: var(--color-magic-400);
-	}
-
-	.option:disabled {
-		cursor: default;
-	}
-
-	/* 정답/오답을 색으로만 알리지 않는다 — 아이콘과 텍스트를 함께 쓴다 */
-	.option.correct {
-		border-color: var(--color-mint-500);
-		background: var(--color-mint-100);
-	}
-
-	.option.wrong {
-		border-color: var(--color-ember-500);
-		background: var(--color-ember-100);
-		animation: var(--animate-shake);
-	}
-
-	.result-bar {
-		position: sticky;
-		bottom: 0;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.75rem 0 max(0.75rem, env(safe-area-inset-bottom));
-		background: linear-gradient(180deg, rgb(246 238 255 / 0) 0%, rgb(246 238 255 / 0.95) 35%);
-		backdrop-filter: blur(6px);
-	}
-
-	.result-bar :global(a),
-	.result-bar :global(button) {
-		max-width: 24rem;
+	.made .hanja {
+		font-size: 2rem;
+		color: var(--color-magic-800);
 	}
 </style>

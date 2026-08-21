@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
-import { settleAnimations } from '../helpers/layout';
+import { expectHealthyLayout, settleAnimations } from '../helpers/layout';
 
 /**
  * "한 화면에 다 담기는가" 회귀 테스트.
@@ -37,9 +37,9 @@ async function readyToPlay(page: Page, label: string, seed: string) {
 }
 
 for (const { path, label, tile } of [
-	{ path: '/quiz', label: '퀴즈', tile: 'button.option' },
-	// 대결은 4지선다가 아니라 부품 서랍이다
-	{ path: '/battle', label: '대결', tile: 'button.part' }
+	// 두 화면 모두 조각 판이다 — 같은 조작, 같은 셀렉터
+	{ path: '/quiz', label: '복습', tile: 'button.piece' },
+	{ path: '/battle', label: '대결', tile: 'button.piece' }
 ]) {
 	test(`${label} 화면은 스크롤 없이 모든 보기를 보여준다`, async ({ page }, testInfo) => {
 		await readyToPlay(page, `os${label}`, `${testInfo.project.name}${testInfo.workerIndex}`);
@@ -52,8 +52,16 @@ for (const { path, label, tile } of [
 		const height = viewport!.height;
 
 		const options = page.locator(tile);
-		await expect(options.first()).toBeVisible();
 		const count = await options.count();
+		if (count === 0) {
+			/*
+			 * 복습 판은 만들 수 있는 조합이 없으면 비어 있다 (막 시작한 아이).
+			 * 그 화면도 한 화면에 담겨야 하므로 레이아웃만 확인하고 넘어간다.
+			 */
+			await expectHealthyLayout(page);
+			return;
+		}
+		await expect(options.first()).toBeVisible();
 		expect(count).toBeGreaterThan(1);
 
 		// 마지막 보기의 아래끝이 화면 안에 있어야 한다
@@ -71,22 +79,3 @@ for (const { path, label, tile } of [
  * 대결은 부품 두 개를 놓는 순간 바로 판정하므로 누를 버튼이 없다 —
  * 아이가 한 번 더 눌러야 하는 단계를 없앤 것이 의도다.
  */
-test('퀴즈에서 답을 고르면 다음 버튼이 바로 화면에 있다', async ({ page }, testInfo) => {
-	await readyToPlay(page, 'nx퀴즈', `${testInfo.project.name}${testInfo.workerIndex}`);
-
-	await gotoReady(page, '/quiz');
-	await settleAnimations(page);
-
-	await page.locator('button.option').first().click();
-
-	const next = page.getByRole('button', { name: /다음|결과 보기/ });
-	await expect(next).toBeVisible();
-
-	const viewport = page.viewportSize()!;
-	const box = await next.boundingBox();
-	expect(box).not.toBeNull();
-	expect(
-		Math.round(box!.y + box!.height),
-		`퀴즈: 다음 버튼을 보려면 스크롤해야 한다`
-	).toBeLessThanOrEqual(viewport.height);
-});
