@@ -77,17 +77,27 @@ test.describe('아이의 첫 모험', () => {
 		// 배우기 전 EXP
 		await gotoReady(page, '/learn');
 		await waitForFonts(page);
-		await expect(page.getByTestId('hanja-reveal')).toBeVisible();
-		const firstHanja = (
-			await page.getByTestId('hanja-reveal').locator('.hanja').first().textContent()
-		)?.trim();
-		expect(firstHanja).toBeTruthy();
+		/*
+		 * 배우기는 이제 **읽는 화면이 아니라 쓰는 화면**이다.
+		 * 처음에는 따라 쓰는 칸만 있고, 뜻·음·예시는 다 쓴 **뒤에** 보상으로 나온다.
+		 */
+		const trace = page.getByTestId('trace-glyph');
+		await expect(trace).toBeVisible();
+		await expect(page.getByTestId('hanja-reveal'), '쓰기 전에는 답이 안 보여야 한다').toHaveCount(
+			0
+		);
 
 		await captureScreen(page, testInfo, 'learn');
 		await expectHealthyLayout(page);
 
 		await page.getByRole('button', { name: '이 한자 배우기' }).click();
 		await expect(page.getByTestId('learn-done')).toBeVisible();
+		// 다 쓰고 나면 그때 뜻·음이 나온다
+		await expect(page.getByTestId('hanja-reveal')).toBeVisible();
+		const firstHanja = (
+			await page.getByTestId('hanja-reveal').locator('.hanja').first().textContent()
+		)?.trim();
+		expect(firstHanja).toBeTruthy();
 
 		// EXP 가 실제로 올랐다 (첫 획득 +20)
 		const expBar = page.getByTestId('top-hud').getByRole('progressbar');
@@ -136,6 +146,8 @@ test.describe('아이의 첫 모험', () => {
 	});
 
 	test('대결 화면이 뜨고 봉인을 깰 수 있다', async ({ page }, testInfo) => {
+		// 봉인 3개를 실제로 깨는 데 시간이 걸린다 (합체 연출 + 보상 화면)
+		test.setTimeout(120_000);
 		await signUp(page, 'battle', `${testInfo.project.name}${testInfo.workerIndex}d`);
 		await pickWizard(page);
 

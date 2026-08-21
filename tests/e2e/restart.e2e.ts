@@ -14,6 +14,8 @@ import { breakAllSeals, clickPastOverlay } from '../helpers/battle';
  * 링크만 확인하는 테스트였다면 이 버그를 그대로 통과시켰을 것이다.
  */
 
+test.describe.configure({ timeout: 120_000 });
+
 async function startAdventure(page: Page, label: string, seed: string) {
 	const user = makeTestUser(label, seed);
 	await gotoReady(page, '/register');

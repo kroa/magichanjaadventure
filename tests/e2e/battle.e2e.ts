@@ -13,7 +13,11 @@ import { captureScreen, waitForFonts } from '../helpers/screens';
  *  2. 도움을 끝까지 쓰면 **반드시 깰 수 있다** (막다른 길이 없다)
  *  3. 안 되는 조합에 **벌이 없다** — 에너지도 안 깎이고 "틀렸어요" 도 없다
  *  4. **질 수 없다** — 패배 화면이 존재하지 않는다
+ *
+ * 한 판이 짧지 않다: 봉인 3개 × (도움 → 조각 두 개 → 합체 연출 0.5초 → "이 글자였어요" 화면).
+ * 전부 실제 제품 동작이라 줄일 수 없고, 기본 45초로는 느린 뷰포트에서 완주 전에 끊긴다.
  */
+test.describe.configure({ timeout: 120_000 });
 
 async function startBattle(page: Page, label: string, seed: string) {
 	const user = makeTestUser(label, seed);

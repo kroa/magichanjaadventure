@@ -5,33 +5,64 @@
 	import SpeechBubble from '$lib/components/common/SpeechBubble.svelte';
 	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 	import Sparkle from '$lib/components/effects/Sparkle.svelte';
+	import FloatingGlyphs from '$lib/components/effects/FloatingGlyphs.svelte';
+	import type { Mood } from '$lib/types/ui';
 
 	let { form } = $props();
 	let submitting = $state(false);
+	let focused = $state<'none' | 'nickname' | 'password'>('none');
+
+	/*
+	 * 캐릭터가 아이를 **쳐다본다.**
+	 * 비밀번호를 칠 때는 고개를 돌리고 안 보겠다고 한다 — 이 한 가지가
+	 * "폼을 채우는 중" 을 "누가 나를 기다리는 중" 으로 바꾼다.
+	 */
+	const mood = $derived<Mood>(
+		focused === 'password' ? 'surprised' : focused === 'nickname' ? 'cheer' : 'happy'
+	);
+	const line = $derived(
+		focused === 'password'
+			? '눈 감고 있을게, 약속!'
+			: focused === 'nickname'
+				? '이름이 뭐였더라?'
+				: '오늘은 어떤 모험을 할까?'
+	);
 </script>
 
 <svelte:head>
 	<title>로그인 · 마법한자탐험대</title>
 </svelte:head>
 
+<!--
+	로그인 — 폼이 아니라 **문 앞**이다.
+
+	예전 화면은 라벨 두 개와 흰 카드가 전부라 어느 웹사이트에나 있는 폼이었다.
+	여기서 아이가 받아야 할 인상은 "가입 절차" 가 아니라 "저 안에 뭔가 있다" 여야 한다.
+	 - 배경에 그림 한자가 떠다닌다: 글자 한 줄 없이 여기가 어떤 곳인지 알려 준다
+	 - 캐릭터가 입력에 반응한다: 기다리는 사람이 있다는 감각
+	 - 라벨을 지우고 아이콘을 넣었다: 읽을 것을 줄인다
+-->
 <AppShell nav={false}>
-	<div class="mx-auto flex w-full max-w-md flex-col items-center gap-6 py-4">
+	<div class="gate relative isolate">
+		<FloatingGlyphs count={9} />
+
 		<div class="relative isolate text-center">
 			<Sparkle count={6} />
-			<h1 class="text-display-lg text-magic-700">마법한자탐험대</h1>
-			<p class="mt-1 text-ink-500">다시 만나서 반가워요!</p>
+			<h1 class="title text-display-lg text-magic-700">마법한자탐험대</h1>
 		</div>
 
-		<div class="flex items-end gap-2">
-			<WizardSprite size={100} />
+		<div class="greet">
+			<div class="hero" class:turned={focused === 'password'}>
+				<WizardSprite size={104} {mood} />
+			</div>
 			<SpeechBubble tail="bottom-left">
-				<p class="font-display">오늘은 어떤 모험을 할까?</p>
+				<p class="font-display">{line}</p>
 			</SpeechBubble>
 		</div>
 
 		<form
 			method="POST"
-			class="glass flex w-full flex-col gap-4 rounded-panel p-6 shadow-card"
+			class="card"
 			use:enhance={() => {
 				submitting = true;
 				return async ({ update }) => {
@@ -40,28 +71,33 @@
 				};
 			}}
 		>
-			<h2 class="text-display-sm text-ink-900">로그인</h2>
-
-			<label class="flex flex-col gap-1.5">
-				<span class="font-display text-sm text-ink-700">닉네임</span>
+			<!-- 라벨 대신 아이콘. 읽지 않아도 무엇을 넣는 칸인지 안다 -->
+			<label class="field" class:on={focused === 'nickname'}>
+				<span class="icon" aria-hidden="true">🙂</span>
 				<input
 					name="nickname"
 					type="text"
 					required
 					autocomplete="username"
+					placeholder="닉네임"
+					aria-label="닉네임"
 					value={form?.nickname ?? ''}
-					class="field"
+					onfocus={() => (focused = 'nickname')}
+					onblur={() => (focused = 'none')}
 				/>
 			</label>
 
-			<label class="flex flex-col gap-1.5">
-				<span class="font-display text-sm text-ink-700">비밀번호</span>
+			<label class="field" class:on={focused === 'password'}>
+				<span class="icon" aria-hidden="true">🔑</span>
 				<input
 					name="password"
 					type="password"
 					required
 					autocomplete="current-password"
-					class="field"
+					placeholder="비밀번호"
+					aria-label="비밀번호"
+					onfocus={() => (focused = 'password')}
+					onblur={() => (focused = 'none')}
 				/>
 			</label>
 
@@ -85,17 +121,137 @@
 </AppShell>
 
 <style>
+	.gate {
+		display: flex;
+		width: 100%;
+		max-width: 26rem;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		margin: 0 auto;
+		padding: 0.5rem 0;
+	}
+
+	/* 제목이 위에서 통통 내려온다. 화면이 열리는 느낌을 만드는 가장 싼 방법이다 */
+	.title {
+		animation: title-drop 0.7s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
+	}
+
+	@keyframes title-drop {
+		from {
+			opacity: 0;
+			transform: translateY(-26px) scale(0.86);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	.greet {
+		display: flex;
+		align-items: flex-end;
+		gap: 0.5rem;
+	}
+
+	/* 캐릭터가 가만히 숨 쉰다 */
+	.hero {
+		animation: hero-bob 3.4s ease-in-out infinite;
+		transition: transform 0.35s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+	}
+
+	/* 비밀번호를 칠 때 고개를 돌린다 */
+	.hero.turned {
+		transform: rotate(-16deg) translateX(-6px);
+	}
+
+	@keyframes hero-bob {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-7px);
+		}
+	}
+
+	.card {
+		display: flex;
+		width: 100%;
+		flex-direction: column;
+		gap: 0.85rem;
+		padding: 1.25rem;
+		border-radius: var(--radius-panel);
+		background: rgb(255 255 255 / 0.82);
+		backdrop-filter: blur(10px);
+		box-shadow: var(--shadow-card);
+		animation: card-rise 0.6s ease-out 0.15s both;
+	}
+
+	@keyframes card-rise {
+		from {
+			opacity: 0;
+			transform: translateY(18px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
 	.field {
-		min-height: var(--tap-min);
-		padding: 0.75rem 1rem;
-		border: 2px solid var(--color-magic-200);
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		/* 아이 손가락 기준 하한선보다 넉넉하게 */
+		min-height: 3.5rem;
+		padding: 0 1rem;
+		border: 3px solid var(--color-magic-200);
 		border-radius: var(--radius-button);
 		background: #fff;
-		font-size: 1rem;
-		color: var(--color-ink-900);
-		transition: border-color 0.15s ease;
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease,
+			transform 0.15s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
 	}
-	.field:focus {
-		border-color: var(--color-magic-500);
+
+	/* 지금 쓰는 칸이 살짝 커지며 빛난다 */
+	.field.on {
+		transform: translateY(-2px);
+		border-color: var(--color-magic-400);
+		box-shadow: 0 0 0 4px rgb(124 92 255 / 0.18);
+	}
+
+	.field .icon {
+		font-size: 1.25rem;
+		line-height: 1;
+	}
+
+	.field input {
+		/*
+		 * 입력칸 자체가 손가락 하한선을 넘어야 한다.
+		 * 감싼 상자만 크게 하면 실제로 눌리는 <input> 은 26px 밖에 안 돼서
+		 * 아이가 정확히 겨냥해야 커서가 들어간다 (레이아웃 검사가 이걸 잡아냈다).
+		 */
+		width: 100%;
+		align-self: stretch;
+		min-height: var(--tap-min);
+		border: 0;
+		background: none;
+		color: var(--color-ink-900);
+		font-size: 1rem;
+		outline: none;
+	}
+
+	.field input::placeholder {
+		color: var(--color-ink-500);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.title,
+		.card,
+		.hero {
+			animation: none;
+		}
 	}
 </style>

@@ -7,6 +7,7 @@
 	import Chip from '$lib/components/common/Chip.svelte';
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import HanjaReveal from '$lib/components/hanja/HanjaReveal.svelte';
+	import TraceGlyph from '$lib/components/play/TraceGlyph.svelte';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { announceReward } from '$lib/game/announce';
 	import { sound } from '$lib/sound/index.svelte';
@@ -16,6 +17,8 @@
 	let { data } = $props();
 
 	let claimed = $state(false);
+	/** 폼을 대신 눌러 주기 위한 참조 — 다 쓰면 그때 제출한다 */
+	let claimForm = $state<HTMLFormElement | null>(null);
 	let submitting = $state(false);
 	let reward = $state<RewardDto | null>(null);
 	let loadingNext = $state(false);
@@ -95,16 +98,34 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<HanjaReveal
-				character={data.hanja.character}
-				reading={data.hanja.reading}
-				meaning={data.hanja.meaning}
-				gradeLabel={data.hanja.gradeLabel}
-				strokeCount={data.hanja.strokeCount}
-				description={data.hanja.description}
-				exampleWords={data.hanja.exampleWords}
-				{claimed}
-			/>
+			{#if claimed}
+				<!-- 다 쓰고 나서야 뜻·음·예시가 나온다. 읽는 것이 **보상**이 되도록 순서를 뒤집었다 -->
+				<HanjaReveal
+					character={data.hanja.character}
+					reading={data.hanja.reading}
+					meaning={data.hanja.meaning}
+					gradeLabel={data.hanja.gradeLabel}
+					strokeCount={data.hanja.strokeCount}
+					description={data.hanja.description}
+					exampleWords={data.hanja.exampleWords}
+					{claimed}
+				/>
+			{:else}
+				<!--
+					**아이가 손으로 글자를 나타나게 한다.**
+					예전에는 카드에 적힌 뜻·음·획수·설명을 읽고 버튼을 누르는 것이 전부였다.
+					지금은 칸 위에 손가락을 굴리면 글자가 차오르고, 그림이 있는 글자는
+					그림이 글자로 변해 간다 — 이 앱이 하는 일을 한 장면으로 보여 준다.
+				-->
+				<div class="flex flex-col items-center gap-3">
+					<TraceGlyph
+						character={data.hanja.character}
+						size={208}
+						oncomplete={() => claimForm?.requestSubmit()}
+					/>
+					<p class="text-sm text-ink-500">손가락으로 칸을 문질러 글자를 꺼내 보세요</p>
+				</div>
+			{/if}
 
 			{#if claimed}
 				<div class="flex flex-col items-center gap-3" data-testid="learn-done">
@@ -122,6 +143,7 @@
 				<form
 					method="POST"
 					action="?/learn"
+					bind:this={claimForm}
 					class="flex justify-center"
 					use:enhance={() => {
 						submitting = true;
@@ -148,7 +170,11 @@
 					}}
 				>
 					<input type="hidden" name="hanjaId" value={data.hanja.id} />
-					<Button type="submit" variant="magic" size="lg" loading={submitting}>
+					<!--
+						글자를 다 쓰면 이 버튼이 대신 눌린다.
+						버튼 자체도 남겨 둔다 — 손가락이 서툰 아이, 키보드 사용자, JS 가 죽은 경우를 위해서다.
+					-->
+					<Button type="submit" variant="ghost" size="sm" loading={submitting}>
 						이 한자 배우기
 					</Button>
 				</form>
