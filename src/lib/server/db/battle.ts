@@ -83,6 +83,17 @@ export interface BattlePlan {
 	pieces: BoardPiece[];
 }
 
+/**
+ * 이번 판에 낼 봉인 수.
+ *
+ * 처음에는 하나, 익숙해지면 셋. 아이가 몇 개를 만들어 봤는지로 정한다.
+ */
+export function sealLimitFor(discovered: number): number {
+	if (discovered <= 0) return 1;
+	if (discovered < 3) return 2;
+	return SEALS_PER_BATTLE;
+}
+
 /** 이 아이가 각 한자를 얼마나 익혔는지 (없으면 0 = 처음 보는 것) */
 async function masteryOf(
 	db: D1Database,
@@ -136,9 +147,18 @@ export async function planFor(
 	db: D1Database,
 	userId: string,
 	sessionKey: string,
-	areaId: number
+	areaId: number,
+	sealLimit = SEALS_PER_BATTLE
 ): Promise<BattlePlan> {
-	const recipes = derive(userId, sessionKey, areaId);
+	/*
+	 * **처음 오는 아이에게는 봉인 하나만 낸다.**
+	 * 조각 여섯 개를 처음부터 깔아 놓으면 짝이 15가지라, 무엇을 하는 화면인지도 모르는 채
+	 * 헤매게 된다. DragonBox 1단계가 손가락 하나면 끝나는 것과 같은 이유다.
+	 *
+	 * 봉인 자체는 언제나 3개를 유도하고 앞에서부터 잘라 쓴다.
+	 * 그래야 공격 요청을 받은 서버가 같은 방식으로 다시 유도해도 답이 어긋나지 않는다.
+	 */
+	const recipes = derive(userId, sessionKey, areaId).slice(0, Math.max(1, sealLimit));
 	const broken = await brokenIndexes(db, userId, sessionKey);
 	/*
 	 * 조각은 봉인들의 재료를 **그대로 펼친 것**이다 (木+木=林 처럼 같은 글자가 둘이면 조각도 둘).

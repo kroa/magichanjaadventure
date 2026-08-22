@@ -45,10 +45,16 @@ test('한자를 하나도 안 배워도 대결에 들어갈 수 있다', async (
 	await waitForFonts(page);
 
 	await expect(page.getByTestId('piece-board')).toBeVisible();
-	// 조각은 이번 봉인들의 재료가 정확히 그만큼만 있다 (미끼 없음)
-	await expect(page.locator('button.piece')).toHaveCount(6);
+	/*
+	 * **처음 오는 아이에게는 조각 두 개만 준다.**
+	 * 여섯 개를 깔면 짝이 15가지라, 무엇을 하는 화면인지도 모르는 채 헤맨다.
+	 * 익숙해지면 서버가 봉인을 늘린다.
+	 */
+	await expect(page.locator('button.piece')).toHaveCount(2);
 	// 목표를 인쇄해 보여 주지 않는다 — 그게 이 화면이 객관식이 아닌 이유다
 	await expect(page.getByTestId('seal-card')).toHaveCount(0);
+	// 대신 손가락이 시범을 보인다. 글이 아니라 몸짓으로 알린다
+	await expect(page.locator('.demo-hand')).toBeVisible();
 
 	await captureScreen(page, testInfo, 'battle');
 	await expectHealthyLayout(page);
@@ -102,7 +108,7 @@ test('패배 화면이 존재하지 않는다', async ({ page }, testInfo) => {
 	 * 고정된 nth 로 누르면 사라진 자리를 누르려다 엉뚱한 타임아웃이 난다.
 	 */
 	const pieces = page.locator('button.piece');
-	for (let i = 0; i < 5; i++) {
+	for (let i = 0; i < 4; i++) {
 		// 번호로 짚는다. 위치(nth)로 짚으면 조각이 사라진 자리를 누르려다 멈춘다
 		const ids = await pieces.evaluateAll((els) =>
 			els.map((el) => el.getAttribute('data-piece-id') ?? '')
@@ -125,7 +131,8 @@ test('이기면 별과 만든 한자가 나오고, 다시 대결이 동작한다
 	await expect(outcome).toBeVisible();
 	// 도움을 다 썼어도 별이 0 이면 안 된다 — 도움에 벌을 매기지 않기로 했다
 	await expect(outcome.getByLabel(/별 \d개/)).toBeVisible();
-	await expect(outcome).toContainText('만든 한자');
+	// 이야기는 판이 굴러가는 동안 멈춰 세우지 않고 여기서 몰아서 읽는다
+	await expect(outcome.locator('.learned li').first()).toBeVisible();
 
 	// 레벨업 연출이 늦게 떠올라 버튼을 가로챌 수 있다
 	await clickPastOverlay(page, '다시 대결');

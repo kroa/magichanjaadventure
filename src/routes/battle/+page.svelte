@@ -11,6 +11,7 @@
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
 	import BattleCanvas from '$lib/components/battle/BattleCanvas.svelte';
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
+	import StrikeGlyph from '$lib/components/play/StrikeGlyph.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
@@ -59,14 +60,20 @@
 	let victoryTrigger = $state(0);
 	let lastDamage = $state(0);
 	let startedAt = $state(Date.now());
+	/** 만든 글자가 날아가 부딪힐 곳 */
+	let monsterEl = $state<HTMLElement | null>(null);
 
-	/** 방금 깬 봉인 — 뜻·음·이야기를 여기서 처음 보여 준다 */
-	let justBroke = $state<{
-		character: string;
-		reading: string;
-		meaning: string;
-		story: string;
-	} | null>(null);
+	/**
+	 * 방금 만든 글자 — 잠깐 크게 보였다가 몬스터에게 날아간다.
+	 *
+	 * 예전에는 카드가 뜨고 "좋아!" 를 눌러야 다음으로 갔다. 한 판에 세 번 멈추면
+	 * 그건 게임이 아니라 슬라이드쇼다. 지금은 아무것도 누르지 않는다.
+	 */
+	let strike = $state<{ character: string; reading: string; meaning: string } | null>(null);
+	/** 이번 판에 배운 이야기들 — 승리 화면에서 몰아서 보여 준다 */
+	let stories = $state<{ character: string; meaning: string; reading: string; story: string }[]>(
+		[]
+	);
 
 	const heroMood = $derived<Mood>(outcome === 'win' ? 'cheer' : 'happy');
 	const enemyMood = $derived<Mood>(outcome === 'win' ? 'sad' : 'happy');
@@ -131,12 +138,20 @@
 			lastDamage = 1;
 			attackTrigger += 1;
 			broken += 1;
-			justBroke = {
+			strike = {
 				character: payload.character!,
 				reading: payload.reading!,
-				meaning: payload.meaning!,
-				story: payload.story!
+				meaning: payload.meaning!
 			};
+			stories = [
+				...stories,
+				{
+					character: payload.character!,
+					meaning: payload.meaning!,
+					reading: payload.reading!,
+					story: payload.story!
+				}
+			];
 
 			// 보스의 반격. 아이의 실패가 아니라 **성공에 대한 응답**이다
 			if (broken < totalSeals) {
@@ -187,9 +202,10 @@
 		}
 	}
 
-	/** 보상 화면을 닫는다. 판이 비었으면 그때 승리로 넘어간다 */
-	function closeBroke() {
-		justBroke = null;
+	/** 날아간 글자가 몬스터에 닿았다. 판이 비었으면 그때 승리로 넘어간다 */
+	function strikeLanded() {
+		strike = null;
+		hitTrigger += 1;
 		if (pieces.length === 0) void finish();
 	}
 
@@ -210,7 +226,8 @@
 			broken = 0;
 			misses = 0;
 			hintTick = 0;
-			justBroke = null;
+			strike = null;
+			stories = [];
 			madeThisBattle = [];
 			discoveredNew = false;
 			outcome = 'fighting';
@@ -286,7 +303,9 @@
 				<span class="pb-8 font-display text-lg text-magic-500" aria-hidden="true">VS</span>
 
 				<div class="flex w-[42%] flex-col items-center gap-1">
-					<MonsterSprite kind={data.area.boss.id} size={spriteSize} mood={enemyMood} />
+					<div bind:this={monsterEl}>
+						<MonsterSprite kind={data.area.boss.id} size={spriteSize} mood={enemyMood} />
+					</div>
 					<ProgressBar
 						value={totalSeals - broken}
 						max={totalSeals}
@@ -320,7 +339,21 @@
 						<li class:done={i < stars}>{label}</li>
 					{/each}
 				</ul>
-				{#if madeThisBattle.length > 0}
+				{#if stories.length > 0}
+					<!-- 이야기는 여기서 몰아서 읽는다. 판이 굴러가는 동안 멈춰 세우지 않기 위해서다 -->
+					<ul class="learned">
+						{#each stories as item (item.character)}
+							<li>
+								<span class="hanja">{item.character}</span>
+								<span class="font-display text-sm text-ink-900">
+									{item.meaning}
+									{item.reading}
+								</span>
+								<span class="text-xs text-ink-500">{item.story}</span>
+							</li>
+						{/each}
+					</ul>
+				{:else if madeThisBattle.length > 0}
 					<p class="made">
 						만든 한자
 						{#each madeThisBattle as ch (ch)}<span class="hanja">{ch}</span>{/each}
@@ -333,33 +366,29 @@
 					<Button variant="ghost" size="lg" href="/">모험 지도</Button>
 				</div>
 			</div>
-		{:else if justBroke}
-			<!--
-				**여기가 배움이 일어나는 순간이다.**
-				아이는 방금 해 그림과 달 그림을 밀어 붙였고, 그것이 明이며 "밝을 명" 이라는 것을
-				지금 처음 안다. 먼저 알려 주고 맞히게 하는 것과 순서가 반대다.
-			-->
-			<div class="broke" data-testid="seal-broke">
-				<span class="hanja broke-char">{justBroke.character}</span>
-				<span class="font-display text-lg text-ink-900">
-					{justBroke.meaning}
-					{justBroke.reading}
-				</span>
-				<p class="broke-story">{justBroke.story}</p>
-				<Button variant="magic" size="md" onclick={closeBroke}>좋아!</Button>
-			</div>
 		{:else}
-			<div class="play">
+			<div class="play relative isolate">
 				<PieceBoard
 					bind:pieces
 					{hintTick}
+					showDemo={data.showDemo}
 					height={boardHeight}
 					onmerge={handleMerge}
 					oncleared={() => {
-						// 마지막 조각이 사라졌다. 보상 화면을 닫을 때 승리로 넘어간다
-						if (!justBroke) void finish();
+						// 마지막 조각이 사라졌다. 날아간 글자가 닿으면 승리로 넘어간다
+						if (!strike) void finish();
 					}}
 				/>
+
+				{#if strike}
+					<StrikeGlyph
+						character={strike.character}
+						meaning={strike.meaning}
+						reading={strike.reading}
+						target={monsterEl}
+						ondone={strikeLanded}
+					/>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -445,28 +474,26 @@
 		align-content: center;
 	}
 
-	.broke {
+	.learned {
 		display: grid;
-		align-content: center;
-		justify-items: center;
-		gap: 0.35rem;
-		padding: 0.75rem;
-		border-radius: var(--radius-panel);
-		background: linear-gradient(180deg, #eef4ff 0%, #f6ecff 100%);
-		box-shadow: var(--shadow-card);
-		text-align: center;
+		gap: 0.4rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		text-align: left;
 	}
 
-	.broke-char {
-		font-size: 3.5rem;
-		line-height: 1;
+	.learned li {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		align-items: center;
+		gap: 0 0.5rem;
+	}
+
+	.learned .hanja {
+		grid-row: span 2;
+		font-size: 2.1rem;
 		color: var(--color-magic-800);
-	}
-
-	.broke-story {
-		max-width: 20rem;
-		color: var(--color-ink-700);
-		font-size: 0.8rem;
 	}
 
 	.stars {
@@ -536,8 +563,7 @@
 		}
 
 		.play,
-		.outcome,
-		.broke {
+		.outcome {
 			grid-area: play;
 		}
 	}

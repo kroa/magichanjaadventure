@@ -16,8 +16,6 @@ export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 	const outcome = page.getByTestId('battle-outcome');
 
 	for (let round = 0; round < maxRounds; round++) {
-		// 봉인을 깨면 "무슨 글자였는지" 화면이 뜬다. 넘겨야 판이 다시 보인다
-		await dismissReveal(page);
 		if (await outcome.isVisible().catch(() => false)) break;
 
 		if ((await page.locator('button.piece').count()) === 0) break;
@@ -43,10 +41,10 @@ export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 		}
 
 		// 합체 연출 + 서버 왕복이 끝날 때까지 기다린다
-		await page.waitForTimeout(1600);
+		// 합체 → 글자가 잠깐 떴다가 몬스터로 날아가는 시간까지 기다린다
+		await page.waitForTimeout(2400);
 	}
 
-	await dismissReveal(page);
 	await expect(outcome).toBeVisible({ timeout: 20_000 });
 
 	/*
@@ -57,14 +55,6 @@ export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 
 	// 승리 보상으로 레벨이 오르면 레벨업 연출이 결과 화면 전체를 덮는다
 	await settleLevelUp(page);
-}
-
-/** 봉인을 깬 뒤 나오는 "이 글자였어요" 화면을 넘긴다 */
-async function dismissReveal(page: Page): Promise<void> {
-	const broke = page.getByTestId('seal-broke');
-	if (!(await broke.isVisible().catch(() => false))) return;
-	await broke.getByRole('button', { name: '좋아!' }).click();
-	await expect(broke).toBeHidden({ timeout: 10_000 });
 }
 
 /**

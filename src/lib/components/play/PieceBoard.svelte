@@ -26,12 +26,45 @@
 		 * 방금 켠 힌트를 지워 버리는 경합이 났다. 짝을 아는 쪽이 직접 켜는 것이 맞다.
 		 */
 		hintTick?: number;
+		/**
+		 * 손 시범을 보일지.
+		 *
+		 * 아직 한 번도 합체해 본 적 없는 아이에게는 **무엇을 하는 화면인지 알 길이 없다.**
+		 * 글로 설명하는 대신 손가락이 조각을 밀어 붙이는 것을 보여 준다 —
+		 * DragonBox 가 새 규칙을 문장이 아니라 제스처로 시연하는 것과 같다.
+		 */
+		showDemo?: boolean;
 		height?: number;
 	}
 
-	let { pieces = $bindable(), onmerge, oncleared, hintTick = 0, height = 260 }: Props = $props();
+	let {
+		pieces = $bindable(),
+		onmerge,
+		oncleared,
+		hintTick = 0,
+		showDemo = false,
+		height = 260
+	}: Props = $props();
 
 	let hinted = $state<number[]>([]);
+	/** 지금 집어 든 조각과 **붙을 수 있는** 조각들 */
+	let joinable = $state<number[]>([]);
+	let touched = $state(false);
+
+	/*
+	 * 손 시범은 아이가 화면을 한 번이라도 건드리면 사라진다.
+	 * 계속 떠 있으면 방해가 되고, 한 번 만져 본 아이에게는 더 필요 없다.
+	 */
+	const demoPair = $derived(showDemo && !touched ? findJoinablePair(pieces) : null);
+
+	/** 이 조각과 붙는 것들을 켠다 (집어 들었을 때) */
+	function markJoinable(from: Piece | null) {
+		joinable = from
+			? pieces
+					.filter((p) => p.id !== from.id && fuse([from.character, p.character]))
+					.map((p) => p.id)
+			: [];
+	}
 
 	$effect(() => {
 		if (hintTick <= 0) return;
@@ -86,6 +119,7 @@
 
 		busy = true;
 		hinted = [];
+		joinable = [];
 		try {
 			const target = els.get(b.id);
 			const source = els.get(a.id);
@@ -110,17 +144,22 @@
 	/** 탭으로도 붙일 수 있어야 한다 — 끌기가 서툰 아이와 키보드 사용자를 위해서다 */
 	function tap(piece: Piece) {
 		if (busy) return;
+		touched = true;
 		if (picked === null) {
 			picked = piece.id;
+			// **집어 드는 순간 붙는 짝이 빛난다.** 설명 한 줄 없이 규칙을 알려 주는 장치다
+			markJoinable(piece);
 			sound.play('click');
 			return;
 		}
 		if (picked === piece.id) {
 			picked = null;
+			markJoinable(null);
 			return;
 		}
 		const first = pieces.find((p) => p.id === picked);
 		picked = null;
+		markJoinable(null);
 		if (first) void tryJoin(first, piece);
 	}
 
@@ -154,6 +193,7 @@
 			type="button"
 			class="piece"
 			class:picked={picked === piece.id}
+			class:joinable={joinable.includes(piece.id)}
 			class:shake={shakeId === piece.id}
 			style="--x:{spot.x}%; --y:{spot.y}%; --tilt:{spot.tilt}deg;"
 			data-piece-id={piece.id}
@@ -168,7 +208,12 @@
 				dropSelector: '.piece',
 				value: String(piece.id),
 				disabled: busy,
-				onLift: () => sound.play('click'),
+				onLift: () => {
+					touched = true;
+					markJoinable(piece);
+					sound.play('click');
+				},
+				onRelease: () => markJoinable(null),
 				onDrop: (value, target) => dropped(Number(value), target)
 			}}
 			aria-label="{piece.character} 조각"
@@ -176,6 +221,26 @@
 			<PictoGlyph character={piece.character} stage={fadeStage(piece.mastery)} size={54} />
 		</button>
 	{/each}
+
+	{#if demoPair}
+		<!--
+			손 시범 — **글이 아니라 몸짓으로 알린다.**
+			손가락이 한 조각에서 다른 조각으로 미끄러지는 것을 반복해 보여 준다.
+			아이가 화면을 한 번이라도 건드리면 사라진다.
+		-->
+		<span
+			class="demo-hand"
+			aria-hidden="true"
+			style="
+				--from-x:{spotOf(pieces.indexOf(demoPair[0])).x}%;
+				--from-y:{spotOf(pieces.indexOf(demoPair[0])).y}%;
+				--to-x:{spotOf(pieces.indexOf(demoPair[1])).x}%;
+				--to-y:{spotOf(pieces.indexOf(demoPair[1])).y}%;
+			"
+		>
+			👆
+		</span>
+	{/if}
 </div>
 
 <style>
@@ -269,8 +334,53 @@
 		}
 	}
 
+	.demo-hand {
+		position: absolute;
+		z-index: 5;
+		font-size: 2rem;
+		line-height: 1;
+		pointer-events: none;
+		animation: demo-slide 2.6s ease-in-out infinite;
+	}
+
+	@keyframes demo-slide {
+		0%,
+		12% {
+			left: var(--from-x);
+			top: var(--from-y);
+			transform: translate(-20%, 10%) scale(1);
+			opacity: 0;
+		}
+		18% {
+			opacity: 1;
+			transform: translate(-20%, 10%) scale(0.86);
+		}
+		30% {
+			left: var(--from-x);
+			top: var(--from-y);
+			transform: translate(-20%, 10%) scale(1);
+			opacity: 1;
+		}
+		70% {
+			left: var(--to-x);
+			top: var(--to-y);
+			transform: translate(-20%, 10%) scale(1);
+			opacity: 1;
+		}
+		80% {
+			transform: translate(-20%, 10%) scale(0.86);
+		}
+		100% {
+			left: var(--to-x);
+			top: var(--to-y);
+			transform: translate(-20%, 10%) scale(1);
+			opacity: 0;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
-		.piece.shake {
+		.piece.shake,
+		.demo-hand {
 			animation: none;
 		}
 	}

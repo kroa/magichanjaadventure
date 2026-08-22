@@ -64,8 +64,19 @@ test.describe('아이의 첫 모험', () => {
 
 		await pickWizard(page);
 
-		await expect(page.getByRole('heading', { name: '모험 지도' })).toBeVisible();
+		/*
+		 * 홈은 이제 섬 지도다. 액션 카드 목록이 아니라 **어디로 갈지 고르는 곳**이다.
+		 * 지역 9개가 전부 보이고, 잠긴 곳도 보여야 한다 (갈 곳이 남았다는 감각).
+		 */
+		await expect(page.getByTestId('adventure-map')).toBeVisible();
+		await expect(page.locator('button.island')).toHaveCount(9);
 		await expect(page.getByTestId('top-hud')).toContainText(user.nickname);
+
+		// 섬을 고르면 무엇을 할지 묻는다
+		await page.locator('button.island[data-area="1"]').click();
+		await expect(page.getByTestId('island-sheet')).toBeVisible();
+		await page.getByRole('button', { name: '닫기' }).click();
+		await expect(page.getByTestId('island-sheet')).toBeHidden();
 		await captureScreen(page, testInfo, 'home');
 		await expectHealthyLayout(page);
 	});
@@ -171,6 +182,8 @@ test.describe('아이의 첫 모험', () => {
 		const user = await signUp(page, 'again', `${testInfo.project.name}${testInfo.workerIndex}e`);
 		await pickWizard(page);
 
+		// 로그아웃은 지도 왼쪽 아래 "내 카드" 안에 있다 (지도를 어지럽히지 않기 위해서다)
+		await page.getByRole('button', { name: '내 정보' }).click();
 		await page.getByRole('button', { name: '로그아웃' }).click();
 		await page.waitForURL('**/login');
 		await waitForHydration(page);
@@ -196,6 +209,8 @@ test.describe('아이의 첫 모험', () => {
 	test('틀린 비밀번호로는 로그인되지 않는다', async ({ page }, testInfo) => {
 		const user = await signUp(page, 'wrongpw', `${testInfo.project.name}${testInfo.workerIndex}f`);
 		await pickWizard(page);
+		// 로그아웃은 지도 왼쪽 아래 "내 카드" 안에 있다 (지도를 어지럽히지 않기 위해서다)
+		await page.getByRole('button', { name: '내 정보' }).click();
 		await page.getByRole('button', { name: '로그아웃' }).click();
 		await page.waitForURL('**/login');
 		await waitForHydration(page);
