@@ -53,6 +53,14 @@ export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 	 */
 	await expect(outcome.getByLabel(/별 [1-3]개/)).toBeVisible({ timeout: 15_000 });
 
+	/*
+	 * 승리 연출이 끝날 때까지 기다린다.
+	 *
+	 * 이 줄이 없으면 스크린샷이 **중간 프레임**을 찍고, 레이아웃 검사가 아직 커져 있는
+	 * 별이나 아래에서 올라오는 중인 한자를 잰다. `LevelUpOverlay` 와 같은 규약이다.
+	 */
+	await expect(outcome).toHaveAttribute('data-anim-state', 'done', { timeout: 15_000 });
+
 	// 승리 보상으로 레벨이 오르면 레벨업 연출이 결과 화면 전체를 덮는다
 	await settleLevelUp(page);
 }

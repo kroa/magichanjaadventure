@@ -11,6 +11,16 @@
 	let { size = 160, mood = 'happy', idle = true, class: className = '' }: Props = $props();
 
 	/*
+	 * 그라디언트 id 를 **인스턴스마다** 다르게 만든다.
+	 *
+	 * id 가 하드코딩이라 같은 캐릭터가 한 화면에 둘 뜨면 SVG 규칙상 문서에서
+	 * **먼저 나온 정의만** 살아남는다. 두 번째 스프라이트는 첫 번째의 그라디언트를
+	 * 참조하게 되고, 그 첫 번째가 사라지면 색이 통째로 빠진다.
+	 * 상점·도감·스타일가이드처럼 여러 개가 같이 뜨는 화면에서 실제로 터진다.
+	 */
+	const uid = $props.id();
+
+	/*
 	 * 한자 도사 — 자체 제작 인라인 SVG.
 	 * 산에서 수련한 **어린** 도사다. 흰 수염을 붙이면 아이가 자기와 동일시하지 못하므로
 	 * 상투와 도포만으로 "도사"를 표현한다.
@@ -27,7 +37,7 @@
 	aria-label="한자 도사"
 >
 	<defs>
-		<linearGradient id="s-robe" x1="0" y1="0" x2="0" y2="1">
+		<linearGradient id="{uid}-s-robe" x1="0" y1="0" x2="0" y2="1">
 			<stop offset="0%" stop-color="#FFFFFF" />
 			<stop offset="100%" stop-color="#CFE4F5" />
 		</linearGradient>
@@ -39,7 +49,7 @@
 		<!-- 도포 (다리를 덮는다) -->
 		<path
 			d="M60 82c-15 0-23 8-26 22l-5 24c-1 5 2 8 7 8h48c5 0 8-3 7-8l-5-24c-3-14-11-22-26-22z"
-			fill="url(#s-robe)"
+			fill="url(#{uid}-s-robe)"
 			stroke="#8FA8C4"
 			stroke-width="2.5"
 		/>

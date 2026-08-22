@@ -6,6 +6,8 @@ export interface LevelUpEvent {
 	level: number;
 	/** 이번에 오른 레벨 수 (2 이상이면 "2단계 상승!") */
 	levelsGained: number;
+	/** 이 보상을 받기 전 레벨. 전직 여부를 여기서 판정한다 */
+	previousLevel: number;
 	characterClass: CharacterClass | null;
 	gemsGained: number;
 	achievements: UnlockedAchievementDto[];

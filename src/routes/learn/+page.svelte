@@ -114,17 +114,37 @@
 				<!--
 					**아이가 손으로 글자를 나타나게 한다.**
 					예전에는 카드에 적힌 뜻·음·획수·설명을 읽고 버튼을 누르는 것이 전부였다.
-					지금은 칸 위에 손가락을 굴리면 글자가 차오르고, 그림이 있는 글자는
-					그림이 글자로 변해 간다 — 이 앱이 하는 일을 한 장면으로 보여 준다.
+					지금은 흙을 문지르면 손이 지나간 자리만 드러난다 —
+					이 앱이 하는 일을 한 장면으로 보여 준다.
+
+					그리고 그 무대가 **지역마다 다르다.**
+
+					AREAS 에 지역마다 하늘·대표색·분위기·흙이 다 정의돼 있는데 화면이 하나도 안 썼다.
+					그래서 새싹 마을과 반짝 시냇가가 보기에 완전히 같았고, 나오는 한자만 달랐다.
+
+					전역 배경(SkyBackground)을 바꾸지 않고 **패널 안에 가둔다** —
+					9곳 중 6곳이 밝은 파스텔이라 전역을 바꾸면 흰 글씨와 유리 패널이 전부 대비를 잃는다.
+					대결 화면이 이미 쓰는 `--sky` 방식과 같다.
 				-->
-				<div class="flex flex-col items-center gap-3">
+				<section
+					class="area-stage"
+					data-testid="area-stage"
+					data-area={data.area.id}
+					style="--area-sky:{data.area.sky}"
+				>
+					<p class="stage-line">
+						<span aria-hidden="true">{data.area.emoji}</span>
+						{data.area.mood}
+					</p>
 					<TraceGlyph
 						character={data.hanja.character}
 						size={208}
+						texture={data.area.soil}
+						accent={data.area.accent}
 						oncomplete={() => claimForm?.requestSubmit()}
 					/>
-					<p class="text-sm text-white/80">흙을 문질러 한자를 파내 보세요</p>
-				</div>
+					<p class="stage-line">흙을 문질러 한자를 파내 보세요</p>
+				</section>
 			{/if}
 
 			{#if claimed}
@@ -207,3 +227,31 @@
 		{/if}
 	</div>
 </AppShell>
+
+<style>
+	/* 지역 무대 — 여기가 "어느 곳인지" 를 보여 주는 유일한 자리다 */
+	.area-stage {
+		display: grid;
+		justify-items: center;
+		gap: 0.6rem;
+		padding: 0.75rem;
+		border-radius: var(--radius-panel);
+		background: var(--area-sky);
+		box-shadow: var(--shadow-card);
+	}
+
+	/*
+	 * 하늘 아홉 개 중 여섯은 밝은 파스텔이고 셋은 어둡다.
+	 * 어디서나 읽히는 한 벌은 "어두운 알약 + 흰 글씨" 뿐이라 그걸로 통일한다.
+	 * 고정 높이나 nowrap 을 주지 않는다 — 분위기 문구가 길어 두 줄이 되는 지역이 있다.
+	 */
+	.stage-line {
+		max-width: 100%;
+		padding: 0.2rem 0.6rem;
+		border-radius: 9999px;
+		background: rgb(28 20 58 / 0.78);
+		color: #fff;
+		font-size: 0.75rem;
+		text-align: center;
+	}
+</style>

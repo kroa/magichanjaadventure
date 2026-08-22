@@ -12,6 +12,16 @@
 	let { size = 160, mood = 'happy', idle = true, class: className = '' }: Props = $props();
 
 	/*
+	 * 그라디언트 id 를 **인스턴스마다** 다르게 만든다.
+	 *
+	 * id 가 하드코딩이라 같은 캐릭터가 한 화면에 둘 뜨면 SVG 규칙상 문서에서
+	 * **먼저 나온 정의만** 살아남는다. 두 번째 스프라이트는 첫 번째의 그라디언트를
+	 * 참조하게 되고, 그 첫 번째가 사라지면 색이 통째로 빠진다.
+	 * 상점·도감·스타일가이드처럼 여러 개가 같이 뜨는 화면에서 실제로 터진다.
+	 */
+	const uid = $props.id();
+
+	/*
 	 * 한자 기사 — 자체 제작 인라인 SVG (docs/06-ASSETS-LICENSE.md)
 	 *
 	 * 규칙 (docs/02-DESIGN-SYSTEM.md §7)
@@ -41,11 +51,11 @@
 	aria-label="한자 기사"
 >
 	<defs>
-		<linearGradient id="k-armor" x1="0" y1="0" x2="0" y2="1">
+		<linearGradient id="{uid}-k-armor" x1="0" y1="0" x2="0" y2="1">
 			<stop offset="0%" stop-color="#8FC0F5" />
 			<stop offset="100%" stop-color="#4A8AD4" />
 		</linearGradient>
-		<linearGradient id="k-shield" x1="0" y1="0" x2="1" y2="1">
+		<linearGradient id="{uid}-k-shield" x1="0" y1="0" x2="1" y2="1">
 			<stop offset="0%" stop-color="#FFE08A" />
 			<stop offset="100%" stop-color="#F5A623" />
 		</linearGradient>
@@ -64,7 +74,7 @@
 		<!-- 몸통 -->
 		<path
 			d="M60 82c-16 0-25 8-25 20v13c0 5 4 8 10 8h30c6 0 10-3 10-8v-13c0-12-9-20-25-20z"
-			fill="url(#k-armor)"
+			fill="url(#{uid}-k-armor)"
 			stroke="#3565A0"
 			stroke-width="2.5"
 		/>
@@ -93,7 +103,7 @@
 		<g class="shield">
 			<path
 				d="M7 84c0-4 3-7 7-7h16c4 0 7 3 7 7v20c0 11-8 17-15 20-7-3-15-9-15-20V84z"
-				fill="url(#k-shield)"
+				fill="url(#{uid}-k-shield)"
 				stroke="#D4860E"
 				stroke-width="2.5"
 			/>
@@ -112,7 +122,7 @@
 		<!-- 투구 -->
 		<path
 			d="M60 10c-19 0-33 15-33 34v14c0 15 14 24 33 24s33-9 33-24V44c0-19-14-34-33-34z"
-			fill="url(#k-armor)"
+			fill="url(#{uid}-k-armor)"
 			stroke="#3565A0"
 			stroke-width="2.5"
 		/>

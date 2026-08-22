@@ -16,6 +16,8 @@ export interface RewardOutcome {
 	exp: number;
 	expToNext: number;
 	levelsGained: number;
+	/** 이 보상을 받기 전의 레벨. 화면이 역산하지 않도록 서버가 준다 */
+	previousLevel: number;
 	totalExp: number;
 	gems: number;
 	unlockedAchievements: UnlockedAchievement[];
@@ -60,13 +62,13 @@ export async function grantRewards(
 	const combo = Math.max(user.best_combo, input.comboReached ?? 0);
 
 	// 1차 적용 — 행동 보상
-	let state = applyExp({ level: user.level, exp: user.exp }, input.expGained);
+	const first = applyExp({ level: user.level, exp: user.exp }, input.expGained);
 	let totalExp = user.total_exp + input.expGained;
 	let gems = user.gems + (input.gemsGained ?? 0);
 
 	// 업적 판정
 	const unlocked = await evaluateAchievements(db, userId, {
-		level: state.level,
+		level: first.level,
 		combo,
 		battleWon: input.battleWon ?? false,
 		streakDays: user.streak_days,
@@ -79,26 +81,42 @@ export async function grantRewards(
 		gems += a.gemReward;
 	}
 
-	if (achievementExp > 0) {
-		state = applyExp({ level: state.level, exp: state.exp }, achievementExp);
-		totalExp += achievementExp;
-	}
+	/*
+	 * **오른 레벨 수는 두 번을 더해야 한다.**
+	 *
+	 * 예전에는 `state = applyExp(...)` 로 통째로 덮어써서 `levelsGained` 가
+	 * 2차 호출 값으로 리셋됐다. 그런데 `level_5`·`level_10`·`level_25` 업적은
+	 * 조건이 '레벨' 이고 1차 적용 뒤의 레벨로 판정하므로, **레벨 5·10·25 에 도달하는
+	 * 바로 그 요청에서 반드시 함께 터진다.** 업적 EXP 는 대개 한 레벨을 더 못 넘기니
+	 * 2차 levelsGained 는 0 이고, 결국 `announce` 의 `levelsGained > 0` 이 false 가 되어
+	 * **하필 그 세 레벨에서만 레벨업 연출이 통째로 사라졌다.**
+	 */
+	const second =
+		achievementExp > 0 ? applyExp({ level: first.level, exp: first.exp }, achievementExp) : first;
+	if (achievementExp > 0) totalExp += achievementExp;
+
+	const levelsGained = first.levelsGained + (achievementExp > 0 ? second.levelsGained : 0);
 
 	await db
 		.prepare(
 			`UPDATE users SET level = ?, exp = ?, total_exp = ?, gems = ?, best_combo = ?, updated_at = ?
 			 WHERE id = ?`
 		)
-		.bind(state.level, state.exp, totalExp, gems, combo, now, userId)
+		.bind(second.level, second.exp, totalExp, gems, combo, now, userId)
 		.run();
 
 	return {
 		expGained: input.expGained + achievementExp,
 		gemsGained: (input.gemsGained ?? 0) + unlocked.reduce((sum, a) => sum + a.gemReward, 0),
-		level: state.level,
-		exp: state.exp,
-		expToNext: expToNextLevel(state.level),
-		levelsGained: state.levelsGained,
+		level: second.level,
+		exp: second.exp,
+		expToNext: expToNextLevel(second.level),
+		levelsGained,
+		/*
+		 * 화면이 `level - levelsGained` 로 역산하지 않게 서버가 직접 준다.
+		 * 역산은 두 번에 걸쳐 오른 경우에 어긋난다.
+		 */
+		previousLevel: user.level,
 		totalExp,
 		gems,
 		unlockedAchievements: unlocked

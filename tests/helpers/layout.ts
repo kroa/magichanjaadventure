@@ -225,6 +225,29 @@ export async function findLayoutIssues(
 				}
 			}
 
+			/*
+			 * 규칙 6 — **중복 DOM id.**
+			 *
+			 * 캐릭터 스프라이트가 SVG 그라디언트를 `id="k-armor"` 처럼 하드코딩하고 있었다.
+			 * 같은 캐릭터가 한 화면에 둘 뜨면 `url(#k-armor)` 이 전부 **먼저 나온 하나**를
+			 * 가리키고, 그게 사라지면 나머지 색이 통째로 빠진다.
+			 * 눈에 잘 안 띄는데 화면 전체가 회색이 되는 식으로 터져서, 규칙으로 잠근다.
+			 */
+			const seenIds = new Map<string, number>();
+			for (const el of Array.from(document.querySelectorAll('[id]'))) {
+				const id = el.id;
+				if (!id) continue;
+				seenIds.set(id, (seenIds.get(id) ?? 0) + 1);
+			}
+			for (const [id, count] of seenIds) {
+				if (count < 2) continue;
+				issues.push({
+					rule: 'duplicate-dom-id',
+					element: `#${id}`,
+					detail: `${count}번 나온다 — SVG url(#…) 참조가 엉뚱한 것을 가리킨다`
+				});
+			}
+
 			return issues;
 		},
 		{ minTap, checkTaps }

@@ -5,11 +5,24 @@
 	interface Props {
 		character: string;
 		size?: number;
+		/**
+		 * 지역의 흙 재질. 새싹 마을은 갈색 흙, 시냇가는 모래, 동굴은 돌빛이다.
+		 * 이름이 `soil` 이 아닌 이유: 아래 캔버스 그라디언트 지역변수와 `.soil` CSS 클래스가 이미 있다.
+		 */
+		texture?: { top: string; bottom: string; grit: string };
+		/** 지역 대표색 — 칸 테두리에 쓴다 */
+		accent?: string;
 		/** 다 파내면 한 번 부른다 */
 		oncomplete?: () => void;
 	}
 
-	let { character, size = 200, oncomplete }: Props = $props();
+	let {
+		character,
+		size = 200,
+		texture = { top: '#B08356', bottom: '#8A5A28', grit: '#D9B382' },
+		accent = 'var(--color-gold-400)',
+		oncomplete
+	}: Props = $props();
 
 	const picture = $derived(PICTOGRAPHS[character]);
 
@@ -43,7 +56,11 @@
 	 * 지금은 흙에 묻힌 글자를 **문지른 자리만** 파낸다. 손이 지나간 곳이 드러나므로
 	 * 아이가 자기 손으로 찾아낸 것이 된다. 탐험대라는 이름과도 맞는다.
 	 */
-	function paintDirt(char: string, box: number) {
+	function paintDirt(
+		char: string,
+		box: number,
+		tex: { top: string; bottom: string; grit: string }
+	) {
 		const el = canvas;
 		if (!el) return;
 		const ctx = el.getContext('2d');
@@ -55,10 +72,11 @@
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 		ctx.globalCompositeOperation = 'source-over';
-		const soil = ctx.createLinearGradient(0, 0, 0, box);
-		soil.addColorStop(0, '#B08356');
-		soil.addColorStop(1, '#8A5A28');
-		ctx.fillStyle = soil;
+		// 지역마다 다른 땅을 판다 — 같은 흙만 계속 나오면 어디를 가도 같은 곳이다
+		const base = ctx.createLinearGradient(0, 0, 0, box);
+		base.addColorStop(0, tex.top);
+		base.addColorStop(1, tex.bottom);
+		ctx.fillStyle = base;
 		ctx.fillRect(0, 0, box, box);
 
 		/*
@@ -149,7 +167,7 @@
 		finished = false;
 		progress = 0;
 		sinceCheck = 0;
-		paintDirt(character, size);
+		paintDirt(character, size, texture);
 	});
 </script>
 
@@ -163,7 +181,11 @@
 	지금은 **손이 지나간 자리만** 드러난다. 아이가 자기 손으로 찾아낸 것이 되고,
 	그림이 있는 글자는 파낼수록 그림이 옅어지며 글자로 바뀐다.
 -->
-<div class="dig" class:done={finished} style="--box:{size}px">
+<div
+	class="dig"
+	class:done={finished}
+	style="--box:{size}px; --accent:{accent}; --grit:{texture.grit}"
+>
 	{#if picture}
 		<svg
 			class="picture"
@@ -219,7 +241,7 @@
 		border-radius: var(--radius-panel);
 		background: rgb(255 255 255 / 0.85);
 		box-shadow:
-			inset 0 0 0 4px var(--color-gold-400),
+			inset 0 0 0 4px var(--accent, var(--color-gold-400)),
 			0 10px 24px rgb(20 12 45 / 0.35);
 		overflow: hidden;
 	}
@@ -285,7 +307,7 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 9999px;
-		background: #d9b382;
+		background: var(--grit, #d9b382);
 		transform: translate(-50%, -50%);
 		pointer-events: none;
 		animation: spark-fly 0.42s ease-out forwards;

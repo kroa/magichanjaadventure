@@ -200,3 +200,37 @@ test('서버가 목표가 아닌 봉인 파괴를 인정하지 않는다', async
 	expect(result.won, '봉인을 안 깼는데 승리로 인정되면 안 된다').toBe(false);
 	expect(result.reward).toBeNull();
 });
+
+test('승리 연출이 끝까지 재생되고, 감속 설정에서는 즉시 최종 화면이 된다', async ({
+	page
+}, testInfo) => {
+	test.setTimeout(120_000);
+
+	/*
+	 * 예전 승리 화면은 완전히 정적이었다 — "승리!" 글자와 별이 툭 켜지고 끝.
+	 * 게다가 서버 정산이 실패하면 팡파르조차 안 울렸고, 레벨업 오버레이가
+	 * 승리 화면을 통째로 덮어서 연출이 가장 필요한 순간이 가려져 있었다.
+	 *
+	 * 여기서 보는 것은 두 가지다.
+	 *  1. 연출이 실제로 돌고 **끝나는가** (`data-anim-state`)
+	 *  2. 감속 설정에서는 연출을 만들지 않고 곧바로 최종 화면인가
+	 */
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+
+	await startBattle(page, 'winanim', `${testInfo.project.name}${testInfo.workerIndex}w`);
+	await breakAllSeals(page);
+
+	const outcome = page.getByTestId('battle-outcome');
+	await expect(outcome).toContainText('승리');
+	await expect(outcome).toHaveAttribute('data-anim-state', 'done');
+
+	// 감속에서도 별과 목록이 전부 보여야 한다 — opacity:0 인 채로 남으면 안 된다
+	const stars = outcome.locator('.star.on');
+	await expect(stars.first()).toBeVisible();
+	const shown = await stars.evaluateAll((els) =>
+		els.every((el) => Number(getComputedStyle(el).opacity) > 0.9)
+	);
+	expect(shown, '감속 설정인데 별이 투명한 채로 남았다').toBe(true);
+
+	await expectHealthyLayout(page);
+});

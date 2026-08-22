@@ -6,6 +6,7 @@
 	import HelpButton from '$lib/components/common/HelpButton.svelte';
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
+	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { sound } from '$lib/sound/index.svelte';
@@ -44,7 +45,15 @@
 	 *
 	 * 복습이므로 **되는 조합이면 무엇이든 인정한다** — 대결처럼 "이번 목표" 가 따로 없다.
 	 */
-	async function handleMerge(recipe: FusionRecipe, used: Piece[]): Promise<boolean> {
+	interface MergeResult {
+		ok: boolean;
+		character?: string;
+		reading?: string;
+		meaning?: string;
+		story?: string;
+	}
+
+	async function handleMerge(recipe: FusionRecipe, used: Piece[]): Promise<MergeResult | null> {
 		void recipe;
 		const body = new FormData();
 		for (const piece of used) body.append('part', piece.character);
@@ -52,22 +61,26 @@
 		try {
 			const response = await fetch('?/fuse', { method: 'POST', body });
 			if (!response.ok) throw new Error('실패');
-			const raw = (await response.json()) as { type: string; data?: string };
 
 			/*
-			 * SvelteKit 액션 응답은 devalue 로 감싸여 온다.
-			 * 화면이 이걸 직접 풀지 않도록 성공 여부만 보고, 자세한 내용은 다시 읽어 온다.
+			 * **`deserialize` 를 써야 한다.**
+			 *
+			 * 액션 응답의 `data` 는 devalue 문자열이라 `JSON.parse` 로 풀면 값이 아니라
+			 * 참조 표(인덱스 배열)가 나온다. 예전 코드가 `payload.includes(true)` 라는
+			 * 이상한 판정을 하고 있던 이유가 그것이고, 그래서 뜻·음을 **아예 꺼내지 못해**
+			 * 결과 카드의 「뜻 음」 줄이 빈칸으로 떴다.
 			 */
-			if (raw.type !== 'success') return false;
-			const payload = JSON.parse(raw.data ?? '[]');
-			const ok = Array.isArray(payload) ? payload.includes(true) : false;
-			if (!ok) return false;
+			const result = deserialize(await response.text());
+			if (result.type !== 'success') return null;
+
+			const payload = (result.data as unknown as MergeResult) ?? { ok: false };
+			if (!payload.ok) return null;
 
 			sound.play('discover');
-			return true;
+			return payload;
 		} catch {
 			toasts.warn('연결이 잠깐 끊겼어요. 다시 해 보세요.');
-			return false;
+			return null;
 		}
 	}
 
@@ -161,7 +174,7 @@
 		{:else if justMade}
 			<div class="reveal" data-testid="quiz-made">
 				<span class="hanja reveal-char">{justMade.character}</span>
-				<span class="font-display text-lg text-ink-900">
+				<span class="font-display text-lg text-ink-900" data-testid="quiz-made-gloss">
 					{justMade.meaning}
 					{justMade.reading}
 				</span>
@@ -184,17 +197,18 @@
 					{hintTick}
 					height={boardHeight}
 					onmerge={async (recipe, used) => {
-						const ok = await handleMerge(recipe, used);
-						if (ok) {
+						const result = await handleMerge(recipe, used);
+						if (result) {
 							made = [...made, recipe.result];
+							// 뜻·음은 서버가 준 것을 쓴다. 예전에는 빈 문자열을 박아 넣어 줄이 비어 있었다
 							justMade = {
-								character: recipe.result,
-								reading: '',
-								meaning: '',
-								story: recipe.story
+								character: result.character ?? recipe.result,
+								reading: result.reading ?? '',
+								meaning: result.meaning ?? '',
+								story: result.story ?? recipe.story
 							};
 						}
-						return ok;
+						return !!result;
 					}}
 					oncleared={() => {
 						if (!justMade) finished = true;

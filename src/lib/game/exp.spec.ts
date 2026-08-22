@@ -136,3 +136,36 @@ describe('levelProgress', () => {
 		expect(levelProgress({ level: MAX_LEVEL, exp: 0 })).toBe(1);
 	});
 });
+
+/**
+ * 보상을 두 번에 나눠 줄 때의 규칙.
+ *
+ * `grantRewards` 는 행동 EXP 를 먼저 적용하고, 그 결과 레벨로 업적을 판정한 뒤
+ * 업적 EXP 를 한 번 더 적용한다. 그때 **오른 레벨 수는 두 번을 더해야 한다.**
+ *
+ * 예전에는 두 번째 결과로 통째로 덮어써서 levelsGained 가 0 으로 리셋됐다.
+ * 하필 level_5·level_10·level_25 업적이 "그 레벨에 도달하는 바로 그 요청" 에서 터지므로,
+ * **레벨 5·10·25 에서만 레벨업 연출이 통째로 사라졌다.** 전직이 걸릴 자리가 정확히 거기다.
+ */
+describe('두 번에 나눠 적용해도 오른 레벨을 잃지 않는다', () => {
+	it('행동 EXP 로 레벨이 오르고 업적 EXP 가 뒤따라도 합이 유지된다', () => {
+		const first = applyExp({ level: 9, exp: expToNextLevel(9) - 1 }, 20);
+		expect(first.level, '행동 EXP 로 레벨 10 이 되어야 한다').toBe(10);
+		expect(first.levelsGained).toBe(1);
+
+		// level_10 업적 보상(+120). expToNextLevel(10) = 460 이라 한 레벨을 못 넘긴다
+		const second = applyExp({ level: first.level, exp: first.exp }, 120);
+		expect(second.levelsGained, '업적만으로는 레벨이 안 오른다').toBe(0);
+
+		// 화면에 알려야 할 값은 둘의 **합**이다. 덮어쓰면 0 이 되어 연출이 사라진다
+		expect(first.levelsGained + second.levelsGained).toBe(1);
+	});
+
+	it('업적 EXP 로 한 번 더 올라도 둘을 더하면 맞는다', () => {
+		const first = applyExp({ level: 4, exp: expToNextLevel(4) - 1 }, 10);
+		expect(first.level).toBe(5);
+		const second = applyExp({ level: first.level, exp: first.exp }, 5_000);
+		expect(first.levelsGained + second.levelsGained).toBe(5 - 4 + second.levelsGained);
+		expect(second.level).toBeGreaterThan(5);
+	});
+});

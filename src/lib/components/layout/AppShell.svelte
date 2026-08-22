@@ -18,11 +18,24 @@
 		nav?: boolean;
 		/** 화면 상단 고정 영역 (TopHud 등) */
 		hud?: Snippet;
+		/**
+		 * 좌우 여백과 최대 폭을 걷어낸다 (지도처럼 **화면 끝까지** 써야 하는 화면).
+		 * 예전에는 각 화면이 `width:100vw; margin-left:50%` 로 껍데기를 뚫고 나갔는데,
+		 * `100vw` 는 세로 스크롤바 폭을 포함해서 넘침 검사에 안 걸리는 사각지대를 만든다.
+		 */
+		bleed?: boolean;
 		class?: string;
 		children: Snippet;
 	}
 
-	let { night = false, nav = true, hud, class: className = '', children }: Props = $props();
+	let {
+		night = false,
+		nav = true,
+		hud,
+		bleed = false,
+		class: className = '',
+		children
+	}: Props = $props();
 
 	/*
 	 * 레벨업 연출은 여기 한 곳에만 마운트한다.
@@ -41,23 +54,38 @@
 	>본문으로 건너뛰기</a
 >
 
-{#if nav}
-	<TopNav />
-{/if}
+<!--
+	**세로를 한 번만 센다.**
 
-<div class="shell" class:with-nav={nav}>
-	{#if hud}
-		<div class="mx-auto w-full max-w-[var(--layout-max)] px-4 pt-4 sm:px-6">
-			{@render hud()}
-		</div>
+	TopNav 는 `position: sticky` 라 문서 흐름에서 자리를 차지한다.
+	그런데 그 아래 `.shell` 이 `min-height: 100dvh` 를 따로 잡고 있어서,
+	640px 이상 모든 화면이 **항상 TopNav 높이(~66px)만큼 세로로 스크롤됐다.**
+	데스크톱 홈 스크린샷이 1280×845 로 찍히던 이유이고,
+	지도가 `calc(100dvh - 13rem)` 같은 매직넘버를 쓸 수밖에 없던 이유다.
+
+	이제 바깥 `.frame` 하나가 100dvh 를 잡고 안쪽은 flex 로 나눠 갖는다.
+-->
+<div class="frame">
+	{#if nav}
+		<TopNav />
 	{/if}
 
-	<main
-		id="main"
-		class="mx-auto w-full max-w-[var(--layout-max)] flex-1 px-4 py-6 sm:px-6 {className}"
-	>
-		{@render children()}
-	</main>
+	<div class="shell" class:with-nav={nav}>
+		{#if hud}
+			<div class="mx-auto w-full max-w-[var(--layout-max)] px-4 pt-4 sm:px-6">
+				{@render hud()}
+			</div>
+		{/if}
+
+		<main
+			id="main"
+			class="{bleed
+				? 'w-full flex-1 py-3'
+				: 'mx-auto w-full max-w-[var(--layout-max)] flex-1 px-4 py-6 sm:px-6'} {className}"
+		>
+			{@render children()}
+		</main>
+	</div>
 </div>
 
 {#if nav}
@@ -65,9 +93,17 @@
 {/if}
 
 <style>
-	.shell {
+	/* 화면 높이를 잡는 것은 여기 하나뿐이다 */
+	.frame {
 		display: flex;
 		min-height: 100dvh;
+		flex-direction: column;
+	}
+
+	.shell {
+		display: flex;
+		min-height: 0;
+		flex: 1;
 		flex-direction: column;
 	}
 

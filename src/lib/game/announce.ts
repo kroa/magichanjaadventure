@@ -25,6 +25,11 @@ export function announceReward(
 		levelUp.show({
 			level: reward.level,
 			levelsGained: reward.levelsGained,
+			/*
+			 * 서버가 준 값을 그대로 쓴다. `level - levelsGained` 로 역산하면
+			 * 업적 보상까지 겹쳐 두 번에 나눠 오른 경우에 어긋난다.
+			 */
+			previousLevel: reward.previousLevel ?? reward.level - reward.levelsGained,
 			characterClass,
 			gemsGained: reward.gemsGained,
 			achievements: reward.unlockedAchievements

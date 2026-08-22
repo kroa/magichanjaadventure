@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { levelUp } from '$lib/stores/levelup.svelte';
-	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
-	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 	import Button from '$lib/components/common/Button.svelte';
+	import HeroSprite from '$lib/components/art/HeroSprite.svelte';
+	import { didPromote, rankOf, titleFor } from '$lib/game/rank';
 	import { sound } from '$lib/sound/index.svelte';
 
 	/*
@@ -134,7 +134,12 @@
 </script>
 
 {#if event}
-	{@const Hero = event.characterClass === 'wizard' ? WizardSprite : KnightSprite}
+	<!--
+		예전에는 `characterClass === 'wizard' ? WizardSprite : KnightSprite` 였다.
+		궁수·도사·여우·천재를 고른 아이는 **레벨업 때마다 남의 캐릭터**를 봤다.
+	-->
+	{@const rank = rankOf(event.level)}
+	{@const promoted = didPromote(event.previousLevel, event.level)}
 	<div
 		bind:this={root}
 		class="overlay"
@@ -154,7 +159,7 @@
 
 		<div class="content">
 			<div class="hero">
-				<Hero size={190} mood="cheer" />
+				<HeroSprite cls={event.characterClass} {rank} size={190} mood="cheer" />
 			</div>
 
 			<p class="title font-display">LEVEL UP!</p>
@@ -163,6 +168,18 @@
 				<span class="lv">Lv</span>
 				<span class="num" data-testid="levelup-number">{shownLevel}</span>
 			</div>
+
+			{#if promoted}
+				<!--
+					**전직은 레벨업 안에서 알린다.**
+					따로 띄우면 레벨 10 에서 오버레이가 두 번 뜨고 아이가 두 번 닫아야 한다.
+					같은 사건의 더 큰 버전이므로 같은 화면에서 한 번에 말한다.
+				-->
+				<p class="promote font-display" data-testid="levelup-promote">
+					<span aria-hidden="true">🎖️</span>
+					{titleFor(event.characterClass, rank)} 가 되었어요!
+				</p>
+			{/if}
 
 			{#if event.levelsGained > 1}
 				<p class="reward font-display text-gold-300">{event.levelsGained}단계 한 번에 올랐어요!</p>
@@ -268,6 +285,19 @@
 	.badge .num {
 		font-size: 2.25rem;
 		line-height: 1;
+	}
+
+	/* 전직은 레벨업보다 큰 사건이다. 금테 알약으로 한 단 높인다 */
+	.promote {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.35rem 0.9rem;
+		border: 2px solid var(--color-gold-400);
+		border-radius: 9999px;
+		background: rgb(255 201 60 / 0.16);
+		color: var(--color-gold-300, #ffe08a);
+		font-size: 1rem;
 	}
 
 	.reward {

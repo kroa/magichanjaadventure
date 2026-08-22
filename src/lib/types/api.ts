@@ -23,6 +23,8 @@ export interface RewardDto {
 	exp: number;
 	expToNext: number;
 	levelsGained: number;
+	/** 이 보상을 받기 전의 레벨 */
+	previousLevel: number;
 	totalExp: number;
 	gems: number;
 	unlockedAchievements: UnlockedAchievementDto[];

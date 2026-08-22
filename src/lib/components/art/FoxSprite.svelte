@@ -11,6 +11,16 @@
 	let { size = 160, mood = 'happy', idle = true, class: className = '' }: Props = $props();
 
 	/*
+	 * 그라디언트 id 를 **인스턴스마다** 다르게 만든다.
+	 *
+	 * id 가 하드코딩이라 같은 캐릭터가 한 화면에 둘 뜨면 SVG 규칙상 문서에서
+	 * **먼저 나온 정의만** 살아남는다. 두 번째 스프라이트는 첫 번째의 그라디언트를
+	 * 참조하게 되고, 그 첫 번째가 사라지면 색이 통째로 빠진다.
+	 * 상점·도감·스타일가이드처럼 여러 개가 같이 뜨는 화면에서 실제로 터진다.
+	 */
+	const uid = $props.id();
+
+	/*
 	 * 한자 여우 — 자체 제작 인라인 SVG.
 	 * 구미호 모티프지만 무섭지 않게: 꼬리 세 개만 두고 전부 둥글게 그린다.
 	 * (아홉 개를 다 그리면 실루엣이 복잡해져 작은 크기에서 뭉갠다)
@@ -27,7 +37,7 @@
 	aria-label="한자 여우"
 >
 	<defs>
-		<linearGradient id="f-coat" x1="0" y1="0" x2="0" y2="1">
+		<linearGradient id="{uid}-f-coat" x1="0" y1="0" x2="0" y2="1">
 			<stop offset="0%" stop-color="#FFC08A" />
 			<stop offset="100%" stop-color="#F08A45" />
 		</linearGradient>
@@ -69,7 +79,7 @@
 		<!-- 몸통 -->
 		<path
 			d="M60 82c-16 0-25 8-25 20v12c0 5 4 8 10 8h30c6 0 10-3 10-8v-12c0-12-9-20-25-20z"
-			fill="url(#f-coat)"
+			fill="url(#{uid}-f-coat)"
 			stroke="#C4692F"
 			stroke-width="2.5"
 		/>
@@ -134,7 +144,7 @@
 			cy="52"
 			rx="27"
 			ry="24"
-			fill="url(#f-coat)"
+			fill="url(#{uid}-f-coat)"
 			stroke="#C4692F"
 			stroke-width="2.5"
 		/>

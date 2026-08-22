@@ -1,9 +1,16 @@
 <script lang="ts">
 	import type { Mood } from '$lib/types/ui';
+	import type { BossId } from '$lib/game/areas';
 
 	interface Props {
-		/** 지역 보스 id. 없으면 1지역 도토리 도적 */
-		kind?: string;
+		/**
+		 * 지역 보스 id.
+		 *
+		 * **`string` 이 아니라 `BossId` 다.** 예전에는 string 이라 스킨이 없는 지역
+		 * (구름 나루·한자 하늘섬)이 조용히 1지역 도토리 도적으로 떨어졌고 아무도 몰랐다.
+		 * 유니온으로 좁혀 두면 스킨을 빠뜨리는 순간 타입 검사에서 걸린다.
+		 */
+		kind?: BossId;
 		size?: number;
 		mood?: Mood;
 		idle?: boolean;
@@ -35,10 +42,11 @@
 		accent: string;
 		label: string;
 		/** 머리 위 장식 */
-		crest: 'leaf' | 'drop' | 'puff' | 'ear' | 'shard' | 'star' | 'horn';
+		crest: 'leaf' | 'drop' | 'puff' | 'ear' | 'shard' | 'star' | 'horn' | 'sail' | 'wing';
 	}
 
-	const SKINS: Record<string, Skin> = {
+	// Record<BossId, …> 라 아홉 지역 중 하나라도 빠지면 컴파일이 안 된다
+	const SKINS: Record<BossId, Skin> = {
 		acorn_bandit: {
 			body: '#C98B4B',
 			dark: '#8A5A28',
@@ -87,6 +95,20 @@
 			accent: '#FFC93C',
 			label: '붓 마왕',
 			crest: 'horn'
+		},
+		cloud_captain: {
+			body: '#9FC7E8',
+			dark: '#4581A6',
+			accent: '#FFE7A8',
+			label: '구름배 선장',
+			crest: 'sail'
+		},
+		sky_dragon: {
+			body: '#B29CFF',
+			dark: '#5B45A8',
+			accent: '#CFE4F5',
+			label: '아기 구름용',
+			crest: 'wing'
 		}
 	};
 
@@ -145,6 +167,32 @@
 		{:else if skin.crest === 'shard'}
 			<path
 				d="M60 4 70 26H50z"
+				fill={skin.accent}
+				stroke={skin.dark}
+				stroke-width="2.5"
+				stroke-linejoin="round"
+			/>
+		{:else if skin.crest === 'sail'}
+			<!-- 돛 — 삼각형 하나에 돛대 한 줄. 곡선 원칙을 지키려 아래를 살짝 부풀렸다 -->
+			<path
+				d="M60 3 78 27q-18 5-36 0z"
+				fill={skin.accent}
+				stroke={skin.dark}
+				stroke-width="2.5"
+				stroke-linejoin="round"
+			/>
+			<path d="M60 3v24" stroke={skin.dark} stroke-width="2.5" stroke-linecap="round" />
+		{:else if skin.crest === 'wing'}
+			<!-- 아기 용의 둥근 날개 한 쌍. 뿔이 아니라 날개인 이유는 무섭지 않아야 해서다 -->
+			<path
+				d="M46 26q-14-4-14-14 10-2 16 8z"
+				fill={skin.accent}
+				stroke={skin.dark}
+				stroke-width="2.5"
+				stroke-linejoin="round"
+			/>
+			<path
+				d="M74 26q14-4 14-14-10-2-16 8z"
 				fill={skin.accent}
 				stroke={skin.dark}
 				stroke-width="2.5"

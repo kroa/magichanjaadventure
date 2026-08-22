@@ -72,6 +72,35 @@ test('복습을 끝낸 뒤 "한 판 더!"를 누르면 새 판이 시작된다',
 	 */
 	if ((await page.locator('button.piece').count()) === 0) return;
 
+	/*
+	 * 한 개를 만들어 보고 **결과 카드에 뜻·음이 실제로 찍히는지** 먼저 본다.
+	 *
+	 * 예전에는 액션 응답(devalue 문자열)을 JSON.parse 로 풀어 `includes(true)` 로만 판정했다.
+	 * 그래서 뜻·음을 아예 못 꺼냈고, 화면은 빈 문자열을 박아 넣어 카드의 「뜻 음」 줄이 비어 있었다.
+	 * 아이는 방금 만든 글자가 무슨 뜻인지 모른 채 넘어갔다.
+	 */
+	const help = page.getByRole('button', { name: '도와줘' });
+	if (await help.isVisible().catch(() => false)) {
+		await help.click();
+		await page.waitForTimeout(600);
+		const ids = await page
+			.locator('button.piece[data-hint]')
+			.evaluateAll((els) => els.map((el) => el.getAttribute('data-piece-id') ?? ''));
+		if (ids.length === 2) {
+			for (const id of ids) await page.locator(`button.piece[data-piece-id="${id}"]`).click();
+			await expect(page.getByTestId('quiz-made')).toBeVisible({ timeout: 15_000 });
+			/*
+			 * **뜻·음 줄만 따로 짚는다.**
+			 * 카드 전체로 검사하면 아래 이야기 줄에 한글이 있어서 옛 코드에서도 통과한다.
+			 * 비어 있던 것은 이 줄 하나였다.
+			 */
+			await expect(
+				page.getByTestId('quiz-made-gloss'),
+				'만든 글자의 뜻·음 줄이 비어 있다'
+			).toContainText(/[가-힣]/);
+		}
+	}
+
 	await clearQuizBoard(page);
 
 	const more = page.getByRole('button', { name: '한 판 더!' });

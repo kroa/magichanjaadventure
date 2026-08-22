@@ -11,6 +11,16 @@
 	let { size = 160, mood = 'happy', idle = true, class: className = '' }: Props = $props();
 
 	/*
+	 * 그라디언트 id 를 **인스턴스마다** 다르게 만든다.
+	 *
+	 * id 가 하드코딩이라 같은 캐릭터가 한 화면에 둘 뜨면 SVG 규칙상 문서에서
+	 * **먼저 나온 정의만** 살아남는다. 두 번째 스프라이트는 첫 번째의 그라디언트를
+	 * 참조하게 되고, 그 첫 번째가 사라지면 색이 통째로 빠진다.
+	 * 상점·도감·스타일가이드처럼 여러 개가 같이 뜨는 화면에서 실제로 터진다.
+	 */
+	const uid = $props.id();
+
+	/*
 	 * 한자 궁수 — 자체 제작 인라인 SVG.
 	 * 같은 규칙: 2등신, 큰 눈 + 하이라이트 2개, 외곽선은 자기 색의 어두운 톤.
 	 * 손에 든 활은 **머리 다음에** 그려야 가려지지 않는다.
@@ -27,7 +37,7 @@
 	aria-label="한자 궁수"
 >
 	<defs>
-		<linearGradient id="a-tunic" x1="0" y1="0" x2="0" y2="1">
+		<linearGradient id="{uid}-a-tunic" x1="0" y1="0" x2="0" y2="1">
 			<stop offset="0%" stop-color="#8FD99A" />
 			<stop offset="100%" stop-color="#3E9C5A" />
 		</linearGradient>
@@ -65,7 +75,7 @@
 		<!-- 몸통 (초록 튜닉) -->
 		<path
 			d="M60 82c-16 0-25 8-25 20v12c0 5 4 8 10 8h30c6 0 10-3 10-8v-12c0-12-9-20-25-20z"
-			fill="url(#a-tunic)"
+			fill="url(#{uid}-a-tunic)"
 			stroke="#2E7A45"
 			stroke-width="2.5"
 		/>

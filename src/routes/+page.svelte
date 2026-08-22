@@ -2,7 +2,9 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import TopHud from '$lib/components/layout/TopHud.svelte';
 	import Button from '$lib/components/common/Button.svelte';
-	import { spriteFor } from '$lib/game/characters';
+	import HeroSprite from '$lib/components/art/HeroSprite.svelte';
+	import { rankOf, titleFor } from '$lib/game/rank';
+	import { nodeFor, trailPath } from '$lib/game/worldmap';
 	import Sparkle from '$lib/components/effects/Sparkle.svelte';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { sound } from '$lib/sound/index.svelte';
@@ -10,45 +12,38 @@
 
 	let { data } = $props();
 
-	const Hero = $derived(spriteFor(data.user.characterClass));
+	const heroRank = $derived(rankOf(data.user.level));
+	const heroTitle = $derived(titleFor(data.user.characterClass, heroRank));
 
 	/*
-	 * 섬이 놓이는 자리 — 아래에서 위로 굽이치는 길.
+	 * 섬 자리는 `$lib/game/worldmap` 이 소유한다.
 	 *
-	 * 예전 홈은 액션 카드가 세로로 늘어선 **메뉴판**이었다. 어디로 갈지 고르는 것이 아니라
-	 * 기능을 고르는 화면이었다. 지도로 바꾸면 "어디를 모험할까" 가 먼저 오고,
-	 * 무엇을 할지는 그 다음이 된다 — 순서가 게임 쪽으로 뒤집힌다.
-	 *
-	 * 고정 좌표를 쓰는 이유는 SkyBackground 와 같다 (Math.random 은 서버와 화면이 어긋난다).
+	 * 예전에는 이 파일에 좌표 배열이 있고 `SPOTS[i] ?? SPOTS[last]` 로 흘렸다.
+	 * 지역이 하나만 늘어도 두 섬이 완전히 포개졌고, 왼쪽 위 내 카드와 한자 왕성이
+	 * 4.6px 차이로 겹침 검사를 통과하고 있었다 — 그 섬이 레벨 28 을 요구해
+	 * 모든 테스트 사용자에게 잠겨 있던 덕분이라, CI 가 영원히 못 볼 시한폭탄이었다.
+	 * 좌표를 데이터로 빼내니 그 불변식을 단위 테스트로 못 박을 수 있다.
 	 */
-	const SPOTS = [
-		{ x: 20, y: 80 },
-		{ x: 52, y: 72 },
-		{ x: 82, y: 80 },
-		{ x: 84, y: 55 },
-		{ x: 52, y: 47 },
-		{ x: 19, y: 55 },
-		{ x: 20, y: 24 },
-		{ x: 52, y: 16 },
-		{ x: 82, y: 24 }
-	];
-
 	const islands = $derived(
-		data.areas.map((entry, i) => ({
+		data.areas.map((entry) => ({
 			id: entry.area.id,
 			name: entry.area.name,
 			emoji: entry.area.emoji,
 			accent: entry.area.accent,
+			ground: entry.area.ground,
+			mood: entry.area.mood,
+			bossName: entry.area.boss.name,
 			learned: entry.learned,
 			total: entry.area.hanjaCount,
 			unlocked: entry.unlocked,
 			reason: entry.lockedReason,
-			spot: SPOTS[i] ?? SPOTS[SPOTS.length - 1]
+			gate: entry.gate,
+			node: nodeFor(entry.area.id) ?? { areaId: entry.area.id, x: 50, y: 50, depth: 0 }
 		}))
 	);
 
-	/** 길을 잇는 선 */
-	const trail = $derived(islands.map((island) => `${island.spot.x},${island.spot.y}`).join(' '));
+	/** 섬을 잇는 길 — 노드에서 곡선을 만든다 */
+	const trail = trailPath();
 
 	/** 내 캐릭터가 서 있는 섬 */
 	const here = $derived(islands.find((i) => i.id === data.nextAreaId) ?? islands[0]);
@@ -107,7 +102,7 @@
 	지금은 섬 아홉 개가 떠 있는 지도다. 내 캐릭터가 지금 있는 섬에 서 있고,
 	길을 따라 다음 섬으로 간다. 잠긴 섬은 자물쇠가 걸려 있다.
 -->
-<AppShell>
+<AppShell bleed class="flex flex-col">
 	{#snippet hud()}
 		<TopHud
 			nickname={data.user.nickname}
@@ -124,12 +119,30 @@
 		<Sparkle count={6} />
 
 		<button type="button" class="me-card" onclick={openMe} aria-label="내 정보">
-			<Hero size={38} mood="happy" />
+			<HeroSprite cls={data.user.characterClass} rank={heroRank} size={38} mood="happy" />
 		</button>
 
-		<!-- 섬을 잇는 길 -->
+		<!--
+			바이옴 땅 — 섬이 아이콘이 아니라 **장소**로 보이게 한다.
+			지역마다 다른 땅색이 깔리면 아홉 개가 같은 점 아홉 개로 안 읽힌다.
+		-->
+		{#each islands as island (island.id)}
+			<span
+				class="ground"
+				class:locked={!island.unlocked}
+				style="--x:{island.node.x}%; --y:{island.node.y}%; --fill:{island.ground}"
+				aria-hidden="true"
+			></span>
+		{/each}
+
+		<!--
+			섬을 잇는 길.
+			`vector-effect="non-scaling-stroke"` 한 줄이 이방성을 없앤다 —
+			예전 polyline 은 preserveAspectRatio="none" 탓에 데스크톱에서 2.16:1 로 찌그러져
+			점선의 굵기와 길이가 방향마다 달랐다.
+		-->
 		<svg class="trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-			<polyline points={trail} />
+			<path d={trail} vector-effect="non-scaling-stroke" />
 		</svg>
 
 		{#each islands as island (island.id)}
@@ -138,7 +151,8 @@
 				class="island"
 				class:locked={!island.unlocked}
 				class:done={island.learned >= island.total}
-				style="--x:{island.spot.x}%; --y:{island.spot.y}%; --accent:{island.accent}"
+				style="--x:{island.node.x}%; --y:{island.node.y}%; --accent:{island.accent}; --depth:{island
+					.node.depth}"
 				onclick={() => tapIsland(island)}
 				data-area={island.id}
 				aria-label="{island.name} {island.unlocked
@@ -146,16 +160,30 @@
 					: '잠김'}"
 			>
 				<span class="blob" aria-hidden="true"></span>
-				<span class="emoji" aria-hidden="true">{island.unlocked ? island.emoji : '🔒'}</span>
+				<!--
+					**잠긴 섬도 자기 얼굴을 보여 준다.**
+					예전에는 이모지를 통째로 🔒 로 바꿔서, 레벨 1 아이가 처음 보는 화면이
+					회색 자물쇠 여덟 개였다. "실패에 벌이 없다" 는 원칙이 지도에서만 깨져 있었다.
+					지금은 색만 빠지고 자물쇠는 작은 배지로 얹힌다 — 못 가는 곳이 아니라 아직 안 간 곳이다.
+				-->
+				<span class="emoji" aria-hidden="true">{island.emoji}</span>
 				<span class="name font-display">{island.name}</span>
 				{#if island.unlocked}
 					<span class="count font-display">{island.learned}/{island.total}</span>
+				{:else}
+					<span class="lock" aria-hidden="true">🔒</span>
+					<!-- 얼마나 남았는지를 눌러 보기 전에 알려 준다 -->
+					<span class="gate font-display">
+						{island.gate?.kind === 'level'
+							? `Lv ${island.gate.need}`
+							: `${island.gate?.have ?? 0}/${island.gate?.need ?? 0}`}
+					</span>
 				{/if}
 
 				{#if island.id === here?.id}
 					<!-- 내가 지금 있는 섬. 캐릭터가 위에 서 있다 -->
 					<span class="me" aria-hidden="true">
-						<Hero size={52} mood="happy" />
+						<HeroSprite cls={data.user.characterClass} rank={heroRank} size={52} mood="happy" />
 					</span>
 				{/if}
 			</button>
@@ -171,6 +199,8 @@
 		<div class="sheet" data-testid="me-sheet">
 			<div class="sheet-head">
 				<span class="font-display text-lg text-ink-900">{data.user.nickname}</span>
+				<!-- 계급은 레벨에서 유도된다. 저장하지 않으므로 캐릭터를 바꿔도 그대로 따라온다 -->
+				<span class="title font-display">{heroTitle}</span>
 				<button type="button" class="sheet-close" onclick={() => (meOpen = false)} aria-label="닫기"
 					>✕</button
 				>
@@ -198,6 +228,12 @@
 					>✕</button
 				>
 			</div>
+			<!-- 이 섬이 어떤 곳인지. AREAS 의 mood·boss 가 화면에 나오는 두 번째 자리다 -->
+			<p class="sheet-mood">{chosenIsland.mood}</p>
+			<p class="sheet-boss">
+				<span aria-hidden="true">👑</span>
+				{chosenIsland.bossName}
+			</p>
 			<div class="sheet-actions">
 				<Button variant="magic" size="lg" href="/learn?area={chosenIsland.id}">한자 배우기</Button>
 				<Button variant="ember" size="lg" href="/battle?area={chosenIsland.id}">보스 대결</Button>
@@ -210,18 +246,22 @@
 
 <style>
 	/*
-	 * 지도를 **화면 끝까지** 넓힌다.
-	 * AppShell 의 좌우 여백(px-4) 안에 갇혀 있으니 섬이 작아지고 카드처럼 보였다.
-	 * 지도는 액자에 든 그림이 아니라 아이가 들어가 있는 곳이어야 한다.
+	 * 지도는 **화면 끝까지** 간다. AppShell 의 `bleed` 가 좌우 여백을 걷어낸다.
+	 *
+	 * `100vw` 와 `calc(100dvh - 13rem)` 을 버렸다.
+	 *  - `100vw` 는 세로 스크롤바 폭을 포함해서, 넘침 검사가 못 잡는 사각지대를 만든다.
+	 *  - `13rem` 은 껍데기 높이를 손으로 추측한 값인데 실제와 달랐다.
+	 *
+	 * 그리고 **섬 크기를 지도 상자에 묶는다**(`cqmin`). 예전에는 위치만 % 이고
+	 * 크기는 고정 rem 이라, 같은 지도가 모바일에서는 섬이 면적의 65.7% 를 먹어 빽빽하고
+	 * 데스크톱에서는 15.4% 라 텅 비었다 — "좁다" 는 느낌의 원인이 하나였다.
 	 */
 	.map {
 		position: relative;
-		width: 100vw;
-		margin-left: 50%;
-		transform: translateX(-50%);
-		/* 아래쪽 섬이 하단 네비에 가리지 않도록 여유를 둔다 */
-		height: calc(100dvh - 13rem);
-		min-height: 26rem;
+		width: 100%;
+		flex: 1 1 0;
+		min-height: 18rem;
+		container-type: size;
 	}
 
 	.trail {
@@ -231,21 +271,62 @@
 		height: 100%;
 	}
 
-	.trail polyline {
+	.trail {
+		z-index: 2;
+	}
+
+	.trail path {
 		fill: none;
 		stroke: rgb(255 226 160 / 0.55);
-		stroke-width: 1.1;
+		/* non-scaling-stroke 덕에 이제 CSS px 로 잰다 — 방향에 따라 안 찌그러진다 */
+		stroke-width: 3px;
+		stroke-dasharray: 7 9;
 		stroke-linecap: round;
 		stroke-linejoin: round;
-		stroke-dasharray: 2.4 2.6;
+	}
+
+	/* 지역 땅 — 섬 밑에 깔리는 저채도 원반 */
+	.ground {
+		position: absolute;
+		left: var(--x);
+		top: var(--y);
+		z-index: 1;
+		width: calc(var(--island) * 1.6);
+		aspect-ratio: 1.65;
+		border-radius: 50%;
+		background: radial-gradient(
+			closest-side,
+			var(--fill) 0%,
+			color-mix(in srgb, var(--fill) 45%, transparent) 55%,
+			transparent 100%
+		);
+		translate: -50% -30%;
+		filter: blur(2px);
+		pointer-events: none;
+	}
+
+	/* 잠긴 곳까지 다 칠하면 "지금 갈 수 있는 곳" 이라는 유일한 신호가 지워진다 */
+	.ground.locked {
+		opacity: 0.3;
+		filter: grayscale(0.85) blur(2px);
+	}
+
+	/*
+	 * 섬 크기를 **지도 짧은 변**에 묶는다.
+	 * 데스크톱에서는 커지고 모바일에서는 작아진다 — 두 화면의 문제가 반대 방향이었다.
+	 */
+	.island,
+	.ground {
+		--island: clamp(3.5rem, 22cqmin, 8rem);
 	}
 
 	.island {
 		position: absolute;
 		left: var(--x);
 		top: var(--y);
+		z-index: calc(10 + var(--depth));
 		display: grid;
-		width: 7rem;
+		width: var(--island);
 		justify-items: center;
 		transform: translate(-50%, -50%);
 		border: 0;
@@ -266,8 +347,8 @@
 	.blob {
 		position: absolute;
 		top: 0;
-		width: 5.9rem;
-		height: 4.3rem;
+		width: calc(var(--island) * 0.84);
+		height: calc(var(--island) * 0.61);
 		border-radius: 48% 52% 44% 56% / 62% 66% 38% 34%;
 		background: linear-gradient(
 			180deg,
@@ -290,8 +371,8 @@
 
 	.emoji {
 		position: relative;
-		margin-top: 0.7rem;
-		font-size: 2.1rem;
+		margin-top: calc(var(--island) * 0.1);
+		font-size: calc(var(--island) * 0.3);
 		line-height: 1;
 		filter: drop-shadow(0 3px 5px rgb(20 12 45 / 0.4));
 	}
@@ -299,12 +380,12 @@
 	/* 이름표는 어두운 장면 위에 얹히므로 밝게 뽑는다 */
 	.name {
 		position: relative;
-		margin-top: 1.6rem;
+		margin-top: calc(var(--island) * 0.23);
 		padding: 0.15rem 0.65rem;
 		border-radius: 9999px;
 		background: rgb(28 20 58 / 0.82);
 		color: #fff;
-		font-size: 0.8rem;
+		font-size: clamp(0.66rem, calc(var(--island) * 0.115), 0.9rem);
 		white-space: nowrap;
 		box-shadow: 0 2px 8px rgb(20 12 45 / 0.45);
 	}
@@ -319,19 +400,40 @@
 
 	/* 잠긴 섬은 색이 빠진다 */
 	/* 잠긴 섬은 작고 어둡게 물러난다 — 갈 수 있는 곳이 먼저 눈에 들어와야 한다 */
+	/*
+	 * 잠긴 섬은 **작아지지도 투명해지지도 않는다.**
+	 *  - scale(.82) 은 겹침 검사에서 실제 크기를 숨겨, CI 가 못 보는 사각지대를 만들었다.
+	 *  - opacity 는 배경 구름이 섬을 통과해 비치게 했다.
+	 * 색만 빼서 "아직 안 간 곳" 으로 보이게 한다.
+	 */
 	.island.locked {
-		transform: translate(-50%, -50%) scale(0.82);
-		opacity: 0.62;
+		transform: translate(-50%, -50%);
 	}
 
 	.island.locked .blob {
-		background: linear-gradient(180deg, #6f6a90 0%, #3b3560 100%);
-		box-shadow: 0 6px 0 rgb(20 12 45 / 0.35);
+		filter: saturate(0.42) brightness(0.66);
 	}
 
 	.island.locked .emoji {
-		font-size: 1.6rem;
-		opacity: 0.85;
+		filter: saturate(0.5) brightness(0.78);
+	}
+
+	.lock {
+		position: absolute;
+		top: 0;
+		right: calc(var(--island) * 0.04);
+		font-size: calc(var(--island) * 0.2);
+	}
+
+	/* 얼마나 남았는지 — 눌러 보기 전에 보인다 */
+	.gate {
+		position: relative;
+		margin-top: 0.1rem;
+		padding: 0.05rem 0.4rem;
+		border-radius: 9999px;
+		background: rgb(20 14 44 / 0.8);
+		color: rgb(255 255 255 / 0.9);
+		font-size: clamp(0.6rem, calc(var(--island) * 0.1), 0.78rem);
 	}
 
 	.island.locked .name {
@@ -413,6 +515,31 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+	}
+
+	.title {
+		padding: 0.1rem 0.55rem;
+		border-radius: 9999px;
+		background: var(--color-magic-100, rgb(237 232 255));
+		color: var(--color-magic-700);
+		font-size: 0.72rem;
+	}
+
+	.sheet-mood {
+		color: var(--color-ink-700);
+		font-size: 0.82rem;
+	}
+
+	.sheet-boss {
+		display: inline-flex;
+		align-self: start;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.15rem 0.6rem;
+		border-radius: 9999px;
+		background: var(--color-ember-100, rgb(255 232 232));
+		color: var(--color-ink-700);
+		font-size: 0.75rem;
 	}
 
 	.sheet-emoji {

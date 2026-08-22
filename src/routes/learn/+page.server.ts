@@ -61,6 +61,25 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		})),
 		areaId: chosen.area.id,
 		areaName: chosen.area.name,
+		/*
+		 * **지역의 겉모습을 화면까지 보낸다.**
+		 *
+		 * `AREAS` 에 sky·accent·mood·soil 이 다 있는데 여기서 안 내려보내서
+		 * 배우기 화면은 지역을 칩 줄에만 썼다. 그래서 새싹 마을과 반짝 시냇가가
+		 * **보기에 완전히 같았고**, 사용자가 "차이가 뭐냐" 고 물었다.
+		 *
+		 * 지역을 고르는 것은 여전히 서버다(위 `chosen`). URL 로 잠긴 지역의
+		 * 하늘만 훔쳐보는 구멍이 생기지 않는다.
+		 */
+		area: {
+			id: chosen.area.id,
+			name: chosen.area.name,
+			emoji: chosen.area.emoji,
+			mood: chosen.area.mood,
+			sky: chosen.area.sky,
+			accent: chosen.area.accent,
+			soil: chosen.area.soil
+		},
 		areaDone: upcoming.length === 0,
 		hanja,
 		nextPlay: hanja ? pickNextPlay(owned, hanja.character) : null

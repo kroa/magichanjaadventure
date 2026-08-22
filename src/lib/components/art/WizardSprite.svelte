@@ -11,6 +11,16 @@
 	let { size = 160, mood = 'happy', idle = true, class: className = '' }: Props = $props();
 
 	/*
+	 * 그라디언트 id 를 **인스턴스마다** 다르게 만든다.
+	 *
+	 * id 가 하드코딩이라 같은 캐릭터가 한 화면에 둘 뜨면 SVG 규칙상 문서에서
+	 * **먼저 나온 정의만** 살아남는다. 두 번째 스프라이트는 첫 번째의 그라디언트를
+	 * 참조하게 되고, 그 첫 번째가 사라지면 색이 통째로 빠진다.
+	 * 상점·도감·스타일가이드처럼 여러 개가 같이 뜨는 화면에서 실제로 터진다.
+	 */
+	const uid = $props.id();
+
+	/*
 	 * 한자 마법사 — 자체 제작 인라인 SVG.
 	 * 모자가 몸통보다 크다. 이 과장이 "귀여운 마법사"를 만든다.
 	 *
@@ -29,15 +39,15 @@
 	aria-label="한자 마법사"
 >
 	<defs>
-		<linearGradient id="w-robe" x1="0" y1="0" x2="0" y2="1">
+		<linearGradient id="{uid}-w-robe" x1="0" y1="0" x2="0" y2="1">
 			<stop offset="0%" stop-color="#A98CFF" />
 			<stop offset="100%" stop-color="#6742E8" />
 		</linearGradient>
-		<linearGradient id="w-hat" x1="0" y1="0" x2="1" y2="1">
+		<linearGradient id="{uid}-w-hat" x1="0" y1="0" x2="1" y2="1">
 			<stop offset="0%" stop-color="#B29CFF" />
 			<stop offset="100%" stop-color="#5231BC" />
 		</linearGradient>
-		<radialGradient id="w-orb">
+		<radialGradient id="{uid}-w-orb">
 			<stop offset="0%" stop-color="#FFF6D6" />
 			<stop offset="55%" stop-color="#FFD25E" />
 			<stop offset="100%" stop-color="#F5A623" />
@@ -60,7 +70,7 @@
 		<!-- 로브 (다리는 로브에 가린다 — 실루엣이 단순해야 귀엽다) -->
 		<path
 			d="M58 82c-14 0-22 8-25 22l-5 24c-1 5 2 8 7 8h46c5 0 8-3 7-8l-5-24c-3-14-11-22-25-22z"
-			fill="url(#w-robe)"
+			fill="url(#{uid}-w-robe)"
 			stroke="#4A2E9E"
 			stroke-width="2.5"
 		/>
@@ -96,7 +106,7 @@
 		<g class="hat">
 			<path
 				d="M58 2c-4 0-7 3-9 9L35 43c-2 5 1 8 6 8h34c5 0 8-3 6-8L67 11c-2-6-5-9-9-9z"
-				fill="url(#w-hat)"
+				fill="url(#{uid}-w-hat)"
 				stroke="#4A2E9E"
 				stroke-width="2.5"
 				stroke-linejoin="round"
@@ -186,7 +196,7 @@
 				cx="98.5"
 				cy="26"
 				r="12"
-				fill="url(#w-orb)"
+				fill="url(#{uid}-w-orb)"
 				stroke="#D4860E"
 				stroke-width="2.2"
 			/>

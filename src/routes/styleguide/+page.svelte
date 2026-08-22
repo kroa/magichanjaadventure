@@ -17,6 +17,11 @@
 	import ParticleBurst from '$lib/components/effects/ParticleBurst.svelte';
 	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
 	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
+	import HeroSprite from '$lib/components/art/HeroSprite.svelte';
+	import { RANK_MAX, RANK_STEP, titleFor } from '$lib/game/rank';
+	import { CHARACTERS, type CharacterClass } from '$lib/types/user';
+
+	const CLASS_IDS = Object.keys(CHARACTERS) as CharacterClass[];
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { TONES, type Mood, type Tone } from '$lib/types/ui';
 
@@ -88,6 +93,34 @@
 					<p class="mt-2 font-display text-ink-900">한자 마법사</p>
 					<p class="text-sm text-ink-500">공격력이 높아 빨리 이긴다</p>
 				</div>
+			</div>
+
+			<Divider label="전직 8단계" />
+
+			<!--
+				레벨 10마다 한 단계. 계급은 저장하지 않고 레벨에서 유도한다.
+				단계마다 그림을 그리지 않고 **금속 4단 × 핀 개수**로 표현하므로
+				단계가 늘어도 손그림 자산이 0장 늘어난다.
+			-->
+			<div class="flex flex-wrap items-end justify-center gap-4">
+				{#each Array(RANK_MAX + 1), r (r)}
+					<div class="text-center">
+						<HeroSprite cls="knight" rank={r} size={96} />
+						<p class="mt-1 text-xs text-ink-500">Lv {r * RANK_STEP || 1}</p>
+						<p class="font-display text-xs text-ink-900">{titleFor('knight', r)}</p>
+					</div>
+				{/each}
+			</div>
+
+			<Divider label="여섯 캐릭터 · 같은 계급" />
+
+			<div class="flex flex-wrap items-end justify-center gap-4">
+				{#each CLASS_IDS as cls (cls)}
+					<div class="text-center">
+						<HeroSprite {cls} rank={5} size={104} />
+						<p class="mt-1 font-display text-xs text-ink-900">{titleFor(cls, 5)}</p>
+					</div>
+				{/each}
 			</div>
 
 			<Divider label="표정" />

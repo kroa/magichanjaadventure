@@ -5,10 +5,12 @@
 	import Chip from '$lib/components/common/Chip.svelte';
 	import ProgressBar from '$lib/components/common/ProgressBar.svelte';
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
-	import { spriteFor } from '$lib/game/characters';
+	import HeroSprite from '$lib/components/art/HeroSprite.svelte';
+	import { rankOf } from '$lib/game/rank';
 	import BattleCanvas from '$lib/components/battle/BattleCanvas.svelte';
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
 	import StrikeGlyph from '$lib/components/play/StrikeGlyph.svelte';
+	import { tick } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
@@ -21,7 +23,7 @@
 
 	let { data } = $props();
 
-	const Hero = $derived(spriteFor(data.user.characterClass));
+	const heroRank = $derived(rankOf(data.user.level));
 
 	const wide = new MediaQuery('(min-width: 900px)');
 	const spriteSize = $derived(wide.current ? 132 : 84);
@@ -46,6 +48,11 @@
 	let hintTick = $state(0);
 	let outcome = $state<'fighting' | 'win'>('fighting');
 	let settled = $state(false);
+
+	/** 승리 연출 진행 상태. e2e 가 `data-anim-state` 로 이걸 기다린다 */
+	let winPhase = $state<'idle' | 'playing' | 'done'>('idle');
+	let outcomeEl = $state<HTMLElement | null>(null);
+	let victoryAnims: Animation[] = [];
 	let stars = $state(0);
 	let restarting = $state(false);
 
@@ -164,7 +171,16 @@
 		settled = true;
 		outcome = 'win';
 		victoryTrigger += 1;
+		winPhase = 'playing';
+		/*
+		 * 팡파르는 **여기서** 울린다.
+		 * 예전에는 서버 정산이 성공한 뒤에 울렸는데, 그 앞에 `if (!response.ok) return;`
+		 * 이 있어서 기록이 한 번 실패하면 이긴 순간에 아무 소리도 안 났다.
+		 * 이겼다는 사실은 이미 판이 비었을 때 확정됐다 — 소리는 그 사실에 붙여야 한다.
+		 */
+		sound.play('victory');
 
+		let reward: RewardDto | null = null;
 		try {
 			const response = await fetch('/api/battle/finish', {
 				method: 'POST',
@@ -181,19 +197,111 @@
 					claimedWin: true
 				})
 			});
-			if (!response.ok) return;
-			const payload = (await response.json()) as {
-				won: boolean;
-				stars: number;
-				reward: RewardDto | null;
-			};
-
-			stars = payload.stars ?? 0;
-			sound.play('victory');
-			if (payload.reward) announceReward(payload.reward, data.user.characterClass);
+			if (response.ok) {
+				const payload = (await response.json()) as {
+					won: boolean;
+					stars: number;
+					reward: RewardDto | null;
+				};
+				stars = payload.stars ?? 0;
+				reward = payload.reward;
+			}
 		} catch {
 			// 기록 실패가 결과 화면을 막지 않게 한다
+		} finally {
+			// 별 DOM 이 새 stars 를 반영한 뒤에 재야 빈 별을 연출하지 않는다
+			await tick();
+			await playVictory();
+			winPhase = 'done';
+			/*
+			 * **레벨업 오버레이는 승리 연출 뒤에.**
+			 * 이 오버레이는 z-index 70 짜리 불투명 전면이라, 예전처럼 즉시 부르면
+			 * 승리 화면을 통째로 덮었다. 초반 레벨은 싸서 첫 대결 승리는 거의 항상
+			 * 레벨업을 동반한다 — 연출이 가장 필요한 순간이 정확히 가려져 있었다.
+			 * `finally` 안이므로 어떤 경로로 빠져나가도 보상은 유실되지 않는다.
+			 */
+			if (reward) announceReward(reward, data.user.characterClass);
 		}
+	}
+
+	/*
+	 * 승리 타임라인 — **WAAPI 로 짠다.**
+	 *
+	 * GSAP 을 쓰지 않는 이유: GSAP 트윈은 `document.getAnimations()` 에도
+	 * Playwright 의 `animations:'disabled'` 에도 잡히지 않는다. 그러면 검사기가
+	 * 중간 프레임을 최종 화면으로 착각해 탭 크기 오탐과 어긋난 스크린샷이 난다.
+	 *
+	 * 두 가지를 지킨다.
+	 *  - base CSS 에 `opacity:0` 을 두지 않는다. 레이아웃 검사기가 투명 요소를 건너뛰므로
+	 *    승리 화면이 통째로 검사에서 사라진다. 대신 전부 `fill:'both'` 로 첫/끝 프레임을 유지한다.
+	 *  - **버튼 줄은 연출하지 않는다.** 처음부터 최종 상태로 보여야
+	 *    "연출 건너뛰려고 화면을 눌렀는데 다시 대결이 눌리는" 사고가 안 난다.
+	 */
+	async function playVictory() {
+		const panel = outcomeEl;
+		if (!panel) return;
+		if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+		victoryAnims = [];
+		const add = (el: Element | null, kf: Keyframe[], o: KeyframeAnimationOptions) => {
+			if (!el) return;
+			victoryAnims.push(
+				(el as HTMLElement).animate(kf, {
+					easing: 'cubic-bezier(.34,1.56,.64,1)',
+					fill: 'both',
+					...o
+				})
+			);
+		};
+		const q = (sel: string) => Array.from(panel.querySelectorAll<HTMLElement>(sel));
+
+		// 시차는 전부 delay 로 준다. setTimeout 으로 나눠 만들면 검사기가 t=0 것만 보고 끝났다고 한다
+		add(
+			panel.querySelector('h2'),
+			[
+				{ opacity: 0, transform: 'scale(.5) rotate(-6deg)' },
+				{ opacity: 1, transform: 'none' }
+			],
+			{ duration: 380 }
+		);
+		// 별은 하나씩 크게 날아와 꽂힌다. 예전에는 정산이 끝나는 순간 셋이 툭 켜졌다
+		q('.star').forEach((el, i) => {
+			if (i >= stars) return;
+			add(
+				el,
+				[
+					{ opacity: 0.35, transform: 'scale(2.2)' },
+					{ opacity: 1, transform: 'scale(1)' }
+				],
+				{ duration: 320, delay: 240 + i * 160 }
+			);
+		});
+		q('.star-list li').forEach((el, i) => {
+			if (i >= stars) return;
+			add(el, [{ opacity: 0.45 }, { opacity: 1 }], { duration: 220, delay: 400 + i * 160 });
+		});
+		// 만든 한자가 뒤따라 떠오른다
+		q('.learned li, .made .hanja').forEach((el, i) =>
+			add(
+				el,
+				[
+					{ opacity: 0, transform: 'translateY(14px)' },
+					{ opacity: 1, transform: 'none' }
+				],
+				{ duration: 300, delay: 760 + i * 90 }
+			)
+		);
+
+		try {
+			await Promise.all(victoryAnims.map((a) => a.finished));
+		} catch {
+			// 건너뛰기로 취소돼도 그냥 진행한다
+		}
+	}
+
+	/** 화면을 건드리면 연출을 끝까지 감는다 (WAAPI 에는 progress(1) 이 없다) */
+	function skipVictory() {
+		for (const a of victoryAnims) a.finish();
 	}
 
 	/** 날아간 글자가 몬스터에 닿았다. 판이 비었으면 그때 승리로 넘어간다 */
@@ -227,6 +335,10 @@
 			outcome = 'fighting';
 			settled = false;
 			stars = 0;
+			// 위 주석이 경고한 그 함정이다 — 새 상태를 빠뜨리면 "다시 대결" 이 또 조용히 깨진다
+			winPhase = 'idle';
+			for (const a of victoryAnims) a.cancel();
+			victoryAnims = [];
 			lastDamage = 0;
 			startedAt = Date.now();
 		} finally {
@@ -234,6 +346,20 @@
 		}
 	}
 </script>
+
+<!--
+	화면 아무 데나 누르면 승리 연출을 끝까지 감는다.
+	`.outcome` 요소에 직접 핸들러를 달지 않는 이유: role 이 붙으면 그 접근 이름이
+	자식 텍스트 전체가 되어 `getByRole('button', { name: '다시 대결' })` 이 둘을 잡는다.
+-->
+<svelte:window
+	onpointerdown={() => {
+		if (winPhase === 'playing') skipVictory();
+	}}
+	onkeydown={() => {
+		if (winPhase === 'playing') skipVictory();
+	}}
+/>
 
 <svelte:head>
 	<title>한자 대결 · 마법한자탐험대</title>
@@ -283,7 +409,12 @@
 
 			<div class="fight relative flex items-end justify-between gap-2">
 				<div class="flex w-[42%] flex-col items-center gap-1">
-					<Hero size={spriteSize} mood={heroMood} />
+					<HeroSprite
+						cls={data.user.characterClass}
+						rank={heroRank}
+						size={spriteSize}
+						mood={heroMood}
+					/>
 					<ProgressBar
 						value={playerHp}
 						max={data.playerHp}
@@ -298,7 +429,12 @@
 
 				<div class="flex w-[42%] flex-col items-center gap-1">
 					<div bind:this={monsterEl}>
-						<MonsterSprite kind={data.area.boss.id} size={spriteSize} mood={enemyMood} />
+						<MonsterSprite
+							kind={data.area.boss.id}
+							size={spriteSize}
+							mood={enemyMood}
+							idle={outcome !== 'win'}
+						/>
 					</div>
 					<ProgressBar
 						value={totalSeals - broken}
@@ -319,8 +455,10 @@
 
 		{#if outcome === 'win'}
 			<div
+				bind:this={outcomeEl}
 				class="outcome flex flex-col items-center justify-center gap-3 text-center"
 				data-testid="battle-outcome"
+				data-anim-state={winPhase === 'done' ? 'done' : 'playing'}
 			>
 				<h2 class="text-display-lg text-gold-600">승리!</h2>
 				<p class="stars" aria-label="별 {stars}개">
