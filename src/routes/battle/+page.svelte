@@ -361,6 +361,15 @@
 			</div>
 		{:else}
 			<div class="play relative isolate">
+				<!--
+					**무엇을 하는 곳인지 한 줄로 알린다.**
+					손 시범만으로는 "왜 붙이는지" 가 안 전해진다.
+					원칙(글자 없애기)보다 아이가 못 하는 것이 더 큰 문제다.
+				-->
+				<p class="howto">
+					<span aria-hidden="true">⚔️</span>
+					조각 두 개를 붙이면 봉인이 깨져요. 다 깨면 이겨요!
+				</p>
 				<PieceBoard
 					bind:pieces
 					{hintTick}
@@ -465,6 +474,20 @@
 		display: grid;
 		min-height: 0;
 		align-content: center;
+		gap: 0.5rem;
+	}
+
+	.howto {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		padding: 0.4rem 0.75rem;
+		border-radius: 9999px;
+		background: rgb(30 22 62 / 0.55);
+		color: rgb(255 255 255 / 0.92);
+		font-size: 0.82rem;
+		text-align: center;
 	}
 
 	.learned {

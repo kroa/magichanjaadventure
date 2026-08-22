@@ -115,7 +115,7 @@
 		<div class="workshop">
 			<header class="flex items-center gap-2">
 				<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
-				<h1 class="font-display text-lg text-magic-700">합체 공방</h1>
+				<h1 class="font-display text-lg text-white">합체 공방</h1>
 				<span class="ml-auto shrink-0">
 					<Badge tone="gold" size="sm">
 						발견 {data.discovered.length} / {TOTAL_DISCOVERABLE}
@@ -260,10 +260,16 @@
 
 			<!-- 부품 서랍 -->
 			<section class="tray" aria-label="부품 서랍">
-				<p class="mb-1 text-xs text-ink-500">
-					배운 한자가 부품이 돼요. 두 개를 골라 붙여 보세요.
+				<!--
+					**무엇을 하는 곳인지 한 줄로 알린다.**
+					원래도 안내가 있었지만 작은 회색 글씨라, 배경이 어두워지면서 아예 안 보였다.
+					안내는 있느냐 없느냐가 아니라 **읽히느냐**가 기준이다.
+				-->
+				<p class="howto">
+					<span aria-hidden="true">🧪</span>
+					배운 한자가 부품이 돼요. 두 개를 붙이면 새 한자가 만들어져요
 					{#if data.lockedPartCount > 0}
-						<span class="text-magic-500">아직 못 배운 부품 {data.lockedPartCount}개</span>
+						<span class="locked">· 아직 못 배운 부품 {data.lockedPartCount}개</span>
 					{/if}
 				</p>
 				<div class="parts">
@@ -399,8 +405,29 @@
 	}
 
 	.tray {
+		display: grid;
 		min-height: 0;
+		align-content: start;
+		gap: 0.5rem;
 		overflow-y: auto;
+	}
+
+	.howto {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		padding: 0.4rem 0.75rem;
+		border-radius: 9999px;
+		background: rgb(30 22 62 / 0.55);
+		color: rgb(255 255 255 / 0.92);
+		font-size: 0.82rem;
+		text-align: center;
+	}
+
+	.howto .locked {
+		color: rgb(255 255 255 / 0.65);
 	}
 
 	.parts {

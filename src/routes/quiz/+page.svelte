@@ -108,11 +108,27 @@
 			{/if}
 		</header>
 
+		{#if !finished && pieces.length > 0}
+			<!--
+				**무엇을 하는 곳인지 한 줄로 알린다.**
+				"글자를 없애라" 는 원칙을 지키느라 아무 안내도 없게 만들었더니
+				아이도 어른도 뭘 해야 할지 몰랐다. 원칙보다 못 하는 것이 더 큰 문제다.
+			-->
+			<p class="howto">
+				<span aria-hidden="true">✨</span>
+				{#if data.focused}
+					방금 배운 <span class="hanja">{data.focus}</span> 로 만들 수 있어요. 조각 두 개를 붙여 보세요
+				{:else}
+					조각 두 개를 붙여 배운 한자를 다시 만들어 보세요
+				{/if}
+			</p>
+		{/if}
+
 		{#if data.pieces.length === 0}
 			<EmptyState
 				icon="✨"
 				title="아직 복습할 것이 없어요"
-				description="공방에서 한자를 몇 개 만들어 보면 여기서 다시 만나요."
+				description="복습은 배운 부품 두 개를 붙여 한자를 다시 만드는 놀이예요. 한자를 조금 더 배우면 여기서 만나요."
 			>
 				{#snippet action()}
 					<Button variant="magic" href="/fusion">합체 공방으로</Button>
@@ -184,7 +200,7 @@
 <style>
 	.quiz-grid {
 		display: grid;
-		grid-template-rows: auto 1fr;
+		grid-template-rows: auto auto 1fr;
 		gap: 0.6rem;
 		min-height: calc(100dvh - 4rem);
 	}
@@ -217,6 +233,24 @@
 		font-size: 1.1rem;
 		font-weight: 700;
 		cursor: pointer;
+	}
+
+	.howto {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		padding: 0.4rem 0.75rem;
+		border-radius: 9999px;
+		background: rgb(30 22 62 / 0.55);
+		color: rgb(255 255 255 / 0.92);
+		font-size: 0.82rem;
+		text-align: center;
+	}
+
+	.howto .hanja {
+		font-size: 1.1rem;
+		color: var(--color-gold-300, #ffe08a);
 	}
 
 	.play {

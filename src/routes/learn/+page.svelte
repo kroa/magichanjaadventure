@@ -136,7 +136,13 @@
 						<Button variant="magic" size="lg" onclick={next} loading={loadingNext}
 							>다음 한자 배우기</Button
 						>
-						<Button variant="gold" size="lg" href="/quiz">퀴즈로 확인하기</Button>
+						<!--
+							방금 배운 글자를 함께 넘긴다.
+							그냥 /quiz 로 보내면 상관없는 조합이 나와서 아이가 "왜 딴 게 나오지?" 하게 된다.
+						-->
+						<Button variant="gold" size="lg" href="/quiz?focus={data.hanja.character}">
+							방금 배운 걸로 복습
+						</Button>
 					</div>
 				</div>
 			{:else}

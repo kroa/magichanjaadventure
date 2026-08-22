@@ -17,7 +17,7 @@ const ROUND_SIZE = 3;
  * 지금은 **이미 만들어 본 조합**의 조각을 판에 흩어 놓는다. 아이는 다시 밀어서 붙인다.
  * 같은 손동작으로 복습이 되고, 무엇을 만드는지 미리 알려 주지 않으니 인출 연습이 된다.
  */
-export const load: PageServerLoad = async ({ locals, platform }) => {
+export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	if (!locals.user) redirect(303, '/login');
 	if (!locals.user.characterClass) redirect(303, '/character');
 
@@ -32,9 +32,24 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	 * **이미 만들어 본 것을 먼저** 낸다 — 복습이 목적이므로 처음 보는 것보다 낫다.
 	 */
 	const makeable = SEAL_RECIPES.filter((r) => r.parts.every((p) => owned.has(p)));
+
+	/*
+	 * **방금 배운 글자와 상관있는 것부터 낸다.**
+	 *
+	 * 배우기 화면에서 "복습하기" 로 넘어오면 `?focus=一` 처럼 방금 배운 글자가 붙어 온다.
+	 * 그걸 무시하고 아무거나 내면 아이는 "왜 딴 게 나오지?" 하고 만다 —
+	 * 실제로 그 지적을 받았다.
+	 */
+	const focus = url.searchParams.get('focus') ?? '';
+	const related = focus
+		? makeable.filter((r) => r.parts.includes(focus) || r.result === focus)
+		: [];
+	const rest = makeable.filter((r) => !related.includes(r));
+
 	const ordered = [
-		...makeable.filter((r) => discovered.has(r.result)),
-		...makeable.filter((r) => !discovered.has(r.result))
+		...related,
+		...rest.filter((r) => discovered.has(r.result)),
+		...rest.filter((r) => !discovered.has(r.result))
 	].slice(0, ROUND_SIZE);
 
 	return {
@@ -47,7 +62,10 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 				character,
 				mastery: masteryOf.get(character) ?? 0
 			})),
-		total: ordered.length
+		total: ordered.length,
+		/** 방금 배운 글자로 만들 수 있는 것이 하나라도 있었는가 */
+		focused: related.length > 0,
+		focus
 	};
 };
 
