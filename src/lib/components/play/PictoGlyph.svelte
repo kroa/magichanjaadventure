@@ -72,16 +72,23 @@
 		color: var(--color-magic-800);
 	}
 
-	/* 그림 귀퉁이의 작은 글자 — 아직 읽으라고 요구하지 않는 크기다 */
+	/*
+	 * 그림에 붙은 글자.
+	 * 처음에는 아주 작게 뒀는데 "무엇을 합치는 건지 헷갈린다" 는 말을 들었다.
+	 * 곁눈으로 흘려볼 크기가 아니라 **그림과 짝이라는 게 보일 크기**여야 한다.
+	 */
 	.corner {
 		position: absolute;
-		right: -2%;
-		bottom: -6%;
-		padding: 0 0.15em;
-		border-radius: 0.35em;
-		background: rgb(255 255 255 / 0.9);
-		color: var(--color-magic-700);
-		font-size: calc(var(--picto) * 0.34);
-		line-height: 1.1;
+		right: -8%;
+		bottom: -10%;
+		min-width: 1.35em;
+		padding: 0.05em 0.2em;
+		border: 2px solid var(--color-magic-300);
+		border-radius: 0.4em;
+		background: #fff;
+		color: var(--color-magic-800);
+		font-size: calc(var(--picto) * 0.42);
+		line-height: 1.15;
+		text-align: center;
 	}
 </style>

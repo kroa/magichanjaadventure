@@ -43,14 +43,15 @@ describe('그림 한자', () => {
 });
 
 describe('fadeStage', () => {
-	it('처음 보는 부품은 그림만 보여 준다', () => {
-		expect(fadeStage(0)).toBe(0);
-		expect(fadeStage(null)).toBe(0);
-		expect(fadeStage(undefined)).toBe(0);
-	});
-
-	it('한 번 써 보면 글자를 곁들인다', () => {
-		expect(fadeStage(1)).toBe(1);
+	it('글자를 아예 감추지는 않는다', () => {
+		/*
+		 * 그림만 보여 주면 "무엇을 합치는 건지" 알 수가 없다.
+		 * 우리가 가르치는 것은 표기법이 아니라 **글자 그 자체**이므로,
+		 * 글자가 화면에서 사라지면 아이는 연결할 대상을 잃는다.
+		 */
+		expect(fadeStage(0)).toBe(1);
+		expect(fadeStage(null)).toBe(1);
+		expect(fadeStage(undefined)).toBe(1);
 		expect(fadeStage(49)).toBe(1);
 	});
 

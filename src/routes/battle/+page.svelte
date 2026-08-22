@@ -35,7 +35,6 @@
 
 	const wide = new MediaQuery('(min-width: 900px)');
 	const spriteSize = $derived(wide.current ? 132 : 84);
-	const boardHeight = $derived(wide.current ? 300 : 250);
 
 	// 서버가 내려준 값으로 한 번만 초기화하고, 이후에는 이 화면이 관리한다
 	// svelte-ignore state_referenced_locally
@@ -44,6 +43,11 @@
 	let playerHp = $state(data.playerHp);
 	// svelte-ignore state_referenced_locally
 	let totalSeals = $state(data.seals.length);
+
+	/* 조각이 둘뿐인데 판만 크면 텅 비어 보인다 */
+	const boardHeight = $derived(
+		pieces.length <= 2 ? (wide.current ? 210 : 180) : wide.current ? 300 : 250
+	);
 
 	let broken = $state(0);
 	let misses = $state(0);

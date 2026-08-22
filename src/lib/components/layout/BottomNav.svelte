@@ -29,7 +29,7 @@
 		position: fixed;
 		inset: auto 0 0 0;
 		z-index: 40;
-		border-top: 2px solid rgb(124 92 255 / 0.12);
+		border-top: 2px solid rgb(255 226 160 / 0.22);
 		padding-bottom: env(safe-area-inset-bottom);
 		box-shadow: 0 -6px 20px rgb(60 40 120 / 0.1);
 	}
@@ -53,7 +53,7 @@
 		/* 터치 타깃 하한선 */
 		min-height: var(--tap-min);
 		padding: 0.5rem 0.25rem;
-		color: var(--color-ink-500);
+		color: rgb(255 255 255 / 0.72);
 		text-decoration: none;
 		transition:
 			color 0.15s ease,
@@ -77,6 +77,6 @@
 	}
 
 	.tab.active {
-		color: var(--color-magic-600);
+		color: var(--color-gold-300, #ffe08a);
 	}
 </style>

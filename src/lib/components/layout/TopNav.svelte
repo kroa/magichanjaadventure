@@ -34,7 +34,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 40;
-		border-bottom: 2px solid rgb(124 92 255 / 0.12);
+		border-bottom: 2px solid rgb(255 226 160 / 0.22);
 		box-shadow: 0 6px 20px rgb(60 40 120 / 0.08);
 	}
 
@@ -53,7 +53,7 @@
 		min-height: var(--tap-min);
 		padding: 0 1rem;
 		border-radius: var(--radius-button);
-		color: var(--color-ink-500);
+		color: rgb(255 255 255 / 0.72);
 		font-size: 1rem;
 		text-decoration: none;
 		transition:
@@ -69,8 +69,8 @@
 
 	.tab:hover {
 		transform: translateY(-1px);
-		background: rgb(124 92 255 / 0.08);
-		color: var(--color-magic-600);
+		background: rgb(255 255 255 / 0.1);
+		color: #fff;
 	}
 
 	.tab.active {

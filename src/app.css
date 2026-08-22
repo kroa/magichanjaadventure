@@ -280,10 +280,17 @@
 	}
 
 	/* 유리 패널 */
+	/*
+	 * 장면 위에 얹히는 판 — HUD, 네비게이션.
+	 *
+	 * 배경이 해 질 녘으로 어두워지면서 흰 유리판이 장면 위에 **떠 있는 종이**처럼 보였다.
+	 * 어두운 유리로 바꾸고 글자를 밝게 뽑으면 같은 장면 안에 있는 것으로 읽힌다.
+	 */
 	.glass {
-		background: rgb(255 255 255 / 0.72);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
+		background: rgb(30 22 62 / 0.62);
+		backdrop-filter: blur(14px);
+		-webkit-backdrop-filter: blur(14px);
+		color: #fff;
 	}
 
 	/* 스크린리더 전용 */

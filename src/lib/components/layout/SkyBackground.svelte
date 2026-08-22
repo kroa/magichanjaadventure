@@ -38,6 +38,32 @@
 		></span>
 	{/each}
 
+	<!--
+		멀고 가까운 산 — **깊이가 여기서 생긴다.**
+		예전 배경은 파스텔 하늘에 구름뿐이라, 그 위에 무엇을 올려도 "떠 있는 아이콘" 으로 보였다.
+		DragonBox 화면이 그럴듯한 이유는 색이 예뻐서가 아니라 층이 겹쳐 공간이 있기 때문이다.
+		뒤는 흐리고 푸르게, 앞은 진하게 — 공기원근법 그대로다.
+	-->
+	<div class="horizon"></div>
+
+	<svg class="range far" viewBox="0 0 1200 260" preserveAspectRatio="none">
+		<path
+			d="M0 260 L0 150 L120 78 L215 132 L330 52 L470 140 L590 84 L700 148 L830 66 L960 138 L1080 92 L1200 152 L1200 260 Z"
+		/>
+	</svg>
+
+	<svg class="range mid" viewBox="0 0 1200 220" preserveAspectRatio="none">
+		<path
+			d="M0 220 L0 168 L90 118 L200 172 L320 104 L440 168 L560 122 L690 176 L810 112 L940 170 L1070 128 L1200 178 L1200 220 Z"
+		/>
+	</svg>
+
+	<svg class="hills" viewBox="0 0 1200 200" preserveAspectRatio="none">
+		<path
+			d="M0 200 L0 120 Q160 58 340 112 Q520 166 700 104 Q880 46 1050 116 L1200 92 L1200 200 Z"
+		/>
+	</svg>
+
 	{#each CLOUDS as cloud, i (i)}
 		<svg
 			class="cloud"
@@ -54,17 +80,85 @@
 </div>
 
 <style>
+	/*
+	 * 저녁 하늘.
+	 *
+	 * 파스텔 낮 하늘에서 **해 질 녘**으로 바꿨다. 색을 예쁘게 하려는 것이 아니라
+	 * 대비를 만들기 위해서다 — 어두운 배경 위에서만 밝은 것이 빛나 보이고,
+	 * 그래야 지금 갈 수 있는 섬이나 방금 만든 글자가 눈에 먼저 들어온다.
+	 */
 	.sky {
 		position: fixed;
 		inset: 0;
 		z-index: -1;
 		overflow: hidden;
-		background: var(--gradient-sky);
+		background: linear-gradient(
+			180deg,
+			#2a2360 0%,
+			#463a8f 26%,
+			#7a5fae 48%,
+			#c98fb0 68%,
+			#f5b98a 86%,
+			#ffd9a8 100%
+		);
 		transition: background 0.6s ease;
 	}
 
+	/* 보스전은 더 깊은 밤 */
 	.sky.night {
-		background: var(--gradient-night);
+		background: linear-gradient(180deg, #140f36 0%, #241a55 40%, #3d2c72 72%, #6b4a86 100%);
+	}
+
+	/* 지평선 빛무리 — 장면에 초점을 만든다 */
+	.horizon {
+		position: absolute;
+		right: 0;
+		bottom: 4%;
+		left: 0;
+		height: 46%;
+		background: radial-gradient(
+			60% 100% at 50% 100%,
+			rgb(255 214 150 / 0.7) 0%,
+			rgb(255 190 140 / 0.26) 42%,
+			transparent 72%
+		);
+	}
+
+	.range,
+	.hills {
+		position: absolute;
+		right: 0;
+		left: 0;
+		width: 100%;
+	}
+
+	.range.far {
+		bottom: 20%;
+		height: 26%;
+	}
+
+	.range.far path {
+		fill: #6a5da8;
+		opacity: 0.45;
+	}
+
+	.range.mid {
+		bottom: 11%;
+		height: 22%;
+	}
+
+	.range.mid path {
+		fill: #4b3f85;
+		opacity: 0.62;
+	}
+
+	.hills {
+		bottom: 0;
+		height: 18%;
+	}
+
+	.hills path {
+		fill: #2f2760;
 	}
 
 	.cloud {
@@ -75,7 +169,8 @@
 		animation-name: cloud-drift;
 		animation-timing-function: linear;
 		animation-iteration-count: infinite;
-		filter: drop-shadow(0 6px 10px rgb(60 40 120 / 0.08));
+		opacity: 0.5;
+		filter: drop-shadow(0 6px 10px rgb(20 12 45 / 0.25));
 	}
 
 	.star {
@@ -89,10 +184,7 @@
 		animation: var(--animate-twinkle);
 	}
 
-	/* 낮에는 별이 보이지 않는다 */
-	.sky:not(.night) .star {
-		display: none;
-	}
+	/* 해 질 녘이라 별이 이미 하나둘 보인다 */
 
 	@keyframes cloud-drift {
 		from {

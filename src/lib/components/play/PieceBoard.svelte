@@ -86,7 +86,50 @@
 	 *
 	 * 고정 좌표를 쓰는 이유는 SkyBackground 와 같다 — Math.random 은 서버와 화면이 어긋난다.
 	 */
-	const SPOTS = [
+	/*
+	 * 조각 수에 맞춘 자리표.
+	 *
+	 * 한 벌만 쓰면 조각이 둘일 때 왼쪽 위에 몰려 판이 텅 비어 보인다.
+	 * 처음 오는 아이가 보는 화면이 바로 그 화면이라 더 나쁘다.
+	 * 그래서 개수마다 자리를 따로 두어 **언제나 판을 고르게 채운다.**
+	 *
+	 * 자리는 벌려 둔다 — 둥근 토큰이 서로 덮으면 밑에 깔린 것을 집을 수가 없다.
+	 * 대신 기울기를 제각각 주어 "줄 세운 보기" 로 보이지 않게 한다.
+	 */
+	const SPOT_SETS: Record<number, { x: number; y: number; tilt: number }[]> = {
+		2: [
+			{ x: 30, y: 50, tilt: -9 },
+			{ x: 70, y: 50, tilt: 8 }
+		],
+		3: [
+			{ x: 24, y: 34, tilt: -8 },
+			{ x: 70, y: 30, tilt: 7 },
+			{ x: 46, y: 72, tilt: -5 }
+		],
+		4: [
+			{ x: 28, y: 30, tilt: -9 },
+			{ x: 72, y: 26, tilt: 7 },
+			{ x: 26, y: 72, tilt: 6 },
+			{ x: 71, y: 74, tilt: -8 }
+		],
+		5: [
+			{ x: 22, y: 28, tilt: -8 },
+			{ x: 55, y: 22, tilt: 6 },
+			{ x: 82, y: 44, tilt: -5 },
+			{ x: 30, y: 70, tilt: 9 },
+			{ x: 66, y: 76, tilt: -10 }
+		],
+		6: [
+			{ x: 20, y: 27, tilt: -9 },
+			{ x: 50, y: 21, tilt: 7 },
+			{ x: 80, y: 28, tilt: -4 },
+			{ x: 20, y: 73, tilt: 6 },
+			{ x: 50, y: 79, tilt: -11 },
+			{ x: 80, y: 72, tilt: 8 }
+		]
+	};
+
+	const FALLBACK = [
 		{ x: 15, y: 27, tilt: -9 },
 		{ x: 38, y: 21, tilt: 7 },
 		{ x: 62, y: 28, tilt: -5 },
@@ -97,8 +140,10 @@
 		{ x: 85, y: 78, tilt: -6 }
 	];
 
+	const spots = $derived(SPOT_SETS[pieces.length] ?? FALLBACK);
+
 	function spotOf(index: number) {
-		return SPOTS[index % SPOTS.length];
+		return spots[index % spots.length];
 	}
 
 	/** 두 조각을 붙여 본다 */

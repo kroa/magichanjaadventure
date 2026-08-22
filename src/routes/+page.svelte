@@ -33,15 +33,15 @@
 	 * 고정 좌표를 쓰는 이유는 SkyBackground 와 같다 (Math.random 은 서버와 화면이 어긋난다).
 	 */
 	const SPOTS = [
-		{ x: 20, y: 90 },
-		{ x: 52, y: 83 },
-		{ x: 82, y: 90 },
-		{ x: 84, y: 62 },
-		{ x: 52, y: 55 },
-		{ x: 19, y: 62 },
-		{ x: 20, y: 30 },
-		{ x: 52, y: 22 },
-		{ x: 82, y: 30 }
+		{ x: 20, y: 80 },
+		{ x: 52, y: 72 },
+		{ x: 82, y: 80 },
+		{ x: 84, y: 55 },
+		{ x: 52, y: 47 },
+		{ x: 19, y: 55 },
+		{ x: 20, y: 24 },
+		{ x: 52, y: 16 },
+		{ x: 82, y: 24 }
 	];
 
 	const islands = $derived(
@@ -107,7 +107,7 @@
 	<h1 class="sr-only">모험 지도</h1>
 
 	<div class="map relative isolate" data-testid="adventure-map">
-		<Sparkle count={8} />
+		<Sparkle count={6} />
 
 		<button type="button" class="me-card" onclick={() => (meOpen = true)} aria-label="내 정보">
 			<Hero size={38} mood="happy" />
@@ -141,7 +141,7 @@
 				{#if island.id === here?.id}
 					<!-- 내가 지금 있는 섬. 캐릭터가 위에 서 있다 -->
 					<span class="me" aria-hidden="true">
-						<Hero size={44} mood="happy" />
+						<Hero size={52} mood="happy" />
 					</span>
 				{/if}
 			</button>
@@ -194,11 +194,18 @@
 </AppShell>
 
 <style>
+	/*
+	 * 지도를 **화면 끝까지** 넓힌다.
+	 * AppShell 의 좌우 여백(px-4) 안에 갇혀 있으니 섬이 작아지고 카드처럼 보였다.
+	 * 지도는 액자에 든 그림이 아니라 아이가 들어가 있는 곳이어야 한다.
+	 */
 	.map {
 		position: relative;
-		width: 100%;
-		/* 아홉 섬이 한 화면에 들어와야 한다. 스크롤하면 지도가 아니라 목록이 된다 */
-		height: calc(100dvh - 11rem);
+		width: 100vw;
+		margin-left: 50%;
+		transform: translateX(-50%);
+		/* 아래쪽 섬이 하단 네비에 가리지 않도록 여유를 둔다 */
+		height: calc(100dvh - 13rem);
 		min-height: 26rem;
 	}
 
@@ -211,8 +218,8 @@
 
 	.trail polyline {
 		fill: none;
-		stroke: rgb(124 92 255 / 0.28);
-		stroke-width: 0.9;
+		stroke: rgb(255 226 160 / 0.55);
+		stroke-width: 1.1;
 		stroke-linecap: round;
 		stroke-linejoin: round;
 		stroke-dasharray: 2.4 2.6;
@@ -223,7 +230,7 @@
 		left: var(--x);
 		top: var(--y);
 		display: grid;
-		width: 5.5rem;
+		width: 7rem;
 		justify-items: center;
 		transform: translate(-50%, -50%);
 		border: 0;
@@ -237,51 +244,84 @@
 	}
 
 	/* 섬 덩어리 */
+	/*
+	 * 섬 덩어리 — 풀밭 위, 흙 아래.
+	 * 단색 얼룩이 아니라 위아래가 다른 재질이어야 "땅" 으로 읽힌다.
+	 */
 	.blob {
 		position: absolute;
 		top: 0;
-		width: 4.4rem;
-		height: 3.2rem;
-		border-radius: 50% 50% 45% 55% / 60% 65% 40% 35%;
+		width: 5.9rem;
+		height: 4.3rem;
+		border-radius: 48% 52% 44% 56% / 62% 66% 38% 34%;
 		background: linear-gradient(
 			180deg,
-			var(--accent) 0%,
-			color-mix(in srgb, var(--accent) 55%, #6b4b2a) 100%
+			color-mix(in srgb, var(--accent) 88%, #ffffff) 0%,
+			var(--accent) 34%,
+			color-mix(in srgb, var(--accent) 42%, #5b3a1c) 62%,
+			#4a2f18 100%
 		);
-		box-shadow: 0 6px 0 rgb(60 40 120 / 0.16);
+		box-shadow:
+			0 10px 0 rgb(20 12 45 / 0.35),
+			0 18px 30px rgb(20 12 45 / 0.4),
+			inset 0 4px 10px rgb(255 255 255 / 0.35);
+	}
+
+	/* 갈 수 있는 섬은 은은히 빛난다 — 어디로 갈지 눈에 먼저 들어와야 한다 */
+	.island:not(.locked) .blob {
+		outline: 3px solid rgb(255 226 160 / 0.55);
+		outline-offset: 3px;
 	}
 
 	.emoji {
 		position: relative;
-		margin-top: 0.5rem;
-		font-size: 1.6rem;
+		margin-top: 0.7rem;
+		font-size: 2.1rem;
 		line-height: 1;
+		filter: drop-shadow(0 3px 5px rgb(20 12 45 / 0.4));
 	}
 
+	/* 이름표는 어두운 장면 위에 얹히므로 밝게 뽑는다 */
 	.name {
 		position: relative;
-		margin-top: 1.15rem;
-		padding: 0.1rem 0.5rem;
+		margin-top: 1.6rem;
+		padding: 0.15rem 0.65rem;
 		border-radius: 9999px;
-		background: rgb(255 255 255 / 0.9);
-		color: var(--color-ink-900);
-		font-size: 0.72rem;
+		background: rgb(28 20 58 / 0.82);
+		color: #fff;
+		font-size: 0.8rem;
 		white-space: nowrap;
+		box-shadow: 0 2px 8px rgb(20 12 45 / 0.45);
 	}
 
 	.count {
 		position: relative;
-		color: var(--color-ink-500);
-		font-size: 0.62rem;
+		margin-top: 0.15rem;
+		color: rgb(255 255 255 / 0.85);
+		font-size: 0.7rem;
+		text-shadow: 0 1px 3px rgb(20 12 45 / 0.8);
 	}
 
 	/* 잠긴 섬은 색이 빠진다 */
+	/* 잠긴 섬은 작고 어둡게 물러난다 — 갈 수 있는 곳이 먼저 눈에 들어와야 한다 */
+	.island.locked {
+		transform: translate(-50%, -50%) scale(0.82);
+		opacity: 0.62;
+	}
+
 	.island.locked .blob {
-		background: linear-gradient(180deg, #cfd3e0 0%, #9aa0b4 100%);
+		background: linear-gradient(180deg, #6f6a90 0%, #3b3560 100%);
+		box-shadow: 0 6px 0 rgb(20 12 45 / 0.35);
+	}
+
+	.island.locked .emoji {
+		font-size: 1.6rem;
+		opacity: 0.85;
 	}
 
 	.island.locked .name {
-		color: var(--color-ink-500);
+		background: rgb(20 14 44 / 0.7);
+		color: rgb(255 255 255 / 0.7);
 	}
 
 	/* 다 모은 섬에는 깃발이 선다 */
@@ -291,7 +331,8 @@
 
 	.me {
 		position: absolute;
-		bottom: 3.1rem;
+		bottom: 4rem;
+		filter: drop-shadow(0 6px 10px rgb(20 12 45 / 0.5));
 		animation: me-bob 3s ease-in-out infinite;
 		pointer-events: none;
 	}
@@ -321,10 +362,10 @@
 		width: 3.5rem;
 		height: 3.5rem;
 		place-items: center;
-		border: 3px solid var(--color-magic-200);
+		border: 3px solid rgb(255 226 160 / 0.6);
 		border-radius: var(--radius-button);
-		background: rgb(255 255 255 / 0.9);
-		box-shadow: var(--shadow-card);
+		background: rgb(28 20 58 / 0.7);
+		box-shadow: 0 6px 16px rgb(20 12 45 / 0.45);
 		cursor: pointer;
 	}
 

@@ -27,10 +27,10 @@
 
 	<div class="min-w-0 flex-1">
 		<div class="mb-1 flex items-baseline justify-between gap-2">
-			<p class="truncate font-display text-base text-ink-900 sm:text-lg" data-allow-clip>
+			<p class="truncate font-display text-base text-white sm:text-lg" data-allow-clip>
 				{nickname}
 			</p>
-			<p class="shrink-0 font-display text-xs text-ink-500 sm:text-sm">
+			<p class="shrink-0 font-display text-xs text-white/70 sm:text-sm">
 				{exp} / {expToNext}
 			</p>
 		</div>
