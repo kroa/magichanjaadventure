@@ -28,6 +28,30 @@
 		slots = $bindable([]),
 		mastery = {}
 	}: Props = $props();
+
+	let frame = $state<HTMLElement | null>(null);
+
+	/*
+	 * **흔들기는 매번 다시 시작해야 한다.**
+	 *
+	 * 예전에는 `class:shake={shake > 0}` 이었는데 `shake` 는 단조 증가 카운터다.
+	 * 첫 실패에 클래스가 붙은 뒤 영영 안 떨어져서 CSS 애니메이션이 재시작하지 않았고,
+	 * **두 번째 실패부터는 아무 반응도 없었다.** 몸이 먼저 말해 주는 자리가 죽어 있었던 셈이다.
+	 * 클래스 대신 명령형으로 재생하면 몇 번을 실패해도 매번 흔들린다.
+	 */
+	$effect(() => {
+		if (shake <= 0 || !frame) return;
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		frame.animate(
+			[
+				{ transform: 'translateX(0)' },
+				{ transform: 'translateX(-7px)', offset: 0.25 },
+				{ transform: 'translateX(7px)', offset: 0.75 },
+				{ transform: 'translateX(0)' }
+			],
+			{ duration: 320, easing: 'ease' }
+		);
+	});
 </script>
 
 <!--
@@ -42,8 +66,8 @@
 	그게 설명 문장 하나를 지운다.
 -->
 <div
+	bind:this={frame}
 	class="frame"
-	class:shake={shake > 0}
 	data-shake={shake}
 	data-layout={layout}
 	style="--frame:{size}px"
@@ -171,20 +195,5 @@
 		font-size: calc(var(--frame) * 0.24);
 	}
 
-	.shake {
-		animation: frame-shake 0.32s ease;
-	}
-
-	@keyframes frame-shake {
-		0%,
-		100% {
-			transform: translateX(0);
-		}
-		25% {
-			transform: translateX(-7px);
-		}
-		75% {
-			transform: translateX(7px);
-		}
-	}
+	/* 흔들기는 CSS 클래스가 아니라 위 $effect 가 명령형으로 재생한다 (매번 재시작해야 하므로) */
 </style>

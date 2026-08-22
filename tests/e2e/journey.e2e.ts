@@ -4,6 +4,7 @@ import { captureScreen, waitForFonts } from '../helpers/screens';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
 import { breakAllSeals } from '../helpers/battle';
+import { settleLevelUp } from '../helpers/learn';
 
 /**
  * 아이가 실제로 걷는 길을 그대로 따라간다.
@@ -197,6 +198,38 @@ test.describe('아이의 첫 모험', () => {
 
 		await page.waitForURL((url) => url.pathname === '/');
 		await expect(page.getByTestId('top-hud')).toContainText(user.nickname);
+	});
+
+	test('배우고 난 뒤의 놀이 버튼은 지킬 수 있는 약속만 한다', async ({ page }, testInfo) => {
+		/*
+		 * 예전 버튼은 무조건 "방금 배운 걸로 복습" 이라 쓰고 `/quiz?focus=` 로 보냈다.
+		 * 그 약속이 실제로 지켜지는 글자는 1000자 중 26자뿐이라, 나머지 974번은
+		 * 상관없는 판을 내주면서 "방금 배운 걸로" 라고 말한 셈이었다.
+		 * 사용자가 場 을 배우고 나서 곧바로 잡아낸 어긋남이 이것이다.
+		 *
+		 * 새싹 마을은 조합 부품부터 내므로 네 자(一 二 日 月)면 明 이 열린다.
+		 */
+		const user = await signUp(page, 'promise', `${testInfo.project.name}${testInfo.workerIndex}p`);
+		expect(user.nickname).toBeTruthy();
+		await pickWizard(page);
+		await learnHanja(page, 4);
+
+		/*
+		 * 네 자면 레벨 2가 된다(20 EXP × 4).
+		 * 형제 테스트들은 곧바로 다른 화면으로 넘어가서 이 오버레이를 안 만나지만,
+		 * 이 테스트는 배우기 화면에 남아 버튼을 누르므로 반드시 걷어내야 한다.
+		 */
+		await settleLevelUp(page);
+
+		// 붙일 짝이 실제로 있으니 그 짝을 이름으로 불러 준다
+		const play = page.getByRole('link', { name: /붙여 보기/ });
+		await expect(play, '네 자를 배웠는데 붙일 짝을 못 찾았다').toBeVisible();
+		await play.click();
+
+		// 그리고 정말로 붙일 것이 깔려 있어야 한다 — 이게 약속의 이행이다
+		await page.waitForURL(/\/quiz/);
+		await waitForHydration(page);
+		await expect(page.locator('button.piece').first()).toBeVisible();
 	});
 
 	test('로그인하지 않으면 게임 화면에 들어갈 수 없다', async ({ page }) => {

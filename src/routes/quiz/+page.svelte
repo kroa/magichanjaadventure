@@ -3,6 +3,7 @@
 	import Button from '$lib/components/common/Button.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
+	import HelpButton from '$lib/components/common/HelpButton.svelte';
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
@@ -104,7 +105,7 @@
 			<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
 			<Badge tone="magic" size="sm">복습 {made.length} / {total}</Badge>
 			{#if !finished && pieces.length > 0}
-				<button type="button" class="help" onclick={askHint} aria-label="도와줘">?</button>
+				<HelpButton onclick={askHint} class="ml-auto" />
 			{/if}
 		</header>
 
@@ -116,8 +117,15 @@
 			-->
 			<p class="howto">
 				<span aria-hidden="true">✨</span>
-				{#if data.focused}
+				{#if data.focusState === 'ready'}
 					방금 배운 <span class="hanja">{data.focus}</span> 로 만들 수 있어요. 조각 두 개를 붙여 보세요
+				{:else if data.focusState === 'workshop-only'}
+					<!-- 여기서 "짝이 없다" 고 하면 거짓말이다 — 같은 순간 공방에서는 만들어진다 -->
+					<span class="hanja">{data.focus}</span> 는 합체 공방에서 만들 수 있어요. 여기서는 배운 조각으로
+					다른 걸 만들어 볼까요?
+				{:else if data.focusState === 'not-a-part'}
+					<span class="hanja">{data.focus}</span> 는 아직 붙일 짝이 없는 글자예요. 배운 조각으로 다른
+					걸 만들어 볼까요?
 				{:else}
 					조각 두 개를 붙여 배운 한자를 다시 만들어 보세요
 				{/if}
@@ -217,22 +225,6 @@
 		color: var(--color-ink-500);
 		text-decoration: none;
 		box-shadow: var(--shadow-soft);
-	}
-
-	.help {
-		display: grid;
-		place-items: center;
-		width: var(--tap-min);
-		height: var(--tap-min);
-		flex-shrink: 0;
-		margin-left: auto;
-		border: 3px solid var(--color-gold-400);
-		border-radius: 9999px;
-		background: #fff;
-		color: var(--color-gold-700);
-		font-size: 1.1rem;
-		font-weight: 700;
-		cursor: pointer;
 	}
 
 	.howto {

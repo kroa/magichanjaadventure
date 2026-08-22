@@ -360,3 +360,37 @@ export function findJoinablePair<T extends { character: string }>(
 	}
 	return null;
 }
+
+/**
+ * **공방용** 짝 찾기. 판(대결·복습)의 `findJoinablePair` 와 규칙이 다르다.
+ *
+ * 판에서는 조각이 실물이라 하나 쓰면 사라지지만, 공방의 부품 서랍은 **줄지 않는 재고**다.
+ * 그 차이 때문에 위 함수를 그대로 쓰면 세 가지가 어긋난다.
+ *
+ *  1. `i < j` 라 **같은 부품을 자기 자신과 못 짝짓는다** — 서랍에 木 타일이 하나뿐이라
+ *     `木+木=林` 을 영영 못 짚는다. 하필 그게 초심자용 조합이다.
+ *  2. 이미 발견한 조합을 걸러 주지 않아, 明 을 만든 아이가 `?` 를 눌러도 계속 日+月 만 빛난다.
+ *  3. 아이가 칸에 부품을 하나 놓아 뒀다면 알고 싶은 것은 아무 쌍이 아니라 **그 부품의 짝**이다.
+ *
+ * 공방은 변형 부수 조합(人+木=休 등)도 만들 수 있으므로 `FUSION_RECIPES` 전체로 잰다.
+ */
+export function findWorkshopHint(
+	parts: readonly { character: string }[],
+	discovered: readonly string[],
+	placed?: string
+): string[] | null {
+	const owned = new Set(parts.map((p) => p.character));
+	const done = new Set(discovered);
+
+	const usable = FUSION_RECIPES.filter(
+		(r) => !done.has(r.result) && r.parts.every((p) => owned.has(p))
+	);
+	if (usable.length === 0) return null;
+
+	// 이미 놓아 둔 부품이 있으면 그 부품이 든 조합을 먼저 짚는다
+	if (placed) {
+		const withPlaced = usable.find((r) => r.parts.includes(placed));
+		if (withPlaced) return [...withPlaced.parts];
+	}
+	return [...usable[0].parts];
+}

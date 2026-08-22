@@ -137,12 +137,31 @@
 							>다음 한자 배우기</Button
 						>
 						<!--
-							방금 배운 글자를 함께 넘긴다.
-							그냥 /quiz 로 보내면 상관없는 조합이 나와서 아이가 "왜 딴 게 나오지?" 하게 된다.
+							**지킬 수 있는 약속만 한다.**
+
+							예전에는 무조건 "방금 배운 걸로 복습" 이라 쓰고 `/quiz?focus=` 로 보냈다.
+							그 약속이 실제로 지켜지는 글자는 1000자 중 26자뿐이었다 —
+							나머지 974번은 상관없는 판을 내주면서 "방금 배운 걸로" 라고 말한 셈이다.
+							지금은 서버(`pickNextPlay`)가 미리 보고 문구와 목적지를 맞춘다.
+							금색은 "지금 바로 된다" 는 신호로만 남긴다.
 						-->
-						<Button variant="gold" size="lg" href="/quiz?focus={data.hanja.character}">
-							방금 배운 걸로 복습
-						</Button>
+						{#if data.nextPlay?.kind === 'ready'}
+							<Button variant="gold" size="lg" href={data.nextPlay.href}>
+								{#if data.nextPlay.doubled}
+									{data.hanja.character} 두 개 붙여 보기
+								{:else}
+									{data.hanja.character} 와 {data.nextPlay.partner} 붙여 보기
+								{/if}
+							</Button>
+						{:else if data.nextPlay?.kind === 'review'}
+							<Button variant="magic" size="lg" href={data.nextPlay.href}>
+								지금까지 배운 걸로 놀기
+							</Button>
+						{:else}
+							<Button variant="magic" size="lg" href={data.nextPlay?.href ?? '/fusion'}>
+								합체 공방으로
+							</Button>
+						{/if}
 					</div>
 				</div>
 			{:else}

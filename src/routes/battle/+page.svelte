@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppShell from '$lib/components/layout/AppShell.svelte';
+	import HelpButton from '$lib/components/common/HelpButton.svelte';
 	import Button from '$lib/components/common/Button.svelte';
 	import Chip from '$lib/components/common/Chip.svelte';
 	import ProgressBar from '$lib/components/common/ProgressBar.svelte';
@@ -268,7 +269,7 @@
 				{/each}
 			</div>
 			{#if outcome === 'fighting'}
-				<button type="button" class="help" onclick={askHint} aria-label="도와줘">?</button>
+				<HelpButton onclick={askHint} class="ml-auto" />
 			{/if}
 		</header>
 
@@ -420,22 +421,6 @@
 		color: var(--color-ink-500);
 		text-decoration: none;
 		box-shadow: var(--shadow-soft);
-	}
-
-	.help {
-		display: grid;
-		place-items: center;
-		width: var(--tap-min);
-		height: var(--tap-min);
-		flex-shrink: 0;
-		margin-left: auto;
-		border: 3px solid var(--color-gold-400);
-		border-radius: 9999px;
-		background: #fff;
-		color: var(--color-gold-700);
-		font-size: 1.1rem;
-		font-weight: 700;
-		cursor: pointer;
 	}
 
 	/* 스크롤 막대가 세로 공간을 먹지 않게 숨긴다 */

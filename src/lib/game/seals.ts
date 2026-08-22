@@ -1,4 +1,4 @@
-import { allPartChars, type FusionRecipe } from './fusion';
+import type { FusionRecipe } from './fusion';
 
 /**
  * 보스의 봉인 — 합체 대결의 문제 생성기.
@@ -9,19 +9,16 @@ import { allPartChars, type FusionRecipe } from './fusion';
  * 긴장은 별(⭐)로 준다 — 못 하면 잃는 것이 아니라, 잘하면 더 얻는 것으로.
  *
  * **막다른 길을 데이터가 아니라 구조로 막는다.**
- * 부품 서랍을 "아이가 배운 것" 이 아니라 **"이번 봉인이 요구하는 부품 + 미끼"** 로 채운다.
- * 그래서 정답 부품은 아이가 몇 자를 알든 **항상 서랍에 있다.**
+ * 판에 흩어 놓는 조각을 "아이가 배운 것" 이 아니라 **"이번 봉인이 요구하는 부품"** 으로 채운다.
+ * 그래서 정답 부품은 아이가 몇 자를 알든 항상 판 위에 있다.
  * 처음 온 아이도 대결이 성립하고, 부품이 없어 영영 못 깨는 봉인이 아예 생기지 않는다.
+ * (조각을 고르는 것은 서버 쪽 `planFor` 다 — 여기서는 봉인만 정한다.)
  *
- * 상태를 저장하지 않는다. 봉인과 서랍은 씨앗 문자열에서 **매번 똑같이 유도**되므로
+ * 상태를 저장하지 않는다. 봉인은 씨앗 문자열에서 **매번 똑같이 유도**되므로
  * 서버가 언제든 다시 계산해 검증할 수 있다.
- * 퀴즈에서 "정답은 (hanjaId, questionType) 만으로 유도된다" 와 같은 방식이다.
  */
 
 export const SEALS_PER_BATTLE = 3;
-
-/** 부품 서랍 칸 수 */
-export const TRAY_SIZE = 12;
 
 /** 문자열에서 뽑아낸 결정론적 난수 발생기 (mulberry32) */
 function rngFrom(seed: string): () => number {
@@ -67,23 +64,6 @@ export function sealsFrom(
 }
 
 /**
- * 부품 서랍을 만든다.
- *
- * **봉인이 요구하는 부품을 전부 넣는다.** 이것이 막다른 길을 없애는 핵심이다.
- * 나머지는 미끼로 채운다 — 미끼가 없으면 서랍이 곧 정답표가 되어 아무 생각 없이 눌러도 이긴다.
- *
- * 빌린 부품과 미끼를 화면에서 **구분하지 않는다.** 표식을 달면 그게 곧 정답 표시가 된다.
- */
-export function trayFrom(seed: string, seals: readonly FusionRecipe[], size = TRAY_SIZE): string[] {
-	const needed = [...new Set(seals.flatMap((s) => s.parts))];
-	const decoyPool = allPartChars().filter((c) => !needed.includes(c));
-	const rng = rngFrom(`${seed}:tray`);
-
-	const decoys = shuffled(decoyPool, rng).slice(0, Math.max(0, size - needed.length));
-	return shuffled([...needed, ...decoys], rng);
-}
-
-/**
  * 별을 센다. **전부 가점이다.**
  *
  * "힌트를 안 썼으면 별" 같은 감점형 조건을 일부러 피했다.
@@ -112,6 +92,3 @@ export const STAR_LABELS = [
 	'한 번에 맞힌 봉인이 있어요',
 	'처음 만들어 본 한자가 있어요'
 ] as const;
-
-/** 힌트 사다리의 꼭대기 (부품 둘 다 빛남) */
-export const MAX_HINT = 2;

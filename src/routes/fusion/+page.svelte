@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { applyAction, enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { toasts } from '$lib/stores/toast.svelte';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import Button from '$lib/components/common/Button.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -11,10 +12,18 @@
 	import { sound } from '$lib/sound/index.svelte';
 	import { draggable } from '$lib/actions/draggable';
 	import GlyphFrame from '$lib/components/play/GlyphFrame.svelte';
+	import SpeechBubble from '$lib/components/common/SpeechBubble.svelte';
+	import HelpButton from '$lib/components/common/HelpButton.svelte';
 	import PictoGlyph from '$lib/components/play/PictoGlyph.svelte';
 	import { fadeStage } from '$lib/art/pictographs';
 	import { mergeInto, popIn } from '$lib/anim/merge';
-	import { FUSION_RECIPES, allResultChars, fuse, recipeFor } from '$lib/game/fusion';
+	import {
+		FUSION_RECIPES,
+		allResultChars,
+		findWorkshopHint,
+		fuse,
+		recipeFor
+	} from '$lib/game/fusion';
 	import type { RewardDto } from '$lib/types/api';
 
 	let { data } = $props();
@@ -63,19 +72,85 @@
 	/** 결과에서 조합법을 되찾아 "무엇과 무엇이 합쳐졌는지" 를 보여 준다 */
 	const madeRecipe = $derived(made ? recipeFor(made.character) : null);
 
+	/*
+	 * **안 붙는 조합에도 말은 해 준다.**
+	 *
+	 * 원래는 일부러 아무 말도 안 했다. "여기서 «틀렸어요» 를 띄우면 이 화면은 다시 시험지가 된다"
+	 * 는 이유였는데, 실제로 써 본 결과 아이는 **아무 일도 안 일어났다**고 받아들였다.
+	 * 침묵은 관대함이 아니라 그냥 정보가 없는 것이다.
+	 *
+	 * 그래서 말은 하되 채점은 하지 않는다:
+	 *  - 주어가 아이가 아니라 부품이다 ("네가 틀렸다" 가 아니라 "이 둘은 안 붙는다")
+	 *  - 빨강·X·오답 소리 없음. 실패 횟수를 세지도 보여 주지도 않는다
+	 *  - 닫기 버튼이 없다 — 닫아야 하는 오답 창은 그 자체로 채점 절차다
+	 */
+	let failMessage = $state('');
+	let failGen = 0;
+
+	/*
+	 * 도움 — 붙는 짝을 **빛내 줄 뿐 놓아 주지 않는다.** 마지막 손가락은 아이 것이다.
+	 *
+	 * 끄는 시점은 판(PieceBoard)과 같게 맞춘다: 합체를 시도하거나 비울 때.
+	 * 3초 자동 소등 같은 걸 여기만 쓰면 화면마다 도움의 수명이 달라진다.
+	 * 값도 매기지 않는다 — 대결의 도움이 공짜이고 별 계산에도 안 들어간다.
+	 */
+	let hinted = $state<string[]>([]);
+	const hintable = $derived(findWorkshopHint(data.parts, data.discovered, slots[0]) !== null);
+
+	function askHint() {
+		sound.play('click');
+		clearFail();
+		// 칸이 차 있으면 비운다 — 안 그러면 눌리지 않는 타일에 금색 링만 켜진다
+		if (slots.length >= SLOTS) slots = [];
+		hinted = findWorkshopHint(data.parts, data.discovered, slots[0]) ?? [];
+
+		const first = hinted[0];
+		if (!first) return;
+		// 서랍은 스크롤된다. 빛나는 첫 타일이 화면 밖이면 도움이 아니다.
+		requestAnimationFrame(() => {
+			document
+				.querySelector(`.part[data-part="${CSS.escape(first)}"]`)
+				?.scrollIntoView({ block: 'nearest' });
+		});
+	}
+
+	function clearFail() {
+		failGen += 1;
+		failMessage = '';
+	}
+
+	function notJoinable() {
+		shake += 1;
+		sound.play('click');
+		// 흔들기(320ms)가 끝난 뒤에 말한다. 몸이 먼저, 글자가 나중이다.
+		const gen = ++failGen;
+		setTimeout(() => {
+			if (gen !== failGen) return;
+			slots = [];
+			failMessage = '이 둘은 아직 안 붙어요';
+			setTimeout(() => {
+				if (gen === failGen) failMessage = '';
+			}, 1800);
+		}, 320);
+	}
+
 	function place(character: string) {
 		if (busy || made) return;
 		if (slots.length >= SLOTS) return;
+		clearFail();
 		slots = [...slots, character];
 		sound.play('click');
 	}
 
 	function removeAt(index: number) {
 		if (busy || made) return;
+		clearFail();
 		slots = slots.filter((_, i) => i !== index);
 	}
 
 	function clearSlots() {
+		clearFail();
+		hinted = [];
 		slots = [];
 	}
 
@@ -95,8 +170,10 @@
 	합체 공방 — 이 게임의 핵심 화면.
 
 	퀴즈처럼 "문제를 내고 맞히게" 하지 않는다. 아이는 부품을 붙여 보고 무엇이 되는지 발견한다.
-	 - 틀린 조합에 아무 벌도 주지 않는다. 살짝 흔들리고 되돌아올 뿐, "틀렸어요" 라고 말하지 않는다
-	 - 그래야 마음 놓고 아무거나 붙여 보고, 붙여 봐야 발견이 일어난다
+	 - 안 붙는 조합에 **벌은 주지 않되 말은 해 준다.** 흔들고 나서 "이 둘은 아직 안 붙어요" 한 줄.
+	   예전에는 아예 침묵했는데, 아이에게는 그게 관대함이 아니라 "아무 일도 안 일어남" 이었다
+	 - 채점하지 않는다: 빨강·X·오답 소리 없고, 실패 횟수를 세지도 보여 주지도 않는다
+	 - 막히면 `?` 로 붙는 짝을 짚어 준다. 값은 매기지 않는다 (대결도 힌트가 공짜다)
 	 - 집중 모드라 메뉴를 숨기고 나가기 버튼을 둔다 (퀴즈·대결과 같은 규칙)
 -->
 <AppShell nav={false}>
@@ -121,6 +198,13 @@
 						발견 {data.discovered.length} / {TOTAL_DISCOVERABLE}
 					</Badge>
 				</span>
+				<!--
+					켜는 기준은 `data.remaining > 0` 이 아니라 **짚을 짝이 실제로 있는가**다.
+					둘은 어긋날 수 있고, 어긋나는 순간 눌러도 아무것도 안 빛나는 죽은 버튼이 된다.
+				-->
+				{#if hintable && !made}
+					<HelpButton onclick={askHint} />
+				{/if}
 			</header>
 
 			<!-- 합체판 -->
@@ -178,37 +262,54 @@
 						bind:slots={slotEls}
 					/>
 
+					<!--
+						자리를 미리 잡아 둔다. 말풍선이 떴다 사라질 때 문서 흐름에 끼어들면
+						「합체!」 버튼이 아이 손가락 아래에서 두 번 움직인다.
+					-->
+					<div class="fail-slot" aria-live="polite" role="status">
+						{#if failMessage}
+							<span class="fail-in" data-testid="fusion-nojoin">
+								<SpeechBubble tone="magic" tail="none">
+									<span class="font-display text-base text-ink-900">{failMessage}</span>
+								</SpeechBubble>
+							</span>
+						{/if}
+					</div>
+
 					<form
 						method="POST"
 						action="?/fuse"
 						use:enhance={() => {
 							busy = true;
+							// 도움은 판과 같은 시점에 꺼진다 — 붙여 보는 순간
+							hinted = [];
 							return async ({ result, update }) => {
 								busy = false;
-								const payload =
-									result.type === 'success'
-										? (result.data as {
-												ok: boolean;
-												character?: string;
-												reading?: string;
-												meaning?: string;
-												story?: string;
-												alreadyKnown?: boolean;
-												reward?: RewardDto | null;
-											})
-										: { ok: false };
+
+								/*
+								 * **세 갈래를 갈라 쓴다.**
+								 * 예전에는 `result.type !== 'success'` 를 통째로 실패로 뭉갰다.
+								 * 그래서 네트워크 끊김·세션 만료·"안 붙는 조합" 이 똑같은 흔들림 하나로 보였고,
+								 * 특히 세션이 끊기면 액션이 /login 리다이렉트를 내는데도 화면에 갇혔다.
+								 */
+								if (result.type === 'redirect') return applyAction(result);
+								if (result.type === 'error' || result.type === 'failure') {
+									toasts.warn('연결이 잠깐 끊겼어요. 다시 해 보세요.');
+									return; // 부품은 판에 그대로 둔다 — 아이 잘못이 아니다
+								}
+
+								const payload = result.data as {
+									ok: boolean;
+									character?: string;
+									reading?: string;
+									meaning?: string;
+									story?: string;
+									alreadyKnown?: boolean;
+									reward?: RewardDto | null;
+								};
 
 								if (!payload.ok) {
-									/*
-									 * 실패해도 아무 말도 하지 않는다.
-									 * 살짝 흔들고 부품을 되돌릴 뿐이다 — 여기서 "틀렸어요" 를 띄우면
-									 * 이 화면은 다시 시험지가 된다.
-									 */
-									shake += 1;
-									sound.play('click');
-									setTimeout(() => {
-										slots = [];
-									}, 320);
+									notJoinable();
 									return;
 								}
 
@@ -266,10 +367,16 @@
 					안내는 있느냐 없느냐가 아니라 **읽히느냐**가 기준이다.
 				-->
 				<p class="howto">
-					<span aria-hidden="true">🧪</span>
-					배운 한자가 부품이 돼요. 두 개를 붙이면 새 한자가 만들어져요
-					{#if data.lockedPartCount > 0}
-						<span class="locked">· 아직 못 배운 부품 {data.lockedPartCount}개</span>
+					{#if hintable}
+						<span aria-hidden="true">🧪</span>
+						배운 한자가 부품이 돼요. 두 개를 붙이면 새 한자가 만들어져요
+						{#if data.lockedPartCount > 0}
+							<span class="locked">· 아직 못 배운 부품 {data.lockedPartCount}개</span>
+						{/if}
+					{:else}
+						<!-- 짚어 줄 짝이 없으면 `?` 도 사라진다. 그럴 땐 왜 없는지를 말해 준다 -->
+						<span aria-hidden="true">🎉</span>
+						여기서 만들 수 있는 건 다 만들었어요 · 배우기에서 부품을 더 모아 볼까요?
 					{/if}
 				</p>
 				<div class="parts">
@@ -278,6 +385,7 @@
 							type="button"
 							class="part"
 							data-part={part.character}
+							data-hint={hinted.includes(part.character) ? '' : undefined}
 							onclick={() => place(part.character)}
 							use:draggable={{
 								dropSelector: '.cell, .frame',
@@ -352,7 +460,32 @@
 		gap: 0.5rem;
 	}
 
-	/* 실패했을 때. 짧게 흔들고 끝낸다 — 실패를 오래 붙들지 않는다 */
+	/*
+	 * 실패 한 줄이 들어갈 자리.
+	 * 높이를 미리 잡아 두어야 말풍선이 떴다 사라질 때 「합체!」 버튼이 안 움직인다.
+	 */
+	.fail-slot {
+		display: grid;
+		place-items: center;
+		min-height: 3.25rem;
+	}
+
+	.fail-in {
+		animation: fail-rise 0.22s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+	}
+
+	@keyframes fail-rise {
+		from {
+			transform: translateY(6px);
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.fail-in {
+			animation: none;
+		}
+	}
 
 	.reveal {
 		display: grid;
@@ -466,6 +599,14 @@
 	.part:hover:not(:disabled) {
 		transform: translateY(-2px);
 		border-color: var(--color-magic-400);
+	}
+
+	/* 도움이 짚어 준 부품. 판(PieceBoard)의 금색 링과 **같은 모양**이어야 한다 */
+	.part[data-hint] {
+		border-color: var(--color-gold-400);
+		box-shadow:
+			0 0 0 6px rgb(255 209 102 / 0.5),
+			0 5px 0 var(--color-gold-400);
 	}
 
 	.part:disabled {

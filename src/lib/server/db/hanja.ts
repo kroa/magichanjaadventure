@@ -1,3 +1,4 @@
+import { allPartChars } from '$lib/game/fusion';
 import type { ExampleWord } from '../../../../database/seed/types';
 
 export interface HanjaRow {
@@ -95,24 +96,53 @@ export async function listAreaHanja(
 	}));
 }
 
-/** 아직 배우지 않은 한자 중 다음에 배울 것들. */
+/**
+ * 아직 배우지 않은 한자 중 다음에 배울 것들.
+ *
+ * **지역 안에서 "합체 부품" 을 먼저 낸다.**
+ *
+ * 원래는 급수 순서(sort_order)를 그대로 따랐다. 그러면 새싹 마을의 3~10번째가
+ * `三四五六七八九十` 여덟 자 연속인데, 이 글자들은 그림도 없고 조리법에도 안 쓰인다.
+ * 아이는 첫 열 번의 발굴 동안 이 앱의 대표 장면(그림이 글자로 바뀌고, 붙이면 새 글자가 되는 것)을
+ * **한 번도 못 본다.** "새싹 마을인데 어렵다" 는 말의 실체가 이것이다.
+ *
+ * 순서를 바꾸면 첫 합체가 12번째에서 **4번째**로 당겨지고, 앞 13자가 전부 그림을 갖는다.
+ *
+ * 급수 체계는 건드리지 않는다 — `sort_order` · `area_id` · 시드 배열 모두 그대로다.
+ * (시드 행 순서를 바꾸면 id 가 밀려 저장된 진도가 딴 글자를 가리킨다.)
+ * 도감(`listAreaHanja`)은 여전히 `sort_order` 로 보여 주므로 표준 순서도 화면에 남는다.
+ */
 export async function listUnlearned(
 	db: D1Database,
 	userId: string,
 	areaId: number,
 	limit = 12
 ): Promise<Hanja[]> {
-	const { results } = await db
-		.prepare(
-			`SELECT h.* FROM hanjas h
-			 LEFT JOIN user_hanja_progress p ON p.hanja_id = h.id AND p.user_id = ?
-			 WHERE h.area_id = ? AND p.hanja_id IS NULL
-			 ORDER BY h.sort_order
-			 LIMIT ?`
-		)
-		.bind(userId, areaId, limit)
+	const parts = allPartChars();
+	const holes = parts.map(() => '?').join(',');
+
+	const sql = (op: 'IN' | 'NOT IN') =>
+		`SELECT h.* FROM hanjas h
+		 LEFT JOIN user_hanja_progress p ON p.hanja_id = h.id AND p.user_id = ?
+		 WHERE h.area_id = ? AND p.hanja_id IS NULL AND h.character ${op} (${holes})
+		 ORDER BY h.sort_order
+		 LIMIT ?`;
+
+	// 1) 조합에 쓰이는 부품부터 — 배우자마자 붙여 볼 수 있다
+	const first = await db
+		.prepare(sql('IN'))
+		.bind(userId, areaId, ...parts, limit)
 		.all<HanjaRow>();
-	return results.map(toHanja);
+
+	if (first.results.length >= limit) return first.results.map(toHanja);
+
+	// 2) 모자라면 나머지를 원래 급수 순서 그대로 채운다
+	const rest = await db
+		.prepare(sql('NOT IN'))
+		.bind(userId, areaId, ...parts, limit - first.results.length)
+		.all<HanjaRow>();
+
+	return [...first.results, ...rest.results].map(toHanja);
 }
 
 export async function getHanja(db: D1Database, id: number): Promise<Hanja | null> {
@@ -237,6 +267,45 @@ export async function pickDistractors(
 		merged.push(row);
 	}
 	return merged.map(toHanja);
+}
+
+/**
+ * 합체에 **쓰인 부품**의 숙련도를 올린다.
+ *
+ * 이걸 만들기 전까지 모든 아이의 `mastery` 는 영원히 0 이었다.
+ * 올리는 코드가 `recordReview` 하나뿐인데 그 유일한 호출처(`/api/quiz/answer`)를
+ * 어떤 화면도 부르지 않았기 때문이다. 나머지 세 곳은 전부 `mastery 0` 으로 INSERT 만 했다.
+ * 그래서 `fadeStage` 가 2단계(글자만)에 **한 번도 도달하지 못했고**, 백 번 붙여 본 日 도
+ * 계속 해 그림으로 보였다. 도감의 「익힘 %」와 금색 배지도 같이 죽어 있었다.
+ *
+ * **UPSERT 가 아니라 순수 UPDATE 다.** 대결은 아이가 안 배운 부품도 판에 깔기 때문에,
+ * UPSERT 로 만들면 배운 적 없는 글자가 진도에 들어와 지역 해금 게이트를 부풀린다.
+ * 행이 없으면 아무 일도 일어나지 않는 것이 맞다.
+ *
+ * delta 가 +20 이 아닌 이유: 세 번 만에 그림이 사라진다. 아이에게 그건 보상이 아니라 상실이다.
+ * +10 이면 다섯 번을 붙여야 글자로 바뀐다.
+ */
+export async function bumpMastery(
+	db: D1Database,
+	userId: string,
+	hanjaIds: number[],
+	delta = 10,
+	now = Date.now()
+): Promise<void> {
+	const ids = [...new Set(hanjaIds)].filter((id) => Number.isInteger(id));
+	if (ids.length === 0) return;
+
+	await db
+		.prepare(
+			`UPDATE user_hanja_progress
+			 SET mastery       = MAX(0, MIN(100, mastery + ?)),
+			     correct_count = correct_count + 1,
+			     status        = CASE WHEN MIN(100, mastery + ?) >= 100 THEN 'mastered' ELSE status END,
+			     last_reviewed_at = ?
+			 WHERE user_id = ? AND hanja_id IN (${ids.map(() => '?').join(',')})`
+		)
+		.bind(delta, delta, now, userId, ...ids)
+		.run();
 }
 
 export async function recordReview(

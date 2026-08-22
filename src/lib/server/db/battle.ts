@@ -1,7 +1,7 @@
 import { SEAL_RECIPES, fuse, type FusionRecipe } from '$lib/game/fusion';
 import { sealsFrom, SEALS_PER_BATTLE } from '$lib/game/seals';
 import { HANJA_SEED } from '../../../../database/seed/hanja';
-import { toHanja, type Hanja, type HanjaRow } from './hanja';
+import { bumpMastery, toHanja, type Hanja, type HanjaRow } from './hanja';
 
 /**
  * 합체 대결 — 서버 쪽.
@@ -52,17 +52,6 @@ export interface BattleSeal {
 	story: string;
 	/** 이미 깬 봉인인가 */
 	broken: boolean;
-}
-
-export interface TrayPart {
-	character: string;
-	reading: string;
-	meaning: string;
-	/**
-	 * 아이가 이 부품을 얼마나 겪었는가.
-	 * 그림으로 보여 줄지 글자로 보여 줄지가 여기서 갈린다 — 0 이면 아직 그림 단계다.
-	 */
-	mastery: number;
 }
 
 export interface BoardPiece {
@@ -137,9 +126,23 @@ async function lookup(db: D1Database, chars: string[]): Promise<Map<string, Hanj
 export function derive(userId: string, sessionKey: string, areaId: number): FusionRecipe[] {
 	const pool = poolForArea(areaId);
 	const seed = seedOf(userId, sessionKey);
+	/*
+	 * **쉬운 레인만 한 지역 앞을 본다.**
+	 *
+	 * 새싹 마을의 beginner 후보는 明·林 둘뿐이라 첫 대결이 늘 「明 林 + 추상어 하나」였다.
+	 * 그 하나는 항상 星·本·天·間 중 하나인데, 間 은 바로 위 주석이 지목한 그 조합이고
+	 * 本(밑동)·天 도 여덟 살에게는 그림에서 뜻으로 가는 길이 없다.
+	 *
+	 * `tierOf` 게이트를 한 칸 여는 것이 여기서 안전한 이유:
+	 * 판에 깔리는 조각은 `planFor` 가 아이의 보유 여부와 **무관하게** 조합의 부품을 그대로 펼치고,
+	 * 모든 부품에는 그림이 있다(`pictographs.spec.ts` 가 강제한다).
+	 * 즉 "부품을 본 적도 없는 문제" 걱정은 추상어가 섞이는 rest 레인에서 유효하지,
+	 * 그림 두 장으로 결과가 짐작되는 beginner 레인에는 해당하지 않는다.
+	 * 실제 효과: 새싹 마을 봉인 세 개가 전부 beginner 가 되고 好(女+子)가 들어온다.
+	 */
 	const easy = sealsFrom(
 		`${seed}:easy`,
-		pool.filter((r) => r.beginner),
+		SEAL_RECIPES.filter((r) => r.beginner && tierOf(r) <= areaId + 1),
 		SEALS_PER_BATTLE
 	);
 	const rest = sealsFrom(
@@ -264,6 +267,26 @@ export async function attack(
 		.bind(userId, hanja.id, now, now)
 		.run();
 	const isNew = (inserted.meta?.changes ?? 0) > 0;
+
+	/*
+	 * 쓴 부품의 숙련도를 올린다 — 대결에서도 그림이 글자로 자란다.
+	 *
+	 * `bumpMastery` 는 UPSERT 가 **아니다.** 대결 판에는 아이가 아직 안 배운 부품도 깔리는데,
+	 * 여기서 행을 새로 만들면 배운 적 없는 글자가 진도에 들어가 지역 해금이 부풀려진다.
+	 * 배운 부품만 자라고 나머지는 조용히 지나가는 것이 맞다.
+	 */
+	const usedParts = [...new Set(recipe.parts)];
+	const { results: partRows } = await db
+		.prepare(`SELECT id FROM hanjas WHERE character IN (${usedParts.map(() => '?').join(',')})`)
+		.bind(...usedParts)
+		.all<{ id: number }>();
+	await bumpMastery(
+		db,
+		userId,
+		partRows.map((r) => r.id),
+		10,
+		now
+	);
 
 	// 조합표에는 있지만 이번 봉인이 아니다 — 한자는 얻었으니 헛수고는 아니다
 	if (sealIndex < 0) return { ok: false, reason: 'not-target' };

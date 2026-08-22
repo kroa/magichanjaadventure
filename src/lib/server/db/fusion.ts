@@ -1,4 +1,4 @@
-import { toHanja, type Hanja, type HanjaRow } from './hanja';
+import { bumpMastery, toHanja, type Hanja, type HanjaRow } from './hanja';
 import { FUSION_RECIPES, allPartChars, allResultChars, fuse } from '$lib/game/fusion';
 
 /**
@@ -102,16 +102,17 @@ export async function tryFuse(
 	// 배우지 않은 부품으로는 합칠 수 없다 — 요청을 직접 만들어도 마찬가지다
 	const needed = [...new Set(recipe.parts)];
 	const holes = needed.map(() => '?').join(',');
-	const owned = await db
+	// 개수만 세지 않고 id 까지 받아 둔다 — 아래에서 부품 숙련도를 올릴 때 쓴다
+	const { results: ownedRows } = await db
 		.prepare(
-			`SELECT COUNT(DISTINCT h.character) AS n
+			`SELECT DISTINCT h.id, h.character
 			 FROM user_hanja_progress p JOIN hanjas h ON h.id = p.hanja_id
 			 WHERE p.user_id = ? AND h.character IN (${holes})`
 		)
 		.bind(userId, ...needed)
-		.first<{ n: number }>();
+		.all<{ id: number; character: string }>();
 
-	if ((owned?.n ?? 0) < needed.length) return { ok: false, reason: 'missing-parts' };
+	if (ownedRows.length < needed.length) return { ok: false, reason: 'missing-parts' };
 
 	const row = await db
 		.prepare('SELECT * FROM hanjas WHERE character = ?')
@@ -129,6 +130,19 @@ export async function tryFuse(
 		)
 		.bind(userId, hanja.id, now, now)
 		.run();
+
+	/*
+	 * 쓰인 부품의 숙련도를 올린다. **결과 INSERT 와 별개로** 한다 —
+	 * 위 INSERT 를 DO UPDATE 로 바꾸면 `changes` 가 항상 1이 되어
+	 * `alreadyKnown` 이 무너지고, 대결의 「처음 만들어 본 한자」 별이 영구 점등된다.
+	 */
+	await bumpMastery(
+		db,
+		userId,
+		ownedRows.map((r) => r.id),
+		10,
+		now
+	);
 
 	return {
 		ok: true,

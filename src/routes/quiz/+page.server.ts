@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { loadWorkshop, tryFuse } from '$lib/server/db/fusion';
 import { SEAL_RECIPES } from '$lib/game/fusion';
+import { classifyFocus } from '$lib/game/play';
 import { expToNextLevel } from '$lib/game/exp';
 
 /** 한 판에 낼 조합 수 */
@@ -63,8 +64,13 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 				mastery: masteryOf.get(character) ?? 0
 			})),
 		total: ordered.length,
-		/** 방금 배운 글자로 만들 수 있는 것이 하나라도 있었는가 */
-		focused: related.length > 0,
+		/**
+		 * 이 글자를 두고 뭐라고 말해야 하는가.
+		 *
+		 * 예전에는 `focused: boolean` 이라, 관련 조합이 없으면 조용히 아무 판이나 냈다.
+		 * 아이 입장에서는 "방금 배운 걸로" 라고 해 놓고 딴 게 나오는 것이라 헷갈린다.
+		 */
+		focusState: classifyFocus(focus, related.length),
 		focus
 	};
 };

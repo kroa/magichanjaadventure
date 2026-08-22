@@ -13,12 +13,12 @@ import { captureScreen, waitForFonts } from '../helpers/screens';
  * 그리고 틀린 조합에 **벌을 주지 않는지** 를 함께 확인한다 —
  * 그게 무너지면 이 화면은 그냥 다른 모양의 시험지가 된다.
  *
- * 준비가 오래 걸린다: 日(11번째)·月(12번째)을 재료로 쓰려면 12자를 실제로 배워야 하고,
- * 그 한 자 한 자가 진짜 서버 왕복이다. 기본 45초로는 준비 도중에 끊긴다.
+ * 준비가 오래 걸린다: 한 자 한 자가 진짜 서버 왕복이다. 기본 45초로는 준비 도중에 끊긴다.
+ * (배우기가 "조합 부품 먼저" 로 바뀐 뒤 日·月 은 3·4번째다. 예전에는 11·12번째였다.)
  */
 test.describe.configure({ timeout: 120_000 });
 
-/** 8급부터 순서대로 배우면 日·月 이 앞쪽에 나온다. n자를 배운다. */
+/** 새싹 마을은 조합 부품부터 낸다 — 一 二 日 月 水 木 … 순이다. n자를 배운다. */
 async function signUpAndLearn(page: Page, label: string, seed: string, count: number) {
 	const user = makeTestUser(label, seed);
 	await gotoReady(page, '/register');
@@ -42,7 +42,7 @@ async function place(page: Page, character: string) {
 }
 
 test('부품 두 개를 붙이면 새 한자가 만들어진다', async ({ page }, testInfo) => {
-	// 日(11번째)·月(12번째) 을 가지려면 딱 12자가 필요하다
+	// 日·月 은 3·4번째지만, 서랍이 여러 타일로 찬 상태의 배치도 함께 보려고 12자를 배운다
 	await signUpAndLearn(page, 'fuse', `${testInfo.project.name}${testInfo.workerIndex}`, 12);
 
 	await gotoReady(page, '/fusion');
@@ -103,15 +103,23 @@ test('안 되는 조합에도 벌을 주지 않는다', async ({ page }, testInf
 
 	/*
 	 * 一 + 二 는 조합표에 없다.
-	 * "틀렸어요" 라는 말도, 점수가 깎이는 일도 없어야 한다.
-	 * 아이가 마음 놓고 아무거나 붙여 볼 수 있어야 발견이 일어난다.
+	 *
+	 * **말은 해 주되 채점은 하지 않는다.**
+	 * 예전에는 아무 말도 없이 살짝 흔들기만 했는데, 아이에게 그건 관대함이 아니라
+	 * "아무 일도 안 일어남" 이었다. 그래서 한 줄을 띄우되 판정어는 쓰지 않는다 —
+	 * 주어가 아이가 아니라 부품이어야 한다("네가 틀렸다" 가 아니라 "이 둘은 안 붙는다").
 	 */
 	await place(page, '一');
 	await place(page, '二');
 	await page.getByRole('button', { name: '합체!' }).click();
 
 	await expect(page.getByTestId('fusion-reveal')).toBeHidden();
+	await expect(page.getByTestId('fusion-nojoin')).toContainText('안 붙어요');
+	// 이 단언이 "공방은 시험지가 아니다" 의 마지막 방어선이다
 	await expect(page.getByText(/틀렸|실패|아니에요|오답/)).toHaveCount(0);
+
+	// 말풍선이 떴다 사라지는 동안 「합체!」 버튼이 손가락 아래에서 움직이면 안 된다
+	await expectHealthyLayout(page);
 
 	// 부품이 되돌아와 바로 다시 시도할 수 있어야 한다
 	await expect(page.locator('.cell.filled')).toHaveCount(0, { timeout: 5000 });
@@ -120,6 +128,51 @@ test('안 되는 조합에도 벌을 주지 않는다', async ({ page }, testInf
 	await place(page, '月');
 	await page.getByRole('button', { name: '합체!' }).click();
 	await expect(page.getByTestId('fusion-reveal')).toBeVisible();
+});
+
+test('두 번 연속 실패해도 매번 반응한다', async ({ page }, testInfo) => {
+	/*
+	 * `shake` 는 단조 증가 카운터인데 `class:shake={shake > 0}` 로 붙여 놨었다.
+	 * 첫 실패에 클래스가 붙은 뒤 안 떨어져서 CSS 애니메이션이 재시작하지 않았고,
+	 * **두 번째 실패부터는 아무 반응이 없었다.** 몸이 먼저 말해 주는 자리가 죽어 있었다.
+	 */
+	await signUpAndLearn(page, 'fusetwice', `${testInfo.project.name}${testInfo.workerIndex}`, 12);
+	await gotoReady(page, '/fusion');
+
+	for (const attempt of [1, 2]) {
+		await place(page, '一');
+		await place(page, '二');
+		await page.getByRole('button', { name: '합체!' }).click();
+		await expect(
+			page.getByTestId('fusion-nojoin'),
+			`${attempt}번째 실패에 아무 말도 없다`
+		).toBeVisible();
+		// 다음 시도 전에 말풍선이 스스로 사라지기를 기다린다
+		await expect(page.getByTestId('fusion-nojoin')).toBeHidden({ timeout: 5000 });
+	}
+});
+
+test('막히면 도움 버튼이 붙는 짝을 짚어 준다', async ({ page }, testInfo) => {
+	await signUpAndLearn(page, 'fusehint', `${testInfo.project.name}${testInfo.workerIndex}`, 12);
+	await gotoReady(page, '/fusion');
+	await expect(page.getByTestId('fusion-board')).toBeVisible();
+
+	await page.getByRole('button', { name: '도와줘' }).click();
+
+	// 짝을 빛낼 뿐 **놓아 주지는 않는다** — 마지막 손가락은 아이 것이다
+	const lit = page.locator('button.part[data-hint]');
+	await expect(lit).not.toHaveCount(0);
+	await expect(page.locator('.cell.filled')).toHaveCount(0);
+
+	// 빛난 것끼리 붙이면 실제로 만들어져야 한다 (죽은 힌트가 아니어야 한다)
+	const chars = await lit.evaluateAll((els) => els.map((el) => el.getAttribute('data-part') ?? ''));
+	for (const c of chars.length === 1 ? [chars[0], chars[0]] : chars.slice(0, 2)) {
+		await place(page, c);
+	}
+	await page.getByRole('button', { name: '합체!' }).click();
+	await expect(page.getByTestId('fusion-reveal')).toBeVisible();
+
+	await expectHealthyLayout(page);
 });
 
 test('배우지 않은 부품으로는 서버가 합체를 거절한다', async ({ page, request }, testInfo) => {

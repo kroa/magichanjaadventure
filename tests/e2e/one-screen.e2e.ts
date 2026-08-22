@@ -37,9 +37,14 @@ async function readyToPlay(page: Page, label: string, seed: string) {
 }
 
 for (const { path, label, tile } of [
-	// 두 화면 모두 조각 판이다 — 같은 조작, 같은 셀렉터
+	// 앞 두 화면은 조각 판이다 — 같은 조작, 같은 셀렉터
 	{ path: '/quiz', label: '복습', tile: 'button.piece' },
-	{ path: '/battle', label: '대결', tile: 'button.piece' }
+	{ path: '/battle', label: '대결', tile: 'button.piece' },
+	/*
+	 * 공방은 서랍 방식이라 셀렉터가 다르지만, 세로로 넘칠 위험은 오히려 더 크다 —
+	 * 머리글에 도움 버튼(48px)이 붙고 판 안에 실패 문구 자리가 생겼다.
+	 */
+	{ path: '/fusion', label: '공방', tile: 'button.part' }
 ]) {
 	test(`${label} 화면은 스크롤 없이 모든 보기를 보여준다`, async ({ page }, testInfo) => {
 		await readyToPlay(page, `os${label}`, `${testInfo.project.name}${testInfo.workerIndex}`);

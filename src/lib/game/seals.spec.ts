@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { SEAL_RECIPES, hasVariant } from './fusion';
-import { countStars, sealsFrom, trayFrom, SEALS_PER_BATTLE, TRAY_SIZE } from './seals';
+import { countStars, sealsFrom, SEALS_PER_BATTLE } from './seals';
 
 /**
  * 봉인 생성기 검증.
  *
- * 두 가지가 절대 무너지면 안 된다.
- *  1. **결정론** — 서버가 다시 계산해 검증하므로, 어긋나면 아이가 맞혔는데 거절당한다
- *  2. **정답 부품이 서랍에 있다** — 이게 깨지면 아이는 절대 못 깨는 봉인 앞에 앉는다
+ * **결정론**이 무너지면 안 된다 — 서버가 다시 계산해 검증하므로,
+ * 어긋나면 아이가 맞혔는데 거절당한다.
+ *
+ * "정답 부품이 서랍에 있다" 를 지키던 trayFrom 테스트는 함께 지웠다.
+ * 대결이 조각 판으로 바뀌면서 서랍이 사라졌고, 그 보장은 이제 서버 쪽
+ * `planFor` 가 `pieces = recipes.flatMap(r => r.parts)` 로 **구조적으로** 갖는다.
+ * 데이터가 맞기를 비는 대신 빠질 수가 없게 만든 것이라 더 강한 보장이다.
  */
 
 describe('sealsFrom', () => {
@@ -54,48 +58,6 @@ describe('sealsFrom', () => {
 				expect(hasVariant(seal), `${seal.result} 가 봉인으로 나왔다`).toBe(false);
 			}
 		}
-	});
-});
-
-describe('trayFrom', () => {
-	it('봉인이 요구하는 부품이 전부 서랍에 있다', () => {
-		/*
-		 * 이 테스트가 막다른 길을 막는다.
-		 * 하나라도 빠지면 아이는 절대 못 깨는 봉인 앞에 앉게 된다.
-		 */
-		for (const seed of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) {
-			const seals = sealsFrom(seed, SEAL_RECIPES);
-			const tray = trayFrom(seed, seals);
-			for (const seal of seals) {
-				for (const part of seal.parts) {
-					expect(tray, `${seed}: ${seal.result} 의 부품 ${part} 이 서랍에 없다`).toContain(part);
-				}
-			}
-		}
-	});
-
-	it('같은 씨앗이면 같은 서랍이다', () => {
-		const seals = sealsFrom('seed', SEAL_RECIPES);
-		expect(trayFrom('seed', seals)).toEqual(trayFrom('seed', seals));
-	});
-
-	it('미끼가 섞여 있다 — 서랍이 곧 정답표가 되면 안 된다', () => {
-		const seals = sealsFrom('seed', SEAL_RECIPES);
-		const tray = trayFrom('seed', seals);
-		const needed = new Set(seals.flatMap((s) => s.parts));
-		const decoys = tray.filter((c) => !needed.has(c));
-		expect(decoys.length).toBeGreaterThan(0);
-	});
-
-	it('서랍에 같은 부품이 두 번 들어가지 않는다', () => {
-		const seals = sealsFrom('seed', SEAL_RECIPES);
-		const tray = trayFrom('seed', seals);
-		expect(new Set(tray).size).toBe(tray.length);
-	});
-
-	it('칸 수를 지킨다', () => {
-		const seals = sealsFrom('seed', SEAL_RECIPES);
-		expect(trayFrom('seed', seals)).toHaveLength(TRAY_SIZE);
 	});
 });
 
