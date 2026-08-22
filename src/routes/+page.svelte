@@ -2,11 +2,7 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import TopHud from '$lib/components/layout/TopHud.svelte';
 	import Button from '$lib/components/common/Button.svelte';
-	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
-	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
-	import ArcherSprite from '$lib/components/art/ArcherSprite.svelte';
-	import SageSprite from '$lib/components/art/SageSprite.svelte';
-	import FoxSprite from '$lib/components/art/FoxSprite.svelte';
+	import { spriteFor } from '$lib/game/characters';
 	import Sparkle from '$lib/components/effects/Sparkle.svelte';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { sound } from '$lib/sound/index.svelte';
@@ -14,14 +10,7 @@
 
 	let { data } = $props();
 
-	const SPRITES = {
-		knight: KnightSprite,
-		wizard: WizardSprite,
-		archer: ArcherSprite,
-		sage: SageSprite,
-		fox: FoxSprite
-	} as const;
-	const Hero = $derived(SPRITES[data.user.characterClass ?? 'knight'] ?? KnightSprite);
+	const Hero = $derived(spriteFor(data.user.characterClass));
 
 	/*
 	 * 섬이 놓이는 자리 — 아래에서 위로 굽이치는 길.
@@ -188,6 +177,7 @@
 				<Button variant="magic" size="lg" href="/learn?area={chosenIsland.id}">한자 배우기</Button>
 				<Button variant="ember" size="lg" href="/battle?area={chosenIsland.id}">보스 대결</Button>
 				<Button variant="gold" size="lg" href="/fusion">합체 공방</Button>
+				<Button variant="mint" size="lg" href="/quiz">복습하기</Button>
 			</div>
 		</div>
 	{/if}
@@ -435,7 +425,7 @@
 		}
 
 		.sheet-actions {
-			grid-template-columns: repeat(3, 1fr);
+			grid-template-columns: repeat(4, 1fr);
 		}
 	}
 

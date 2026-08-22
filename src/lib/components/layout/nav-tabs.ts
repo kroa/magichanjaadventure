@@ -11,11 +11,16 @@ export interface NavTab {
 	icon: string;
 }
 
+/*
+ * 여섯 칸이 한계다 (390px 화면에서 한 칸 65px).
+ * 그래서 **복습은 여기 두지 않는다** — 지도에서 섬을 고르면 나오는 차림표에 있다.
+ * 대결은 반대로 반드시 여기 있어야 한다: 지도를 눌러야만 갈 수 있으면 못 찾는다.
+ */
 export const NAV_TABS: NavTab[] = [
 	{ href: '/', label: '모험', icon: '🗺️' },
 	{ href: '/learn', label: '배우기', icon: '✨' },
 	{ href: '/fusion', label: '합체', icon: '🧪' },
-	{ href: '/quiz', label: '퀴즈', icon: '⚔️' },
+	{ href: '/battle', label: '대결', icon: '⚔️' },
 	{ href: '/collection', label: '도감', icon: '📖' },
 	{ href: '/shop', label: '상점', icon: '💎' }
 ];

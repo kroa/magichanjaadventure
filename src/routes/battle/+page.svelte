@@ -3,12 +3,8 @@
 	import Button from '$lib/components/common/Button.svelte';
 	import Chip from '$lib/components/common/Chip.svelte';
 	import ProgressBar from '$lib/components/common/ProgressBar.svelte';
-	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
-	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
-	import ArcherSprite from '$lib/components/art/ArcherSprite.svelte';
-	import SageSprite from '$lib/components/art/SageSprite.svelte';
-	import FoxSprite from '$lib/components/art/FoxSprite.svelte';
 	import MonsterSprite from '$lib/components/art/MonsterSprite.svelte';
+	import { spriteFor } from '$lib/game/characters';
 	import BattleCanvas from '$lib/components/battle/BattleCanvas.svelte';
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
 	import StrikeGlyph from '$lib/components/play/StrikeGlyph.svelte';
@@ -24,14 +20,7 @@
 
 	let { data } = $props();
 
-	const SPRITES = {
-		knight: KnightSprite,
-		wizard: WizardSprite,
-		archer: ArcherSprite,
-		sage: SageSprite,
-		fox: FoxSprite
-	} as const;
-	const Hero = $derived(SPRITES[data.user.characterClass ?? 'knight'] ?? KnightSprite);
+	const Hero = $derived(spriteFor(data.user.characterClass));
 
 	const wide = new MediaQuery('(min-width: 900px)');
 	const spriteSize = $derived(wide.current ? 132 : 84);

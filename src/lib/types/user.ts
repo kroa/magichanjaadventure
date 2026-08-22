@@ -1,4 +1,4 @@
-export type CharacterClass = 'knight' | 'wizard' | 'archer' | 'sage' | 'fox';
+export type CharacterClass = 'knight' | 'wizard' | 'archer' | 'sage' | 'fox' | 'genius';
 
 /**
  * 세션에서 복원한 로그인 사용자.
@@ -81,13 +81,34 @@ export const CHARACTERS: Record<CharacterClass, CharacterInfo> = {
 		attack: 16,
 		price: 200,
 		blurb: '꼬리가 아홉인 장난꾸러기. 한자를 알아보는 눈이 빨라요.'
+	},
+	/*
+	 * 마지막 캐릭터. 보석 300 은 한참 모아야 하는 양이라 **목표**가 되어 준다.
+	 * 다만 "제일 비싼 것이 제일 세다" 가 되면 앞의 선택이 전부 잘못된 선택이 되므로,
+	 * 총합(hp/10 + attack)은 다른 캐릭터와 같은 22 근처에 둔다.
+	 */
+	genius: {
+		id: 'genius',
+		label: '한자 천재',
+		tagline: '에너지도 공격도 고루 뛰어나요',
+		hp: 130,
+		attack: 13,
+		price: 300,
+		blurb: '두루마리를 띄우고 다니는 꼬마 학자. 모르는 한자가 거의 없어요.'
 	}
 };
 
 /** 처음부터 가질 수 있는 캐릭터 */
 export const STARTER_CLASSES: CharacterClass[] = ['knight', 'wizard'];
 
-export const ALL_CLASSES: CharacterClass[] = ['knight', 'wizard', 'archer', 'sage', 'fox'];
+export const ALL_CLASSES: CharacterClass[] = [
+	'knight',
+	'wizard',
+	'archer',
+	'sage',
+	'fox',
+	'genius'
+];
 
 export function isCharacterClass(value: unknown): value is CharacterClass {
 	return typeof value === 'string' && (ALL_CLASSES as string[]).includes(value);

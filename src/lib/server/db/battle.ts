@@ -124,9 +124,30 @@ async function lookup(db: D1Database, chars: string[]): Promise<Map<string, Hanj
 	return new Map(results.map((row) => [row.character, toHanja(row)]));
 }
 
-/** 서버가 이번 판의 봉인을 유도한다 (화면도 이 결과를 그대로 받는다) */
+/**
+ * 서버가 이번 판의 봉인을 유도한다 (화면도 이 결과를 그대로 받는다).
+ *
+ * **쉬운 것을 앞에 둔다.** 처음 오는 아이는 봉인 하나만 받으므로(sealLimitFor),
+ * 앞에서부터 자르면 자연히 가장 그림 같은 조합을 만난다.
+ * 나무+나무=수풀은 여섯 살도 알아보지만, 문+해=사이(間)는 그림을 다 알아도 뜻이 안 따라온다.
+ *
+ * 순서를 이렇게 고정하는 또 하나의 이유: 공격 요청을 받은 서버가 **같은 방식으로 다시 유도**
+ * 해야 답이 어긋나지 않는다. 아이의 진도에 따라 풀이 달라지면 판 도중에 정답이 바뀐다.
+ */
 export function derive(userId: string, sessionKey: string, areaId: number): FusionRecipe[] {
-	return sealsFrom(seedOf(userId, sessionKey), poolForArea(areaId));
+	const pool = poolForArea(areaId);
+	const seed = seedOf(userId, sessionKey);
+	const easy = sealsFrom(
+		`${seed}:easy`,
+		pool.filter((r) => r.beginner),
+		SEALS_PER_BATTLE
+	);
+	const rest = sealsFrom(
+		`${seed}:rest`,
+		pool.filter((r) => !r.beginner),
+		SEALS_PER_BATTLE
+	);
+	return [...easy, ...rest].slice(0, SEALS_PER_BATTLE);
 }
 
 /** 이번 판에서 이미 깬 봉인 번호 */

@@ -123,7 +123,7 @@
 						size={208}
 						oncomplete={() => claimForm?.requestSubmit()}
 					/>
-					<p class="text-sm text-ink-500">손가락으로 칸을 문질러 글자를 꺼내 보세요</p>
+					<p class="text-sm text-white/80">흙을 문질러 한자를 파내 보세요</p>
 				</div>
 			{/if}
 

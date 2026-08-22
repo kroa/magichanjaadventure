@@ -4,6 +4,7 @@ import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 import ArcherSprite from '$lib/components/art/ArcherSprite.svelte';
 import SageSprite from '$lib/components/art/SageSprite.svelte';
 import FoxSprite from '$lib/components/art/FoxSprite.svelte';
+import GeniusSprite from '$lib/components/art/GeniusSprite.svelte';
 import type { CharacterClass } from '$lib/types/user';
 import type { Mood } from '$lib/types/ui';
 
@@ -25,7 +26,8 @@ export const SPRITES: Record<CharacterClass, SpriteComponent> = {
 	wizard: WizardSprite,
 	archer: ArcherSprite,
 	sage: SageSprite,
-	fox: FoxSprite
+	fox: FoxSprite,
+	genius: GeniusSprite
 };
 
 /** 캐릭터가 없으면(가입 직후 등) 기사를 보여 준다. */

@@ -44,6 +44,14 @@ export interface FusionRecipe {
 	story: string;
 	kind: FusionKind;
 	/**
+	 * 처음 하는 아이에게 내도 되는 조합인가.
+	 *
+	 * 기준은 딱 하나 — **그림 두 개만 보고 결과가 짐작되는가.**
+	 * 나무+나무=수풀은 여섯 살도 알아본다. 반면 문+해=사이(間)는 그림을 다 알아도
+	 * 뜻이 안 따라온다. 그런 것은 조금 익숙해진 뒤에 만나야 한다.
+	 */
+	beginner?: boolean;
+	/**
 	 * 부품이 놓이는 자리. **`parts` 의 순서가 곧 배치 순서다.**
 	 * lr 이면 parts[0] 이 왼쪽, tb 면 parts[0] 이 위, enclose 면 parts[0] 이 감싸는 쪽이다.
 	 * (맞추기는 `fuse()` 가 정렬해서 하므로 순서가 판정에 영향을 주지는 않는다.)
@@ -88,6 +96,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '明',
 		story: '해와 달이 함께 뜨면 세상이 환해져요.',
 		kind: '회의',
+		beginner: true,
 		layout: 'lr'
 	},
 	{
@@ -111,6 +120,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '林',
 		story: '나무가 둘이면 수풀이 돼요.',
 		kind: '회의',
+		beginner: true,
 		layout: 'lr'
 	},
 	{
@@ -157,6 +167,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '好',
 		story: '어머니가 아이를 안고 있어요. 참 좋은 모습이지요.',
 		kind: '회의',
+		beginner: true,
 		layout: 'lr'
 	},
 	{
@@ -257,6 +268,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '鳴',
 		story: '새가 입을 벌려 노래해요.',
 		kind: '회의',
+		beginner: true,
 		layout: 'lr'
 	},
 	{
@@ -264,6 +276,7 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		result: '鮮',
 		story: '갓 잡은 물고기와 양고기. 신선하고 곱다는 뜻이에요.',
 		kind: '회의',
+		beginner: true,
 		layout: 'lr'
 	},
 	{

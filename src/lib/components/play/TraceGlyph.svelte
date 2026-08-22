@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { PICTOGRAPHS } from '$lib/art/pictographs';
+	import { sound } from '$lib/sound/index.svelte';
 
 	interface Props {
 		character: string;
 		size?: number;
-		/** 다 쓰면 한 번 부른다 */
+		/** 다 파내면 한 번 부른다 */
 		oncomplete?: () => void;
 	}
 
@@ -12,191 +13,250 @@
 
 	const picture = $derived(PICTOGRAPHS[character]);
 
+	let canvas = $state<HTMLCanvasElement | null>(null);
 	let progress = $state(0);
-	let tracing = $state(false);
+	let digging = $state(false);
 	let finished = $state(false);
-	let lastX = 0;
-	let lastY = 0;
+	let sparks = $state<{ id: number; x: number; y: number }[]>([]);
 
-	/** 이만큼 손가락이 움직이면 글자가 다 채워진다 */
-	const target = $derived(size * 2.4);
-	let travelled = $state(0);
+	let sparkId = 0;
+	let sinceCheck = 0;
+	let lastSound = 0;
+
+	/** 이만큼 걷어내면 다 찾은 것으로 본다 */
+	const CLEARED = 0.52;
+	/** 붓 굵기 */
+	const BRUSH = 26;
 
 	/*
-	 * 글자가 **위에서부터** 차오른다.
-	 * 한자를 쓰는 순서가 대체로 위에서 아래라, 채워지는 방향만으로도 손이 그 리듬을 배운다.
+	 * **발굴**.
+	 *
+	 * 예전에는 손가락을 굴리면 글자가 위에서부터 차오르기만 했다. 조작은 있었지만
+	 * 아이가 하는 일은 "게이지 채우기" 였고, 어디를 문지르든 똑같이 찼다.
+	 *
+	 * 지금은 흙에 묻힌 글자를 **문지른 자리만** 파낸다. 손이 지나간 곳이 드러나므로
+	 * 아이가 자기 손으로 찾아낸 것이 된다. 탐험대라는 이름과도 맞는다.
 	 */
-	const clip = $derived(`inset(${Math.round((1 - progress) * 100)}% 0 0 0)`);
+	function paintDirt() {
+		const el = canvas;
+		if (!el) return;
+		const ctx = el.getContext('2d');
+		if (!ctx) return;
 
-	function advance(by: number) {
-		if (finished) return;
-		travelled = Math.min(target, travelled + by);
-		progress = travelled / target;
-		if (progress >= 1) {
+		const dpr = Math.min(window.devicePixelRatio || 1, 2);
+		el.width = size * dpr;
+		el.height = size * dpr;
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+		ctx.globalCompositeOperation = 'source-over';
+		const soil = ctx.createLinearGradient(0, 0, 0, size);
+		soil.addColorStop(0, '#B08356');
+		soil.addColorStop(1, '#8A5A28');
+		ctx.fillStyle = soil;
+		ctx.fillRect(0, 0, size, size);
+
+		// 흙 알갱이 — 고정 패턴이라 서버·화면이 어긋나지 않는다
+		ctx.fillStyle = 'rgba(255,255,255,0.14)';
+		for (let i = 0; i < 90; i++) {
+			const x = ((i * 73) % 100) * (size / 100);
+			const y = ((i * 137) % 100) * (size / 100);
+			ctx.beginPath();
+			ctx.arc(x, y, ((i % 3) + 1) * 0.9, 0, Math.PI * 2);
+			ctx.fill();
+		}
+	}
+
+	/** 얼마나 걷어냈는지 — 픽셀을 듬성듬성 훑는다 (매번 다 세면 느리다) */
+	function measure(ctx: CanvasRenderingContext2D, el: HTMLCanvasElement) {
+		const data = ctx.getImageData(0, 0, el.width, el.height).data;
+		let clear = 0;
+		let total = 0;
+		for (let i = 3; i < data.length; i += 4 * 40) {
+			total += 1;
+			if (data[i] < 40) clear += 1;
+		}
+		progress = total ? clear / total : 0;
+		if (progress >= CLEARED && !finished) {
 			finished = true;
 			oncomplete?.();
 		}
 	}
 
-	function onPointerDown(event: PointerEvent) {
+	function dig(clientX: number, clientY: number) {
+		const el = canvas;
+		if (!el || finished) return;
+		const ctx = el.getContext('2d');
+		if (!ctx) return;
+
+		const box = el.getBoundingClientRect();
+		const x = clientX - box.left;
+		const y = clientY - box.top;
+
+		ctx.globalCompositeOperation = 'destination-out';
+		ctx.beginPath();
+		ctx.arc(x, y, BRUSH, 0, Math.PI * 2);
+		ctx.fill();
+
+		// 흙먼지가 튄다
+		sparkId += 1;
+		const id = sparkId;
+		sparks = [...sparks.slice(-5), { id, x, y }];
+		setTimeout(() => (sparks = sparks.filter((s) => s.id !== id)), 420);
+
+		const now = Date.now();
+		if (now - lastSound > 140) {
+			lastSound = now;
+			sound.play('click');
+		}
+
+		sinceCheck += 1;
+		if (sinceCheck < 6) return;
+		sinceCheck = 0;
+		measure(ctx, el);
+	}
+
+	function down(event: PointerEvent) {
 		if (finished) return;
-		tracing = true;
-		lastX = event.clientX;
-		lastY = event.clientY;
+		digging = true;
 		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-		// 톡 누르기만 해도 조금씩 차오른다 — 끌기가 서툰 아이도 끝까지 갈 수 있어야 한다
-		advance(size * 0.35);
+		dig(event.clientX, event.clientY);
 	}
 
-	function onPointerMove(event: PointerEvent) {
-		if (!tracing || finished) return;
-		const dx = event.clientX - lastX;
-		const dy = event.clientY - lastY;
-		lastX = event.clientX;
-		lastY = event.clientY;
-		advance(Math.hypot(dx, dy));
+	function move(event: PointerEvent) {
+		if (!digging) return;
+		dig(event.clientX, event.clientY);
 	}
 
-	function stop() {
-		tracing = false;
+	function up() {
+		digging = false;
 	}
 
 	$effect(() => {
-		// 다른 한자로 넘어가면 처음부터 다시 쓴다
+		// 다른 한자로 넘어가면 흙을 새로 덮는다
 		character;
-		travelled = 0;
-		progress = 0;
+		size;
 		finished = false;
+		progress = 0;
+		sinceCheck = 0;
+		paintDirt();
 	});
 </script>
 
 <!--
-	글자 쓰기 — 아이가 손으로 글자를 **나타나게** 한다.
+	한자 발굴 — 흙에 묻힌 글자를 **문질러 파낸다.**
 
 	예전 배우기 화면은 카드에 적힌 뜻·음·획수·설명을 읽고 버튼을 누르는 것이 전부였다.
-	그건 교재지 게임이 아니다. 여기서는 아이가 칸 위에 손가락을 굴리면
-	글자가 위에서부터 차오르고, 그림이 있는 글자는 **그림이 글자로 변해 간다.**
+	그걸 "문지르면 차오르는 게이지" 로 바꿨더니 조작은 생겼지만 여전히 밋밋했다 —
+	어디를 문지르든 똑같이 찼기 때문이다.
 
-	1000자 전부에 쓸 수 있다 — 글자별 획순 데이터 없이, 채워지는 방향만으로 성립한다.
+	지금은 **손이 지나간 자리만** 드러난다. 아이가 자기 손으로 찾아낸 것이 되고,
+	그림이 있는 글자는 파낼수록 그림이 옅어지며 글자로 바뀐다.
 -->
-<div
-	class="trace"
-	class:done={finished}
-	style="--box:{size}px"
-	role="button"
-	tabindex="0"
-	aria-label="{character} 따라 쓰기"
-	onpointerdown={onPointerDown}
-	onpointermove={onPointerMove}
-	onpointerup={stop}
-	onpointercancel={stop}
-	onkeydown={(e) => {
-		// 키보드로도 끝까지 갈 수 있어야 한다
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			advance(target);
-		}
-	}}
-	data-testid="trace-glyph"
-	data-progress={Math.round(progress * 100)}
->
+<div class="dig" class:done={finished} style="--box:{size}px">
 	{#if picture}
-		<!-- 그림이 글자로 변해 간다. 이 화면이 하는 일을 한마디로 보여 주는 장면이다 -->
-		<svg class="picture" viewBox="0 0 100 100" style="opacity:{1 - progress}" aria-hidden="true">
+		<svg
+			class="picture"
+			viewBox="0 0 100 100"
+			style="opacity:{Math.max(0, 1 - progress / CLEARED)}"
+			aria-hidden="true"
+		>
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -- 우리가 직접 쓴 도형이다 -->
 			{@html picture.svg}
 		</svg>
 	{/if}
 
-	<!-- 흐린 안내 글자. 어디를 채워야 하는지만 알려 준다 -->
-	<span class="hanja guide" aria-hidden="true">{character}</span>
+	<span class="hanja glyph" aria-hidden="true">{character}</span>
 
-	<!-- 손가락을 따라 차오르는 진한 글자 -->
-	<span class="hanja ink" style="clip-path:{clip}" aria-hidden="true">{character}</span>
+	<canvas
+		bind:this={canvas}
+		class="soil"
+		style="width:{size}px; height:{size}px"
+		role="button"
+		tabindex="0"
+		aria-label="{character} 파내기"
+		onpointerdown={down}
+		onpointermove={move}
+		onpointerup={up}
+		onpointercancel={up}
+		onkeydown={(e) => {
+			// 키보드로도 끝까지 갈 수 있어야 한다
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				finished = true;
+				progress = 1;
+				oncomplete?.();
+			}
+		}}
+		data-testid="trace-glyph"
+		data-progress={Math.round(progress * 100)}
+	></canvas>
+
+	{#each sparks as spark (spark.id)}
+		<span class="spark" style="left:{spark.x}px; top:{spark.y}px" aria-hidden="true"></span>
+	{/each}
 
 	{#if !finished}
-		<span class="nudge" aria-hidden="true">✍️</span>
+		<span class="nudge" aria-hidden="true">👆</span>
 	{/if}
 </div>
 
 <style>
-	.trace {
+	.dig {
 		position: relative;
-		display: grid;
 		width: var(--box);
 		height: var(--box);
-		place-items: center;
 		border-radius: var(--radius-panel);
-		/* 원고지 칸 — 아이가 한자를 쓰던 그 네모 */
-		background: rgb(255 255 255 / 0.7);
-		box-shadow: inset 0 0 0 3px var(--color-magic-200);
-		cursor: crosshair;
-		/* 쓰는 동안 화면이 같이 스크롤되면 손가락이 미끄러진다 */
-		touch-action: none;
-		user-select: none;
-	}
-
-	/* 가운데 십자 안내선 */
-	.trace::before,
-	.trace::after {
-		position: absolute;
-		background: var(--color-magic-200);
-		content: '';
-		opacity: 0.5;
-	}
-
-	.trace::before {
-		width: 100%;
-		height: 2px;
-	}
-
-	.trace::after {
-		width: 2px;
-		height: 100%;
+		background: rgb(255 255 255 / 0.85);
+		box-shadow:
+			inset 0 0 0 4px var(--color-gold-400),
+			0 10px 24px rgb(20 12 45 / 0.35);
+		overflow: hidden;
 	}
 
 	.picture,
-	.guide,
-	.ink {
+	.glyph {
 		position: absolute;
+		inset: 0;
 		display: grid;
-		width: 100%;
-		height: 100%;
 		place-items: center;
 	}
 
 	.picture {
 		padding: 12%;
-		transition: opacity 0.12s linear;
+		transition: opacity 0.15s linear;
 	}
 
-	.guide,
-	.ink {
+	.glyph {
 		font-size: calc(var(--box) * 0.62);
 		line-height: 1;
-	}
-
-	.guide {
-		color: var(--color-magic-300);
-		opacity: 0.28;
-	}
-
-	.ink {
 		color: var(--color-magic-800);
-		transition: clip-path 0.08s linear;
 	}
 
-	/* 다 쓰면 한 번 통 튄다 */
-	.trace.done .ink {
-		animation: ink-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+	/* 흙 — 이 위를 문지르면 아래가 드러난다 */
+	.soil {
+		position: absolute;
+		inset: 0;
+		cursor: grab;
+		/* 파는 동안 화면이 같이 스크롤되면 손가락이 미끄러진다 */
+		touch-action: none;
 	}
 
-	.trace.done {
-		box-shadow: inset 0 0 0 3px var(--color-gold-400);
-		cursor: default;
+	.soil:active {
+		cursor: grabbing;
 	}
 
-	@keyframes ink-pop {
+	/* 다 파내면 흙이 사라지고 글자가 한 번 튄다 */
+	.dig.done .soil {
+		opacity: 0;
+		transition: opacity 0.35s ease;
+		pointer-events: none;
+	}
+
+	.dig.done .glyph {
+		animation: glyph-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	@keyframes glyph-pop {
 		0% {
 			transform: scale(1);
 		}
@@ -208,28 +268,49 @@
 		}
 	}
 
-	/* 뭘 해야 하는지 모를 때를 위한 손짓. 글자가 아니라 몸짓으로 알린다 */
-	.nudge {
+	/* 튀는 흙먼지 */
+	.spark {
 		position: absolute;
-		right: 8%;
-		bottom: 6%;
-		font-size: 1.5rem;
-		animation: nudge-wave 1.8s ease-in-out infinite;
+		width: 8px;
+		height: 8px;
+		border-radius: 9999px;
+		background: #d9b382;
+		transform: translate(-50%, -50%);
+		pointer-events: none;
+		animation: spark-fly 0.42s ease-out forwards;
 	}
 
-	@keyframes nudge-wave {
+	@keyframes spark-fly {
+		to {
+			transform: translate(-50%, -230%) scale(0.2);
+			opacity: 0;
+		}
+	}
+
+	/* 뭘 해야 하는지 모를 때를 위한 손짓 */
+	.nudge {
+		position: absolute;
+		right: 10%;
+		bottom: 8%;
+		font-size: 1.7rem;
+		pointer-events: none;
+		animation: nudge-rub 1.6s ease-in-out infinite;
+	}
+
+	@keyframes nudge-rub {
 		0%,
 		100% {
-			transform: translate(0, 0) rotate(-8deg);
+			transform: translate(0, 0) rotate(-10deg);
 		}
 		50% {
-			transform: translate(-14px, -6px) rotate(8deg);
+			transform: translate(-26px, -10px) rotate(10deg);
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.nudge,
-		.trace.done .ink {
+		.spark,
+		.dig.done .glyph {
 			animation: none;
 		}
 	}
