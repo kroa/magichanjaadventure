@@ -1,5 +1,5 @@
 import { SEAL_RECIPES, fuse, type FusionRecipe } from '$lib/game/fusion';
-import { sealsFrom, trayFrom, SEALS_PER_BATTLE } from '$lib/game/seals';
+import { sealsFrom, SEALS_PER_BATTLE } from '$lib/game/seals';
 import { HANJA_SEED } from '../../../../database/seed/hanja';
 import { toHanja, type Hanja, type HanjaRow } from './hanja';
 

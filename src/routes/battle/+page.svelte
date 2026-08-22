@@ -308,7 +308,7 @@
 						class="w-full"
 					/>
 					<span class="seal-dots" aria-hidden="true">
-						{#each Array(totalSeals) as _, i (i)}
+						{#each Array(totalSeals), i (i)}
 							<span class="dot" class:broken={i < broken}></span>
 						{/each}
 					</span>

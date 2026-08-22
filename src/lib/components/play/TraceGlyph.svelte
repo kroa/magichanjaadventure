@@ -43,29 +43,36 @@
 	 * 지금은 흙에 묻힌 글자를 **문지른 자리만** 파낸다. 손이 지나간 곳이 드러나므로
 	 * 아이가 자기 손으로 찾아낸 것이 된다. 탐험대라는 이름과도 맞는다.
 	 */
-	function paintDirt() {
+	function paintDirt(char: string, box: number) {
 		const el = canvas;
 		if (!el) return;
 		const ctx = el.getContext('2d');
 		if (!ctx) return;
 
 		const dpr = Math.min(window.devicePixelRatio || 1, 2);
-		el.width = size * dpr;
-		el.height = size * dpr;
+		el.width = box * dpr;
+		el.height = box * dpr;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 		ctx.globalCompositeOperation = 'source-over';
-		const soil = ctx.createLinearGradient(0, 0, 0, size);
+		const soil = ctx.createLinearGradient(0, 0, 0, box);
 		soil.addColorStop(0, '#B08356');
 		soil.addColorStop(1, '#8A5A28');
 		ctx.fillStyle = soil;
-		ctx.fillRect(0, 0, size, size);
+		ctx.fillRect(0, 0, box, box);
 
-		// 흙 알갱이 — 고정 패턴이라 서버·화면이 어긋나지 않는다
+		/*
+		 * 흙 알갱이.
+		 *
+		 * 글자를 씨앗으로 삼아 알갱이를 흩는다 — 한자마다 흙 무늬가 조금씩 달라서
+		 * 같은 자리를 또 파는 느낌이 덜하다. Math.random 은 쓰지 않는다.
+		 * 서버와 화면이 어긋나기 때문이다 (SkyBackground 와 같은 이유다).
+		 */
+		const grit = char.codePointAt(0) ?? 0;
 		ctx.fillStyle = 'rgba(255,255,255,0.14)';
 		for (let i = 0; i < 90; i++) {
-			const x = ((i * 73) % 100) * (size / 100);
-			const y = ((i * 137) % 100) * (size / 100);
+			const x = ((i * 73 + grit) % 100) * (box / 100);
+			const y = ((i * 137 + grit * 7) % 100) * (box / 100);
 			ctx.beginPath();
 			ctx.arc(x, y, ((i % 3) + 1) * 0.9, 0, Math.PI * 2);
 			ctx.fill();
@@ -138,13 +145,11 @@
 	}
 
 	$effect(() => {
-		// 다른 한자로 넘어가면 흙을 새로 덮는다
-		character;
-		size;
+		// 다른 한자로 넘어가면 흙을 새로 덮는다 — 두 값을 인자로 넘겨야 의존성이 잡힌다
 		finished = false;
 		progress = 0;
 		sinceCheck = 0;
-		paintDirt();
+		paintDirt(character, size);
 	});
 </script>
 

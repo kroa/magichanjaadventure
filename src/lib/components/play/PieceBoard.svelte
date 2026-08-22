@@ -75,6 +75,11 @@
 	let picked = $state<number | null>(null);
 	let busy = $state(false);
 	let shakeId = $state<number | null>(null);
+	/*
+	 * 조각 id → DOM 노드. 합체 연출에서 두 조각의 실제 좌표를 재려고 들고 있는 것뿐이다.
+	 * 화면은 여기를 읽어 그리지 않으므로 반응형일 필요가 없다 — SvelteMap 은 과하다.
+	 */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- 반응형이 아닌 DOM 노드 장부다
 	const els = new Map<number, HTMLElement>();
 
 	/*

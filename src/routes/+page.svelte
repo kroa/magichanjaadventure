@@ -57,16 +57,41 @@
 	let meOpen = $state(false);
 	const chosenIsland = $derived(islands.find((i) => i.id === chosen) ?? null);
 
+	/*
+	 * 시트는 **한 번에 하나만** 뜬다.
+	 *
+	 * 둘 다 `position: fixed; bottom: 0` 이라 같이 열리면 완전히 포개진다.
+	 * 나중에 그려지는 섬 시트가 위를 덮어서, 아이가 "내 정보 → 로그아웃" 을 눌러도
+	 * 그 자리의 `합체 공방` 이 대신 눌렸다. 실제로 로그아웃이 안 된다는 신고를 받았고
+	 * Playwright 가 "island-sheet subtree intercepts pointer events" 로 그대로 재현했다.
+	 */
+	function openMe() {
+		chosen = null;
+		meOpen = true;
+	}
+
 	function tapIsland(island: (typeof islands)[number]) {
 		if (!island.unlocked) {
 			sound.play('click');
 			toasts.warn(island.reason ?? '아직 갈 수 없어요');
 			return;
 		}
+		meOpen = false;
 		chosen = island.id;
 		sound.play('click');
 	}
+
+	function closeSheets() {
+		meOpen = false;
+		chosen = null;
+	}
 </script>
+
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape') closeSheets();
+	}}
+/>
 
 <svelte:head>
 	<title>모험 지도 · 마법한자탐험대</title>
@@ -98,7 +123,7 @@
 	<div class="map relative isolate" data-testid="adventure-map">
 		<Sparkle count={6} />
 
-		<button type="button" class="me-card" onclick={() => (meOpen = true)} aria-label="내 정보">
+		<button type="button" class="me-card" onclick={openMe} aria-label="내 정보">
 			<Hero size={38} mood="happy" />
 		</button>
 
@@ -420,12 +445,29 @@
 			left: 50%;
 			max-width: 28rem;
 			margin-bottom: 1rem;
-			transform: translateX(-50%);
+			/*
+			 * 가운데 정렬은 `transform` 이 아니라 `translate` 로 한다.
+			 * sheet-up 키프레임이 `transform` 을 쓰기 때문에, 여기서도 transform 을 쓰면
+			 * 올라오는 동안 가운데 정렬이 통째로 지워졌다가 끝날 때 툭 튀어 들어왔다.
+			 */
+			translate: -50% 0;
 			border-radius: var(--radius-panel);
 		}
 
+		/*
+		 * **두 칸.**
+		 *
+		 * 네 칸으로 잘랐더니 한 칸이 98px 인데 버튼은 `px-9 text-xl` 이라 그보다 넓었고,
+		 * `1fr`(= minmax(auto,1fr)) 는 내용보다 작아지지 않으므로 버튼 줄이 통째로
+		 * 시트 밖으로 삐져나왔다. 화면 밖으로는 안 나가서 넘침 검사에도 안 걸렸다.
+		 */
 		.sheet-actions {
-			grid-template-columns: repeat(4, 1fr);
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		/* 로그아웃은 성격이 다르다 — 한 줄을 통째로 쓰게 두어 도감·상점과 구분한다 */
+		.sheet-actions form {
+			grid-column: 1 / -1;
 		}
 	}
 

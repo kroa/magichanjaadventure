@@ -1,4 +1,4 @@
-import { SEAL_RECIPES, allPartChars, type FusionRecipe } from './fusion';
+import { allPartChars, type FusionRecipe } from './fusion';
 
 /**
  * 보스의 봉인 — 합체 대결의 문제 생성기.

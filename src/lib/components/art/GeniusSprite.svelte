@@ -53,13 +53,7 @@
 	<path d="M50 80v30" stroke="#2A7C76" stroke-width="3" stroke-linecap="round" />
 
 	<!-- 목도리 -->
-	<path
-		d="M36 80q14 8 28 0"
-		fill="none"
-		stroke="#FFD166"
-		stroke-width="7"
-		stroke-linecap="round"
-	/>
+	<path d="M36 80q14 8 28 0" fill="none" stroke="#FFD166" stroke-width="7" stroke-linecap="round" />
 
 	<!-- 얼굴 -->
 	<circle cx="50" cy="60" r="22" fill="#FFE2C8" stroke="#D9A97E" stroke-width="4" />
@@ -90,7 +84,16 @@
 
 	<!-- 머리 위에 떠 있는 두루마리 -->
 	<g class="scroll">
-		<rect x="30" y="12" width="40" height="16" rx="4" fill="#FFF3D6" stroke="#C9A44B" stroke-width="3" />
+		<rect
+			x="30"
+			y="12"
+			width="40"
+			height="16"
+			rx="4"
+			fill="#FFF3D6"
+			stroke="#C9A44B"
+			stroke-width="3"
+		/>
 		<circle cx="30" cy="20" r="5" fill="#C9A44B" />
 		<circle cx="70" cy="20" r="5" fill="#C9A44B" />
 		<path d="M40 18h8M40 23h14" stroke="#8A6A22" stroke-width="2.4" stroke-linecap="round" />
