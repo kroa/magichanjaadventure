@@ -18,7 +18,7 @@
 	여기서도 내면 두 번 난다.
 	오른쪽 밀기(`ml-auto`)도 부르는 쪽이 정한다 — 공방은 배지 옆에 붙기 때문이다.
 -->
-<button type="button" class="help {className}" {onclick} aria-label="도와줘">?</button>
+<button type="button" class="help tappable {className}" {onclick} aria-label="도와줘">?</button>
 
 <style>
 	.help {

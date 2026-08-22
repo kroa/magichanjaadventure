@@ -15,7 +15,12 @@
 		{#each NAV_TABS as tab (tab.href)}
 			{@const active = isTabActive(tab.href, page.url.pathname)}
 			<li>
-				<a href={tab.href} class="tab" class:active aria-current={active ? 'page' : undefined}>
+				<a
+					href={tab.href}
+					class="tab tappable"
+					class:active
+					aria-current={active ? 'page' : undefined}
+				>
 					<span class="icon" aria-hidden="true">{tab.icon}</span>
 					<span class="label font-display">{tab.label}</span>
 				</a>

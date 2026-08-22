@@ -32,6 +32,17 @@ export interface DraggableOptions {
 /** 이만큼 움직이면 탭이 아니라 드래그로 본다 */
 const DRAG_THRESHOLD = 8;
 
+/*
+ * WAAPI 와 인라인 스타일은 전역 감속 규칙(app.css 의 prefers-reduced-motion)의
+ * 영향을 받지 않는다. 그래서 손으로 들고 있어야 한다 — merge.ts 와 같은 이유다.
+ */
+function reduced(): boolean {
+	return (
+		typeof window !== 'undefined' &&
+		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+	);
+}
+
 function swallowClick(event: Event) {
 	event.stopPropagation();
 	event.preventDefault();
@@ -66,7 +77,13 @@ export function draggable(node: HTMLElement, options: DraggableOptions) {
 	}
 
 	function reset() {
-		node.style.transform = '';
+		/*
+		 * **`transform` 이 아니라 개별 속성을 비운다.**
+		 * 아래 onPointerMove 의 주석과 같은 이유다.
+		 */
+		node.style.translate = '';
+		node.style.scale = '';
+		node.style.rotate = '';
 		node.style.zIndex = '';
 		node.removeAttribute('data-dragging');
 		highlight(null);
@@ -99,7 +116,22 @@ export function draggable(node: HTMLElement, options: DraggableOptions) {
 			current.onLift?.(current.value);
 		}
 
-		node.style.transform = `translate(${dx}px, ${dy}px)`;
+		/*
+		 * **`style.transform` 을 쓰면 안 된다.**
+		 *
+		 * 판의 조각(`.piece`)은 `transform: translate(-50%,-50%) rotate(var(--tilt))` 로
+		 * **자리를 잡는다.** 여기서 transform 을 덮어쓰면 그 -50% 가 사라져서
+		 * 집는 순간 조각이 제 크기의 절반(약 38px)만큼 오른쪽 아래로 튀고 기울기도 풀렸다.
+		 * 대결과 복습 두 화면이 전부 이 경로였다.
+		 *
+		 * 개별 `translate`/`scale`/`rotate` 는 transform 바깥에서 합성되므로
+		 * 자리 지정도 기울기도 살아남고, transform 기반 키프레임도 계속 돈다.
+		 */
+		node.style.translate = `${dx}px ${dy}px`;
+		if (!reduced()) {
+			node.style.scale = '1.12';
+			node.style.rotate = '-3deg';
+		}
 		highlight(dropTargetAt(event.clientX, event.clientY));
 	}
 

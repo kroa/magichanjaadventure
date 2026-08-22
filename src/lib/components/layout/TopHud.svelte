@@ -94,6 +94,12 @@
 		border: none;
 		border-radius: 9999px;
 		background: var(--color-magic-50);
+		/*
+		 * 색을 물려받으면 흰색이 된다. 이모지는 보통 제 색으로 그려지지만
+		 * 폰트가 단색 글리프로 떨어지는 환경에서는 연보라 위 흰 글자(1.12:1)가 되어
+		 * 버튼이 통째로 사라진다. 대비 검사를 켜자마자 잡힌 자리다.
+		 */
+		color: var(--color-ink-900);
 		font-size: 1.1rem;
 		cursor: pointer;
 	}

@@ -120,8 +120,15 @@ class SoundManager {
 			// 컨텍스트 생성도 상호작용 시점으로 미룬다 (브라우저 경고 방지)
 			void this.context();
 		};
-		window.addEventListener('pointerdown', unlock, { once: true });
-		window.addEventListener('keydown', unlock, { once: true });
+		/*
+		 * **캡처 단계로 듣는다.**
+		 *
+		 * 버블 단계로 두면 노드에 붙은 클릭 핸들러가 먼저 돌고, 그 안의 `play()` 는
+		 * 아직 `unlocked` 가 false 라 조용히 빠진다 — 아이가 처음 누른 그 한 번만
+		 * 소리가 안 나고 다음부터 난다. 원인을 찾기 아주 어려운 종류의 어긋남이다.
+		 */
+		window.addEventListener('pointerdown', unlock, { capture: true, once: true });
+		window.addEventListener('keydown', unlock, { capture: true, once: true });
 
 		return () => {
 			window.removeEventListener('pointerdown', unlock);

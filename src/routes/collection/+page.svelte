@@ -72,7 +72,7 @@
 			{#each data.hanja as item (item.id)}
 				<button
 					type="button"
-					class="slot"
+					class="slot tappable"
 					class:learned={item.learned}
 					disabled={!item.learned}
 					onclick={() => open(item)}

@@ -17,7 +17,7 @@
 			<li>
 				<a
 					href={tab.href}
-					class="tab font-display"
+					class="tab tappable font-display"
 					class:active
 					aria-current={active ? 'page' : undefined}
 				>

@@ -148,7 +148,7 @@
 		{#each islands as island (island.id)}
 			<button
 				type="button"
-				class="island"
+				class="island tappable"
 				class:locked={!island.unlocked}
 				class:done={island.learned >= island.total}
 				style="--x:{island.node.x}%; --y:{island.node.y}%; --accent:{island.accent}; --depth:{island

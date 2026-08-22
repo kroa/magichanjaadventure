@@ -48,8 +48,8 @@
 <AppShell nav={false}>
 	<div class="flex flex-col items-center gap-6 py-2">
 		<div class="text-center">
-			<h1 class="text-display-lg text-magic-700">누구와 떠날까?</h1>
-			<p class="mt-1 text-ink-500">둘 다 끝까지 갈 수 있어요. 마음에 드는 친구를 눌러 보세요.</p>
+			<h1 class="on-sky text-display-lg">누구와 떠날까?</h1>
+			<p class="mt-1 text-white/85">둘 다 끝까지 갈 수 있어요. 마음에 드는 친구를 눌러 보세요.</p>
 		</div>
 
 		<form

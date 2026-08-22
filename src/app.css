@@ -124,6 +124,27 @@
 	/* 아이 손가락 기준. WCAG 44px 보다 높게 잡는다 */
 	--tap-min: 3rem;
 	--layout-max: 70rem;
+
+	/*
+	 * 어두운 하늘 위에 얹는 글자.
+	 *
+	 * SkyBackground 가 `position:fixed; z-index:-1` 로 body 배경을 완전히 덮어서
+	 * 실제 바탕은 `#2a2360 → #463a8f` 다. 그 위에 `text-magic-700`(#5231bc)을 쓰면
+	 * 실측 대비가 **1.6:1** 이라 저학년에게는 사실상 안 보인다.
+	 * 흰 글자 + 사방 외곽선이면 같은 배경에서 13:1 이 나온다.
+	 *
+	 * `@theme` 이 아니라 `:root` 에 둔다 — Tailwind 4 에서 `--shadow-*` 는
+	 * box-shadow 유틸을 만들어 버린다.
+	 */
+	--shadow-text-on-sky:
+		0 2px 0 #2b1a66, 0 -1px 0 #2b1a66, 1px 0 0 #2b1a66, -1px 0 0 #2b1a66,
+		0 0 18px rgb(124 92 255 / 0.55);
+}
+
+/* 하늘 위에 직접 얹히는 글자에만 쓴다. 흰 카드 위에는 절대 쓰지 않는다 */
+.on-sky {
+	color: #fff;
+	text-shadow: var(--shadow-text-on-sky);
 }
 
 @keyframes float {
@@ -267,6 +288,36 @@
 	}
 	.btn-3d:active:not(:disabled) {
 		transform: translateY(var(--btn-press, 4px));
+	}
+
+	/*
+	 * **누르면 반응한다** — 3D 버튼이 아닌 것들에도.
+	 *
+	 * 섬·칩·탭·상점 카드·도감 칸은 지금까지 `:hover` 밖에 없었다.
+	 * 터치 기기에는 hover 가 없으므로 **아이가 눌러도 아무 일도 안 일어났다.**
+	 *
+	 * `transform` 이 아니라 개별 `scale` 을 쓴다. 섬은 `transform: translate(-50%,-50%)` 로
+	 * 자리를 잡고 있어서, transform 을 덮으면 누를 때마다 제 크기의 절반만큼 튄다.
+	 * 개별 속성은 transform 바깥에서 합성되므로 자리 지정이 살아남는다.
+	 */
+	.tappable {
+		transition: scale 0.12s var(--ease-pop);
+	}
+
+	.tappable:active:not(:disabled) {
+		scale: 0.94;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.tappable {
+			transition: none;
+		}
+
+		/* 움직이지 않되 눌린 것은 알려 준다 */
+		.tappable:active:not(:disabled) {
+			scale: 1;
+			filter: brightness(0.9);
+		}
 	}
 
 	/* 한자 글리프 전용 */

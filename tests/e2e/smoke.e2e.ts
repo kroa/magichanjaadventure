@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectHealthyLayout } from '../helpers/layout';
+import { expectHealthyLayout, expectSufficientContrast } from '../helpers/layout';
 import { captureScreen, waitForFonts } from '../helpers/screens';
 
 /**
@@ -48,6 +48,14 @@ test.describe('부팅 스모크', () => {
 		await waitForFonts(page);
 
 		await expectHealthyLayout(page);
+		/*
+		 * 대비 검사를 **실제로 켠다.**
+		 * `expectSufficientContrast` 는 정의만 있고 어디서도 호출되지 않고 있었다.
+		 * 그래서 로그인 제목이 하늘 위에서 1.6:1 인 채로 출시돼 있었다.
+		 * (하늘처럼 그라디언트 위인 글자는 이 검사가 건너뛰므로,
+		 *  그쪽은 src/lib/design/sky.spec.ts 가 순수 계산으로 잡는다.)
+		 */
+		await expectSufficientContrast(page);
 		await captureScreen(page, testInfo, 'phase1-home');
 	});
 

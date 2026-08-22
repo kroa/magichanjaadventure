@@ -383,7 +383,7 @@
 					{#each data.parts as part (part.character)}
 						<button
 							type="button"
-							class="part"
+							class="part tappable"
 							data-part={part.character}
 							data-hint={hinted.includes(part.character) ? '' : undefined}
 							onclick={() => place(part.character)}

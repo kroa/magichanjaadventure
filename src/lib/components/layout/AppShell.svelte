@@ -125,7 +125,11 @@
 		z-index: 80;
 		padding: 0.75rem 1.25rem;
 		border-radius: var(--radius-button);
-		background: var(--color-magic-500);
+		/*
+		 * magic-500 은 흰 글자와 4.35:1 이라 본문 기준(4.5)에 못 미친다.
+		 * 하필 **접근성 건너뛰기 링크**가 그 색이었다 — 대비 검사를 켜자마자 잡혔다.
+		 */
+		background: var(--color-magic-600);
 		color: #fff;
 		text-decoration: none;
 	}

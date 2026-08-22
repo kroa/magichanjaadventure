@@ -234,3 +234,48 @@ test('승리 연출이 끝까지 재생되고, 감속 설정에서는 즉시 최
 
 	await expectHealthyLayout(page);
 });
+
+test('조각을 집어도 제자리에서 튀지 않는다', async ({ page }, testInfo) => {
+	test.setTimeout(120_000);
+
+	/*
+	 * `draggable` 이 `style.transform` 을 통째로 덮어쓰고 있었다.
+	 * 그런데 `.piece` 는 `transform: translate(-50%,-50%) rotate(var(--tilt))` 로
+	 * **자리를 잡는다.** 그래서 집는 순간 조각이 제 크기의 절반(약 38px)만큼
+	 * 오른쪽 아래로 튀고 기울기도 풀렸다. 대결과 복습 두 화면 전부 이 경로였다.
+	 *
+	 * 손가락을 따라오지 않는 조각은 아이 눈에 "고장" 이다.
+	 */
+	await startBattle(page, 'grab', `${testInfo.project.name}${testInfo.workerIndex}g`);
+
+	const piece = page.locator('button.piece').first();
+	await expect(piece).toBeVisible();
+	const before = await piece.boundingBox();
+	expect(before).not.toBeNull();
+
+	const cx = before!.x + before!.width / 2;
+	const cy = before!.y + before!.height / 2;
+
+	await page.mouse.move(cx, cy);
+	await page.mouse.down();
+	// 임계값(8px)을 넘겨 드래그로 전환시킨다
+	await page.mouse.move(cx + 30, cy - 30, { steps: 6 });
+
+	const during = await piece.boundingBox();
+	expect(during, '끌고 있는 조각의 위치를 잴 수 없다').not.toBeNull();
+
+	/*
+	 * 조각은 손가락을 따라 딱 (+30, -30) 만큼만 움직여야 한다.
+	 * 집을 때 커지는 연출(scale 1.12)이 있으므로 상자 크기 변화분은 빼고 중심으로 잰다.
+	 */
+	const movedX = during!.x + during!.width / 2 - cx;
+	const movedY = during!.y + during!.height / 2 - cy;
+	expect(Math.abs(movedX - 30), `가로로 ${movedX.toFixed(0)}px 움직였다 (기대 30)`).toBeLessThan(
+		12
+	);
+	expect(Math.abs(movedY + 30), `세로로 ${movedY.toFixed(0)}px 움직였다 (기대 -30)`).toBeLessThan(
+		12
+	);
+
+	await page.mouse.up();
+});

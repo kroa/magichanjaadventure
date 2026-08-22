@@ -18,7 +18,7 @@
 	 * "폼을 채우는 중" 을 "누가 나를 기다리는 중" 으로 바꾼다.
 	 */
 	const mood = $derived<Mood>(
-		focused === 'password' ? 'surprised' : focused === 'nickname' ? 'cheer' : 'happy'
+		focused === 'password' ? 'happy' : focused === 'nickname' ? 'cheer' : 'happy'
 	);
 	const line = $derived(
 		focused === 'password'
@@ -48,12 +48,12 @@
 
 		<div class="relative isolate text-center">
 			<Sparkle count={6} />
-			<h1 class="title text-display-lg text-magic-700">마법한자탐험대</h1>
+			<h1 class="title on-sky text-display-lg">마법한자탐험대</h1>
 		</div>
 
 		<div class="greet">
 			<div class="hero" class:turned={focused === 'password'}>
-				<WizardSprite size={104} {mood} />
+				<WizardSprite size={104} {mood} shy={focused === 'password'} />
 			</div>
 			<SpeechBubble tail="bottom-left">
 				<p class="font-display">{line}</p>
@@ -155,14 +155,25 @@
 	}
 
 	/* 캐릭터가 가만히 숨 쉰다 */
+	/*
+	 * **고개 돌리기는 `transform` 이 아니라 `rotate`/`translate` 로 한다.**
+	 *
+	 * `hero-bob` 무한 애니메이션이 `transform` 을 쥐고 있어서, 애니메이션 오리진이
+	 * 저자 선언을 이긴다. 그래서 `.hero.turned { transform: rotate(...) }` 는
+	 * **한 번도 적용된 적이 없었다** — 실측 computed transform 은 회전 0 이었다.
+	 * 개별 속성은 transform 과 따로 합성되므로 keyframes 에 안 먹힌다.
+	 */
 	.hero {
 		animation: hero-bob 3.4s ease-in-out infinite;
-		transition: transform 0.35s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
+		transition:
+			rotate 0.35s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1)),
+			translate 0.35s var(--ease-pop, cubic-bezier(0.34, 1.56, 0.64, 1));
 	}
 
 	/* 비밀번호를 칠 때 고개를 돌린다 */
 	.hero.turned {
-		transform: rotate(-16deg) translateX(-6px);
+		rotate: -16deg;
+		translate: -6px 0;
 	}
 
 	@keyframes hero-bob {

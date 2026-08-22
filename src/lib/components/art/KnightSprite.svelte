@@ -6,10 +6,18 @@
 		mood?: Mood;
 		/** 숨쉬기 / 눈 깜빡임 */
 		idle?: boolean;
+		/** 눈을 감는다 — "안 볼게" 라고 말할 때 쓴다 */
+		shy?: boolean;
 		class?: string;
 	}
 
-	let { size = 160, mood = 'happy', idle = true, class: className = '' }: Props = $props();
+	let {
+		size = 160,
+		mood = 'happy',
+		idle = true,
+		shy = false,
+		class: className = ''
+	}: Props = $props();
 
 	/*
 	 * 그라디언트 id 를 **인스턴스마다** 다르게 만든다.
@@ -47,6 +55,7 @@
 	height={(size * 152) / 120}
 	class="knight {className}"
 	class:idle
+	class:shy
 	role="img"
 	aria-label="한자 기사"
 >
@@ -250,9 +259,24 @@
 		animation: knight-plume 2.2s ease-in-out infinite;
 		transform-origin: 60px 12px;
 	}
+	/* 깜빡임 원점은 idle 여부와 무관하다 — shy 포즈도 같은 원점을 써야 한다 */
+	.knight .eyes {
+		transform-origin: 60px 52px;
+	}
+
 	.knight.idle .eyes {
 		animation: knight-blink 4.6s infinite;
-		transform-origin: 60px 52px;
+	}
+
+	/*
+	 * 눈 감기. "눈 감고 있을게, 약속!" 이라 말하면서 눈을 부릅뜨고 있으면
+	 * 아이는 말과 그림이 어긋난 것을 바로 알아챈다.
+	 * Mood 유니온에 'shy' 를 더하지 않는 이유: 6종 스프라이트의 Record<Mood,…> 가
+	 * 전부 비망라가 되고 스타일가이드·시각 테스트까지 연쇄로 손대야 한다.
+	 */
+	.knight.shy .eyes {
+		animation: none;
+		transform: scaleY(0.08);
 	}
 
 	@keyframes knight-head {

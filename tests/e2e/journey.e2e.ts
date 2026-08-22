@@ -1,5 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
-import { expectHealthyLayout } from '../helpers/layout';
+import { expectHealthyLayout, expectSufficientContrast } from '../helpers/layout';
 import { captureScreen, waitForFonts } from '../helpers/screens';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
@@ -80,6 +80,7 @@ test.describe('아이의 첫 모험', () => {
 		await expect(page.getByTestId('island-sheet')).toBeHidden();
 		await captureScreen(page, testInfo, 'home');
 		await expectHealthyLayout(page);
+		await expectSufficientContrast(page);
 	});
 
 	test('한자를 배우면 EXP 가 오르고 도감에 컬러로 나타난다', async ({ page }, testInfo) => {
@@ -191,6 +192,7 @@ test.describe('아이의 첫 모험', () => {
 		await waitForFonts(page);
 		await captureScreen(page, testInfo, 'login');
 		await expectHealthyLayout(page);
+		await expectSufficientContrast(page);
 
 		await page.getByLabel('닉네임').fill(user.nickname);
 		await page.getByLabel('비밀번호').fill(user.password);

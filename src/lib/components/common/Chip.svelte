@@ -23,7 +23,7 @@
 
 <button
 	type="button"
-	class="chip rounded-full px-4 font-display {className}"
+	class="chip tappable rounded-full px-4 font-display {className}"
 	class:selected
 	{disabled}
 	aria-pressed={selected}
