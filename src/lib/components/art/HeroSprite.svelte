@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { spriteFor } from '$lib/game/characters';
 	import RankAura from './RankAura.svelte';
+	import RankBadge from './RankBadge.svelte';
 	import type { CharacterClass } from '$lib/types/user';
 	import type { Mood } from '$lib/types/ui';
 
@@ -24,6 +25,15 @@
 	}: Props = $props();
 
 	const Sprite = $derived(spriteFor(cls));
+
+	/*
+	 * 작은 자리에서는 오라 대신 배지를 쓴다.
+	 *
+	 * 상점은 캐릭터 여섯을 동시에 그린다. 거기에 링·후광·핀을 여섯 벌 얹으면
+	 * 노드가 두 배가 되는데, 그 크기에서는 핀이 어차피 안 보인다.
+	 * 호출부가 매번 판단하게 두면 언젠가 빠뜨리므로 여기서 강제한다.
+	 */
+	const small = $derived(size < 120);
 </script>
 
 <!--
@@ -38,9 +48,14 @@
 	오라는 `position:absolute` 라 레이아웃 높이를 1px 도 늘리지 않는다.
 -->
 <span class="hero {className}" style="--w:{size}px">
-	<RankAura {cls} {rank} {size} layer="back" />
-	<Sprite {size} {mood} {idle} />
-	<RankAura {cls} {rank} {size} layer="front" />
+	{#if small}
+		<Sprite {size} {mood} {idle} />
+		<RankBadge {rank} {size} />
+	{:else}
+		<RankAura {cls} {rank} {size} layer="back" />
+		<Sprite {size} {mood} {idle} />
+		<RankAura {cls} {rank} {size} layer="front" />
+	{/if}
 </span>
 
 <style>

@@ -56,7 +56,7 @@
 	<path d="M36 80q14 8 28 0" fill="none" stroke="#FFD166" stroke-width="7" stroke-linecap="round" />
 
 	<!-- 얼굴 -->
-	<circle cx="50" cy="60" r="22" fill="#FFE2C8" stroke="#D9A97E" stroke-width="4" />
+	<circle cx="50" cy="60" r="22" fill="#FFDFC0" stroke="#E8B894" stroke-width="4" />
 
 	<!-- 안경 — 천재의 표식 -->
 	<g stroke="#3E2590" stroke-width="3.4" fill="none">
@@ -66,17 +66,17 @@
 	</g>
 
 	<!-- 눈 -->
-	<circle cx="41" cy="59" r={eyes} fill="#2B1A66" />
-	<circle cx="59" cy="59" r={eyes} fill="#2B1A66" />
+	<circle cx="41" cy="59" r={eyes} fill="#2A2050" />
+	<circle cx="59" cy="59" r={eyes} fill="#2A2050" />
 	<circle cx="43.4" cy="56.6" r="2.1" fill="#fff" />
 	<circle cx="61.4" cy="56.6" r="2.1" fill="#fff" />
 
 	<!-- 볼 -->
-	<circle cx="31" cy="67" r="4.4" fill="#FFB4C4" opacity=".65" />
-	<circle cx="69" cy="67" r="4.4" fill="#FFB4C4" opacity=".65" />
+	<circle cx="31" cy="67" r="4.4" fill="#FF9EC4" opacity=".55" />
+	<circle cx="69" cy="67" r="4.4" fill="#FF9EC4" opacity=".55" />
 
 	<!-- 입 -->
-	<path d={mouth} fill="none" stroke="#C4796A" stroke-width="3" stroke-linecap="round" />
+	<path d={mouth} fill="none" stroke="#A03C60" stroke-width="3" stroke-linecap="round" />
 
 	<!-- 상투 -->
 	<circle cx="50" cy="34" r="7" fill="#3E2590" />
@@ -101,6 +101,14 @@
 </svg>
 
 <style>
+	/*
+	 * 다른 여섯 스프라이트가 전부 갖고 있는데 이것만 없었다.
+	 * 계급 표식처럼 viewBox 밖으로 넘치는 장식이 붙으면 여기서만 잘린다.
+	 */
+	svg {
+		overflow: visible;
+	}
+
 	.idle {
 		animation: genius-breathe 3.4s ease-in-out infinite;
 	}

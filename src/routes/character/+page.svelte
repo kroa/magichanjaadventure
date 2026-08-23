@@ -1,13 +1,10 @@
 <script lang="ts">
-	import type { Component } from 'svelte';
 	import { enhance } from '$app/forms';
 	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import KnightSprite from '$lib/components/art/KnightSprite.svelte';
-	import WizardSprite from '$lib/components/art/WizardSprite.svelte';
 	import Sparkle from '$lib/components/effects/Sparkle.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { spriteFor, type SpriteComponent } from '$lib/game/characters';
 	import { CHARACTERS, STARTER_CLASSES, type CharacterClass } from '$lib/types/user';
-	import type { Mood } from '$lib/types/ui';
 
 	let { data, form } = $props();
 
@@ -25,18 +22,21 @@
 	 * 선택지를 스크립트에서 정의하는 이유: 템플릿에 `as const as [a, b]` 처럼 쓰면
 	 * Svelte each 문법과 충돌해 프로덕션 빌드에서만 깨진 적이 있다.
 	 */
+	/*
+	 * **스프라이트 매핑을 여기서 또 만들지 않는다.**
+	 *
+	 * `characters.ts` 에 `SPRITES` 와 `spriteFor()` 가 이미 있는데 이 파일이 두 종만 담은
+	 * 사본을 따로 들고 `!` 로 단언하고 있었다. 캐릭터를 늘릴 때 한쪽만 고치면
+	 * 조용히 `undefined` 가 되는 구조다 — 레벨업 오버레이가 정확히 그 사고를 냈다
+	 * (기사·마법사가 아니면 전부 기사로 그려졌다).
+	 */
 	interface Choice {
 		cls: CharacterClass;
-		Sprite: Component<{ size?: number; mood?: Mood; idle?: boolean; class?: string }>;
+		Sprite: SpriteComponent;
 	}
 
-	const SPRITE_BY_CLASS: Partial<Record<CharacterClass, Choice['Sprite']>> = {
-		knight: KnightSprite,
-		wizard: WizardSprite
-	};
-
 	// 시작 캐릭터는 2종. 나머지는 상점에서 보석으로 얻는다.
-	const CHOICES: Choice[] = STARTER_CLASSES.map((cls) => ({ cls, Sprite: SPRITE_BY_CLASS[cls]! }));
+	const CHOICES: Choice[] = STARTER_CLASSES.map((cls) => ({ cls, Sprite: spriteFor(cls) }));
 
 	let picking = $state<CharacterClass | null>(null);
 </script>
