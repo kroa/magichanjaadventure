@@ -2,8 +2,10 @@ import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { learnedCountByArea, learnHanja, listUnlearned, getHanja } from '$lib/server/db/hanja';
+import { bossWinAreas } from '$lib/server/db/battle';
 import { evaluateAreaUnlocks } from '$lib/game/areas';
 import { allPartChars } from '$lib/game/fusion';
+import { partnersOf } from '$lib/game/words';
 import { pickNextPlay } from '$lib/game/play';
 import { grantRewards } from '$lib/server/game/rewards';
 import { EXP_REWARD } from '$lib/game/exp';
@@ -13,8 +15,11 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	if (!locals.user.characterClass) redirect(303, '/character');
 
 	const db = getDb(platform);
-	const byArea = await learnedCountByArea(db, locals.user.id);
-	const areas = evaluateAreaUnlocks(locals.user.level, byArea);
+	const [byArea, bossWins] = await Promise.all([
+		learnedCountByArea(db, locals.user.id),
+		bossWinAreas(db, locals.user.id)
+	]);
+	const areas = evaluateAreaUnlocks(locals.user.level, byArea, bossWins);
 
 	const requested = Number(url.searchParams.get('area'));
 	const openAreas = areas.filter((a) => a.unlocked);
@@ -36,14 +41,24 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	 * loadWorkshop 을 쓰지 않는 이유: 전체 진도를 훑고 hanjas 를 두 번 더 읽는다.
 	 * 배우기 화면은 글자마다 load 가 다시 도므로 26자짜리 한 쿼리로 끝내는 편이 맞다.
 	 */
-	const parts = allPartChars();
+	/*
+	 * 조합 부품(26자) **에 더해** 방금 배운 글자와 낱말이 되는 짝까지 묻는다.
+	 *
+	 * 부품만 물으면 낱말 축을 볼 수 없다. 그런데 조합은 아이가 배운 글자의 5%만
+	 * 건드리고 낱말은 95%를 덮는다 — 室 을 배운 아이에게 敎室 을 권하려면
+	 * 敎 를 배웠는지 알아야 한다.
+	 * 전체 진도를 다 읽지는 않는다. **후보만** 좁혀서 묻는다.
+	 */
+	const candidates = [
+		...new Set([...allPartChars(), ...(hanja ? partnersOf(hanja.character) : [])])
+	];
 	const { results: ownedRows } = await db
 		.prepare(
 			`SELECT h.character FROM user_hanja_progress p
 			 JOIN hanjas h ON h.id = p.hanja_id
-			 WHERE p.user_id = ? AND h.character IN (${parts.map(() => '?').join(',')})`
+			 WHERE p.user_id = ? AND h.character IN (${candidates.map(() => '?').join(',')})`
 		)
-		.bind(locals.user.id, ...parts)
+		.bind(locals.user.id, ...candidates)
 		.all<{ character: string }>();
 
 	const owned = new Set(ownedRows.map((r) => r.character));

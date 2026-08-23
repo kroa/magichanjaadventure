@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { learnedCountByArea, totalLearned } from '$lib/server/db/hanja';
+import { bossWinAreas } from '$lib/server/db/battle';
 import { evaluateAreaUnlocks, TOTAL_HANJA } from '$lib/game/areas';
 import { expToNextLevel } from '$lib/game/exp';
 
@@ -12,12 +13,13 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	const db = getDb(platform);
 	const user = locals.user;
 
-	const [byArea, learned] = await Promise.all([
+	const [byArea, learned, bossWins] = await Promise.all([
 		learnedCountByArea(db, user.id),
-		totalLearned(db, user.id)
+		totalLearned(db, user.id),
+		bossWinAreas(db, user.id)
 	]);
 
-	const areas = evaluateAreaUnlocks(user.level, byArea);
+	const areas = evaluateAreaUnlocks(user.level, byArea, bossWins);
 
 	// 다음에 갈 곳: 열려 있으면서 아직 다 못 모은 첫 지역
 	const nextArea = areas.find((a) => a.unlocked && a.learned < a.area.hanjaCount) ?? areas[0];

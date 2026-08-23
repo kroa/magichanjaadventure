@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { learnedCountByArea, listAreaHanja } from '$lib/server/db/hanja';
+import { bossWinAreas } from '$lib/server/db/battle';
 import { evaluateAreaUnlocks, TOTAL_HANJA } from '$lib/game/areas';
 import { expToNextLevel } from '$lib/game/exp';
 
@@ -11,7 +12,8 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 
 	const db = getDb(platform);
 	const byArea = await learnedCountByArea(db, locals.user.id);
-	const areas = evaluateAreaUnlocks(locals.user.level, byArea);
+	const bossWins = await bossWinAreas(db, locals.user.id);
+	const areas = evaluateAreaUnlocks(locals.user.level, byArea, bossWins);
 
 	const requested = Number(url.searchParams.get('area'));
 	const areaId = areas.some((a) => a.area.id === requested) ? requested : 1;

@@ -1,4 +1,5 @@
 import { SEAL_RECIPES, FUSION_RECIPES, type FusionRecipe } from './fusion';
+import { wordsWith } from './words';
 
 /**
  * 한 글자를 배운 **다음에 무엇을 하러 갈지** 를 고른다.
@@ -21,6 +22,14 @@ export type NextPlay =
 			result: string;
 			/** 木+木 처럼 같은 글자를 두 번 쓰는 조합인가 */
 			doubled: boolean;
+			href: string;
+	  }
+	| {
+			/** 방금 배운 글자로 **낱말**을 만들 수 있다 */
+			kind: 'word';
+			partner: string;
+			result: string;
+			reading: string;
 			href: string;
 	  }
 	| { kind: 'review'; href: '/quiz' }
@@ -52,6 +61,25 @@ export function pickNextPlay(owned: ReadonlySet<string>, justLearned: string): N
 			result: ready.result,
 			doubled,
 			href: `/quiz?focus=${encodeURIComponent(justLearned)}`
+		};
+	}
+
+	/*
+	 * **낱말 축.**
+	 *
+	 * 조합표는 아이가 배운 글자의 5%만 건드린다. 室·場 처럼 조합으로는 **영영** 못 쓰는
+	 * 글자가 950자다 — 至·宀·昜 이 우리 1000자에 없어서 조합표를 늘려도 소용이 없다.
+	 * 그런데 낱말은 955자를 덮는다. 敎室 이 되는 이유이고,
+	 * 이 갈래 하나가 "방금 배운 글자로 놀 수 있다" 를 14회에서 748회로 늘린다.
+	 */
+	const madeWord = wordsWith(owned, justLearned)[0];
+	if (madeWord) {
+		return {
+			kind: 'word',
+			partner: madeWord.head === justLearned ? madeWord.tail : madeWord.head,
+			result: madeWord.word,
+			reading: madeWord.reading,
+			href: `/word?focus=${encodeURIComponent(justLearned)}`
 		};
 	}
 

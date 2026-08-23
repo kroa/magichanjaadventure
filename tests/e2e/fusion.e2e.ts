@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { makeTestUser } from '../fixtures/users';
 import { gotoReady, waitForHydration } from '../helpers/app';
-import { expectHealthyLayout } from '../helpers/layout';
+import { expectHealthyLayout, settleAnimations } from '../helpers/layout';
 import { learnHanja } from '../helpers/learn';
 import { captureScreen, waitForFonts } from '../helpers/screens';
 
@@ -54,8 +54,7 @@ test('부품 두 개를 붙이면 새 한자가 만들어진다', async ({ page 
 
 	await place(page, '日');
 	await place(page, '月');
-
-	await page.getByRole('button', { name: '합체!' }).click();
+	// 칸이 차면 버튼 없이 바로 판정한다
 
 	// 日 + 月 = 明 (밝을 명)
 	const reveal = page.getByTestId('fusion-reveal');
@@ -87,7 +86,6 @@ test('만든 한자는 도감에 들어간다', async ({ page }, testInfo) => {
 	await gotoReady(page, '/fusion');
 	await place(page, '日');
 	await place(page, '月');
-	await page.getByRole('button', { name: '합체!' }).click();
 	await expect(page.getByTestId('fusion-reveal')).toBeVisible();
 	await page.getByRole('button', { name: '좋아!' }).click();
 
@@ -111,7 +109,6 @@ test('안 되는 조합에도 벌을 주지 않는다', async ({ page }, testInf
 	 */
 	await place(page, '一');
 	await place(page, '二');
-	await page.getByRole('button', { name: '합체!' }).click();
 
 	await expect(page.getByTestId('fusion-reveal')).toBeHidden();
 	await expect(page.getByTestId('fusion-nojoin')).toContainText('안 붙어요');
@@ -126,7 +123,6 @@ test('안 되는 조합에도 벌을 주지 않는다', async ({ page }, testInf
 
 	await place(page, '日');
 	await place(page, '月');
-	await page.getByRole('button', { name: '합체!' }).click();
 	await expect(page.getByTestId('fusion-reveal')).toBeVisible();
 });
 
@@ -142,7 +138,6 @@ test('두 번 연속 실패해도 매번 반응한다', async ({ page }, testInf
 	for (const attempt of [1, 2]) {
 		await place(page, '一');
 		await place(page, '二');
-		await page.getByRole('button', { name: '합체!' }).click();
 		await expect(
 			page.getByTestId('fusion-nojoin'),
 			`${attempt}번째 실패에 아무 말도 없다`
@@ -164,14 +159,27 @@ test('막히면 도움 버튼이 붙는 짝을 짚어 준다', async ({ page }, 
 	await expect(lit).not.toHaveCount(0);
 	await expect(page.locator('.cell.filled')).toHaveCount(0);
 
-	// 빛난 것끼리 붙이면 실제로 만들어져야 한다 (죽은 힌트가 아니어야 한다)
+	/*
+	 * 빛난 것끼리 붙이면 실제로 만들어져야 한다 (죽은 힌트가 아니어야 한다).
+	 *
+	 * **버튼을 따로 누르지 않는다.** 칸이 차면 그 자리에서 판정한다 —
+	 * 대결·복습이 조각 두 개를 놓는 순간 판정하는 것과 같은 문법이다.
+	 * 예전에는 공방만 제출 단계가 하나 더 있어서 이 화면만 폼처럼 느껴졌다.
+	 */
 	const chars = await lit.evaluateAll((els) => els.map((el) => el.getAttribute('data-part') ?? ''));
 	for (const c of chars.length === 1 ? [chars[0], chars[0]] : chars.slice(0, 2)) {
 		await place(page, c);
 	}
-	await page.getByRole('button', { name: '합체!' }).click();
-	await expect(page.getByTestId('fusion-reveal')).toBeVisible();
+	await expect(page.getByTestId('fusion-reveal'), '칸을 다 채웠는데 판정이 안 났다').toBeVisible({
+		timeout: 15_000
+	});
 
+	/*
+	 * 등장 연출이 끝난 뒤에 잰다.
+	 * 자동 제출로 바뀌면서 판정이 빨라졌더니 검사기가 **커지는 중인** 카드를 재서
+	 * 「좋아!」 버튼이 18×11px 로 잡혔다. 최종 상태를 재야 의미가 있다.
+	 */
+	await settleAnimations(page);
 	await expectHealthyLayout(page);
 });
 

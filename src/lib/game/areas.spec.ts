@@ -85,16 +85,42 @@ describe('evaluateAreaUnlocks', () => {
 			}
 			expect(state.gate, `${state.area.name}: 잠겼는데 관문이 없다`).not.toBeNull();
 			expect(state.lockedReason).toBeTruthy();
-			expect(state.lockedReason).toContain(String(state.gate!.need));
+			const gate = state.gate!;
+			if (gate.kind === 'boss') {
+				expect(state.lockedReason).toContain(gate.boss);
+			} else {
+				expect(state.lockedReason).toContain(String(gate.need));
+			}
 		}
 	});
 
-	it('다 모으고 레벨도 높으면 전부 열린다', () => {
+	it('다 모으고 레벨도 높은데 보스를 안 이겼으면 아직 잠겨 있다', () => {
+		/*
+		 * **대결이 있어야 할 이유.**
+		 * 예전에는 레벨과 한자 수만 봤다. 그런데 레벨은 배우기만 해도 오르므로
+		 * 대결을 한 번도 안 하고 아홉 섬을 다 지날 수 있었다.
+		 */
 		const learned = Object.fromEntries(AREAS.map((a) => [a.id, a.hanjaCount]));
-		for (const state of evaluateAreaUnlocks(80, learned)) {
+		const states = evaluateAreaUnlocks(80, learned, new Set());
+		expect(states[0].unlocked, '첫 섬은 언제나 열려 있다').toBe(true);
+		expect(states[1].unlocked).toBe(false);
+		expect(states[1].gate?.kind).toBe('boss');
+	});
+
+	it('보스까지 다 이기면 전부 열린다', () => {
+		const learned = Object.fromEntries(AREAS.map((a) => [a.id, a.hanjaCount]));
+		const wins = new Set(AREAS.map((a) => a.id));
+		for (const state of evaluateAreaUnlocks(80, learned, wins)) {
 			expect(state.unlocked, `${state.area.name} 이 안 열렸다`).toBe(true);
 			expect(state.gate).toBeNull();
 		}
+	});
+
+	it('보스 관문은 레벨·진도를 다 채운 뒤에만 나온다 — 한 번에 하나씩만 알려 준다', () => {
+		const learned = Object.fromEntries(AREAS.map((a) => [a.id, a.hanjaCount]));
+		// 레벨이 모자라면 보스가 아니라 레벨을 먼저 말해야 한다
+		const low = evaluateAreaUnlocks(1, learned, new Set());
+		expect(low[1].gate?.kind).toBe('level');
 	});
 });
 

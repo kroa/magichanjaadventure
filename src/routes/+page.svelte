@@ -174,9 +174,14 @@
 					<span class="lock" aria-hidden="true">🔒</span>
 					<!-- 얼마나 남았는지를 눌러 보기 전에 알려 준다 -->
 					<span class="gate font-display">
-						{island.gate?.kind === 'level'
-							? `Lv ${island.gate.need}`
-							: `${island.gate?.have ?? 0}/${island.gate?.need ?? 0}`}
+						{#if island.gate?.kind === 'level'}
+							Lv {island.gate.need}
+						{:else if island.gate?.kind === 'progress'}
+							{island.gate.have}/{island.gate.need}
+						{:else if island.gate?.kind === 'boss'}
+							<!-- 보스를 이겨야 열린다. 대결이 있어야 할 이유가 여기서 생긴다 -->
+							⚔️ 보스
+						{/if}
 					</span>
 				{/if}
 
@@ -239,6 +244,7 @@
 				<Button variant="ember" size="lg" href="/battle?area={chosenIsland.id}">보스 대결</Button>
 				<Button variant="gold" size="lg" href="/fusion">합체 공방</Button>
 				<Button variant="mint" size="lg" href="/quiz">복습하기</Button>
+				<Button variant="sky" size="lg" href="/word">낱말 만들기</Button>
 			</div>
 		</div>
 	{/if}

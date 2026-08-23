@@ -173,6 +173,14 @@
 									{data.hanja.character} 와 {data.nextPlay.partner} 붙여 보기
 								{/if}
 							</Button>
+						{:else if data.nextPlay?.kind === 'word'}
+							<!--
+								**낱말 축.** 조합으로는 못 쓰는 글자가 950자다 —
+								사용자가 場 과 室 로 두 번 신고한 그 문제다. 낱말은 955자를 덮는다.
+							-->
+							<Button variant="gold" size="lg" href={data.nextPlay.href}>
+								{data.nextPlay.partner} 와 붙여 「{data.nextPlay.result}」 만들기
+							</Button>
 						{:else if data.nextPlay?.kind === 'review'}
 							<Button variant="magic" size="lg" href={data.nextPlay.href}>
 								지금까지 배운 걸로 놀기

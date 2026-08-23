@@ -33,6 +33,8 @@
 	const TOTAL_DISCOVERABLE = allResultChars().length;
 
 	let slots = $state<string[]>([]);
+	/** 자동 제출용 폼 참조 — 아래 place() 가 대신 눌러 준다 */
+	let fuseForm = $state<HTMLFormElement | null>(null);
 	/** 합쳐지는 연출에 쓸 DOM 참조 */
 	let slotEls = $state<(HTMLElement | null)[]>([]);
 	let anvil = $state<HTMLElement | null>(null);
@@ -140,6 +142,19 @@
 		clearFail();
 		slots = [...slots, character];
 		sound.play('click');
+
+		/*
+		 * **칸이 차면 바로 판정한다.**
+		 *
+		 * 예전에는 「합체!」 버튼을 한 번 더 눌러야 했다. 대결과 복습은 조각 두 개를
+		 * 놓는 순간 바로 판정하는데 여기만 제출 단계가 하나 더 있었던 셈이다 —
+		 * 아이 입장에서 이 화면만 "폼" 이었고, 그게 공방이 게임 같지 않던 가장 큰 이유다.
+		 *
+		 * 버튼은 남긴다. 키보드 사용자와 JS 가 죽은 경우의 길이다.
+		 */
+		if (slots.length >= SLOTS) {
+			requestAnimationFrame(() => fuseForm?.requestSubmit());
+		}
 	}
 
 	function removeAt(index: number) {
@@ -277,6 +292,7 @@
 					</div>
 
 					<form
+						bind:this={fuseForm}
 						method="POST"
 						action="?/fuse"
 						use:enhance={() => {
@@ -342,6 +358,10 @@
 							<input type="hidden" name="part" value={part} />
 						{/each}
 						<div class="actions">
+							<!--
+								칸이 차면 자동으로 제출되므로 이 버튼은 이제 **보조 경로**다.
+								키보드 사용자와 JS 가 죽은 경우를 위해 남겨 둔다.
+							-->
 							<Button
 								variant={looksValid ? 'gold' : 'magic'}
 								size="lg"

@@ -218,7 +218,9 @@ export const AREA_UNLOCK_RATIO = 0.6;
  */
 export type AreaGate =
 	| { kind: 'level'; need: number; have: number }
-	| { kind: 'progress'; need: number; have: number; from: string };
+	| { kind: 'progress'; need: number; have: number; from: string }
+	/** 직전 지역의 보스를 아직 못 이겼다 */
+	| { kind: 'boss'; boss: string; from: string };
 
 export interface AreaUnlockState {
 	area: Area;
@@ -232,7 +234,13 @@ export interface AreaUnlockState {
 
 export function evaluateAreaUnlocks(
 	level: number,
-	learnedByArea: Record<number, number>
+	learnedByArea: Record<number, number>,
+	/**
+	 * 보스를 이긴 지역 번호.
+	 *
+	 * **필수 인자다.** 기본값을 주면 넘기는 것을 잊은 화면이 조용히 다른 규칙으로 돌아간다.
+	 */
+	bossWins: ReadonlySet<number> = new Set()
 ): AreaUnlockState[] {
 	return AREAS.map((area) => {
 		const learned = learnedByArea[area.id] ?? 0;
@@ -263,6 +271,27 @@ export function evaluateAreaUnlocks(
 				gate: { kind: 'progress', need: needed, have: previousLearned, from: previous.name }
 			};
 		}
+
+		/*
+		 * **보스를 이겨야 다음 섬으로 간다.**
+		 *
+		 * 예전에는 레벨과 한자 수만 봤다. 그런데 레벨은 한자를 배우기만 해도 오르므로
+		 * 대결을 한 번도 안 하고 아홉 섬을 다 지날 수 있었다 — 보스가 있어야 할 이유가
+		 * 게임 안에 없었던 셈이다. 사용자가 그걸 정확히 짚었다.
+		 *
+		 * 대결은 **질 수 없게** 설계돼 있으므로(seals.ts) 이 관문이 아이를 가두지 않는다.
+		 * 판을 비우기만 하면 이긴다.
+		 */
+		if (!bossWins.has(previous.id)) {
+			return {
+				area,
+				unlocked: false,
+				learned,
+				lockedReason: `${previous.name}의 ${previous.boss.name}을 이겨야 해요`,
+				gate: { kind: 'boss', boss: previous.boss.name, from: previous.name }
+			};
+		}
+
 		return { area, unlocked: true, learned, lockedReason: null, gate: null };
 	});
 }

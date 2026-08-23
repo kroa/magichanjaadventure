@@ -66,7 +66,7 @@ test('집중 모드 화면은 메뉴 대신 나가기 버튼으로 빠져나간�
 	 * 메뉴를 끈 화면에 나가기 버튼도 없으면 갇힌다.
 	 */
 	// 복습(/quiz)은 메뉴에 없다 — 지도의 섬 차림표에 있다
-	for (const path of ['/quiz', '/battle']) {
+	for (const path of ['/quiz', '/battle', '/word']) {
 		await gotoReady(page, path);
 
 		const menu = page.getByRole('navigation', { name: '주요 메뉴' }).filter({ visible: true });

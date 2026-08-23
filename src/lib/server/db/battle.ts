@@ -328,3 +328,17 @@ export async function tallyFor(
 		.first<{ broken: number | null; first_try: number | null }>();
 	return { broken: row?.broken ?? 0, firstTry: row?.first_try ?? 0 };
 }
+
+/**
+ * 보스를 이긴 지역 번호.
+ *
+ * 지역 해금의 세 번째 관문이다. 예전에는 레벨과 한자 수만 봐서, 대결을 한 번도
+ * 안 하고 아홉 섬을 다 지날 수 있었다 — 보스가 있어야 할 이유가 게임 안에 없었다.
+ */
+export async function bossWinAreas(db: D1Database, userId: string): Promise<Set<number>> {
+	const { results } = await db
+		.prepare("SELECT DISTINCT area_id FROM battle_records WHERE user_id = ? AND result = 'win'")
+		.bind(userId)
+		.all<{ area_id: number }>();
+	return new Set(results.map((r) => r.area_id));
+}

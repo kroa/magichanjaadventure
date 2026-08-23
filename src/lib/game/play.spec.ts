@@ -172,3 +172,29 @@ describe('복습 판은 언제나 비울 수 있다', () => {
 		expect(checked).toBeGreaterThan(0);
 	});
 });
+
+describe('낱말 축이 실제로 열리는가', () => {
+	it('조합으로 못 쓰는 글자도 낱말로는 놀 수 있다', () => {
+		/*
+		 * 사용자가 場 과 室 로 **세 번** 신고한 그 문제다.
+		 * 室 은 조합표를 아무리 늘려도 못 만든다 — 至·宀 이 우리 1000자에 없다.
+		 * 그런데 敎室 은 된다. 敎 는 室 바로 앞에 배우는 글자다.
+		 */
+		const play = pickNextPlay(new Set(['敎', '室']), '室');
+		expect(play.kind, '室 을 배웠는데 낱말 축이 안 열렸다').toBe('word');
+		if (play.kind !== 'word') return;
+		expect(play.result).toBe('敎室');
+		expect(play.partner).toBe('敎');
+		expect(play.href).toContain('/word');
+	});
+
+	it('조합이 되면 조합을 먼저 권한다 — 그게 이 게임의 뼈대다', () => {
+		const play = pickNextPlay(new Set(['日', '月']), '月');
+		expect(play.kind).toBe('ready');
+	});
+
+	it('낱말도 조합도 안 되면 그제야 복습·공방으로 보낸다', () => {
+		const play = pickNextPlay(new Set(['場']), '場');
+		expect(['review', 'workshop']).toContain(play.kind);
+	});
+});
