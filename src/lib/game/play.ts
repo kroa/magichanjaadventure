@@ -1,4 +1,4 @@
-import { SEAL_RECIPES, FUSION_RECIPES } from './fusion';
+import { SEAL_RECIPES, FUSION_RECIPES, type FusionRecipe } from './fusion';
 
 /**
  * 한 글자를 배운 **다음에 무엇을 하러 갈지** 를 고른다.
@@ -89,4 +89,52 @@ export function classifyFocus(focus: string, relatedCount: number): FocusState {
 	 */
 	const inWorkshop = FUSION_RECIPES.some((r) => r.parts.includes(focus) || r.result === focus);
 	return inWorkshop ? 'workshop-only' : 'not-a-part';
+}
+
+/** 복습 한 판에 낼 조합 수 */
+export const QUIZ_ROUND_SIZE = 3;
+
+/**
+ * 복습 판에 낼 조합을 고른다.
+ *
+ * **`load` 와 `fuse` 액션이 둘 다 이 함수를 부른다.** 서버가 같은 방식으로 두 번 유도해야
+ * "이 판의 목표가 무엇이었나" 를 나중에도 알 수 있다 — 대결이 봉인을 씨앗에서 다시
+ * 유도해 검증하는 것과 같은 구조다.
+ *
+ * `round` 는 판을 새로 열 때마다 오르는 회차다. 관련 조합(`related`)은 앞에 고정하고
+ * 나머지만 회전시킨다. 셔플이 아니라 회전인 이유:
+ *  - 결정론이다. 서버가 몇 번을 다시 계산해도 같은 답이 나온다
+ *  - `related` 가 앞에 남으므로 "방금 배운 글자" 안내가 계속 정직하다
+ */
+export function orderQuizRecipes(
+	owned: ReadonlySet<string>,
+	discovered: ReadonlySet<string>,
+	focus: string,
+	round = 0,
+	size = QUIZ_ROUND_SIZE
+): FusionRecipe[] {
+	const makeable = SEAL_RECIPES.filter((r) => r.parts.every((p) => owned.has(p)));
+
+	const related = focus
+		? makeable.filter((r) => r.parts.includes(focus) || r.result === focus)
+		: [];
+	const rest = makeable.filter((r) => !related.includes(r));
+
+	// 이미 만들어 본 것을 먼저 — 복습이 목적이므로 처음 보는 것보다 낫다
+	const sorted = [
+		...rest.filter((r) => discovered.has(r.result)),
+		...rest.filter((r) => !discovered.has(r.result))
+	];
+
+	/*
+	 * 회전.
+	 *
+	 * 이게 없으면 아이가 몇 번을 다시 열어도 **똑같은 여섯 조각**을 받는다.
+	 * 조합에 안 쓰이는 950자에서는 언제나 같은 판(明星林)이 나왔다 —
+	 * 사용자가 본 日月日生木木 이 우연이 아니라 그 950자의 고정 화면이었다.
+	 */
+	const turn = sorted.length > 0 ? ((round % sorted.length) + sorted.length) % sorted.length : 0;
+	const rotated = [...sorted.slice(turn), ...sorted.slice(0, turn)];
+
+	return [...related, ...rotated].slice(0, size);
 }

@@ -286,6 +286,71 @@ export const FUSION_RECIPES: FusionRecipe[] = [
 		kind: '회의',
 		layout: 'tb',
 		variantParts: ['手']
+	},
+
+	/*
+	 * ── 여기서부터 확장 ──
+	 *
+	 * 조합표가 1000자 중 50자만 건드려서, 아이가 배운 글자가 놀이에 거의 안 나왔다.
+	 * **새 부품은 山 하나뿐이고 그림은 이미 있다** — 새로 그린 그림 0장이다.
+	 * 배열 끝에 붙이는 이유: 앞에 넣으면 findWorkshopHint 가 짚는 첫 조합이 바뀐다.
+	 */
+
+	{
+		parts: ['女', '生'],
+		result: '姓',
+		story: '어머니가 낳은 아이마다 이어 붙는 이름이 성이에요.',
+		kind: '회의',
+		layout: 'lr'
+	},
+	{
+		parts: ['一', '白'],
+		result: '百',
+		story: '하얀 것 위에 줄을 하나 그어 백을 나타냈어요.',
+		kind: '형성',
+		layout: 'tb',
+		soundPart: '白'
+	},
+	{
+		parts: ['水', '魚'],
+		result: '漁',
+		story: '물속을 헤엄치는 물고기를 잡는 일이에요.',
+		kind: '형성',
+		layout: 'lr',
+		soundPart: '魚',
+		variantParts: ['水']
+	},
+	{
+		parts: ['目', '人'],
+		result: '見',
+		story: '사람 위에 커다란 눈을 얹어 본다는 뜻이 됐어요.',
+		kind: '회의',
+		layout: 'tb',
+		variantParts: ['人']
+	},
+	{
+		parts: ['人', '山'],
+		result: '仙',
+		story: '산속에 들어가 사는 사람을 신선이라고 불렀어요.',
+		kind: '회의',
+		layout: 'lr',
+		variantParts: ['人']
+	},
+	{
+		parts: ['鳥', '山'],
+		result: '島',
+		story: '바다 위에 솟은 산에 새가 내려앉아 쉬어요.',
+		kind: '형성',
+		layout: 'tb',
+		variantParts: ['鳥']
+	},
+	{
+		parts: ['羊', '大'],
+		result: '美',
+		story: '살이 오른 커다란 양은 보기에 참 아름다웠어요.',
+		kind: '회의',
+		layout: 'tb',
+		variantParts: ['羊']
 	}
 ];
 

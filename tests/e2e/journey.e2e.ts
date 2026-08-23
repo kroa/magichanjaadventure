@@ -214,6 +214,21 @@ test.describe('아이의 첫 모험', () => {
 		await expectHealthyLayout(page);
 		await expectSufficientContrast(page);
 
+		/*
+			**입단 버튼이 실제로 눌릴 만한 크기인가.**
+			예전에는 밑줄 친 작은 글자였고 48px 탭 하한을 면제받는 `data-allow-small` 이
+			붙어 있었다 — 처음 온 아이에게 가장 중요한 길이 화면에서 가장 작았다.
+		*/
+		const join = page.getByRole('link', { name: '탐험대 입단하기' });
+		await expect(join).toBeVisible();
+		const joinBox = await join.boundingBox();
+		expect(joinBox, '입단 버튼의 크기를 잴 수 없다').not.toBeNull();
+		expect(joinBox!.height, '입단 버튼이 아이 손가락에 너무 작다').toBeGreaterThanOrEqual(48);
+
+		// 이 앱이 무엇을 하는 곳인지 첫 화면이 말해 준다
+		await expect(page.getByText('조각을 붙여 만들면서 배워요')).toBeVisible();
+		await expect(page.getByText(/만든 사람/)).toBeVisible();
+
 		await page.getByLabel('닉네임').fill(user.nickname);
 		await page.getByLabel('비밀번호').fill(user.password);
 		await page.getByRole('button', { name: '모험 이어하기' }).click();

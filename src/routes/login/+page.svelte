@@ -49,6 +49,11 @@
 		<div class="relative isolate text-center">
 			<Sparkle count={6} />
 			<h1 class="title on-sky text-display-lg">마법한자탐험대</h1>
+			<!--
+				여기가 무엇을 하는 곳인지 한 줄로.
+				처음 연 부모도 아이도 "한자 앱" 이라는 것만 알고 무엇이 다른지는 몰랐다.
+			-->
+			<p class="pitch on-sky">한자를 외우지 않아요.<br />조각을 붙여 만들면서 배워요.</p>
 		</div>
 
 		<div class="greet">
@@ -111,16 +116,52 @@
 				모험 이어하기
 			</Button>
 
-			<p class="text-center text-sm text-ink-500">
-				처음이라면 <a href="/register" class="text-magic-600 underline" data-allow-small
-					>탐험대 입단</a
-				>
-			</p>
+			<!--
+				**처음 온 아이에게는 이 버튼이 가장 중요하다.**
+				예전에는 밑줄 친 작은 글자 링크였고, 48px 탭 하한을 면제받는
+				`data-allow-small` 까지 붙어 있었다 — 화면에서 가장 작은 것이
+				가장 중요한 길이었던 셈이다. 크기와 무게를 되찾아 준다.
+			-->
+			<div class="or" aria-hidden="true"><span>처음이라면</span></div>
+			<Button variant="mint" size="lg" fullWidth href="/register">탐험대 입단하기</Button>
 		</form>
+
+		<p class="made-by on-sky">만든 사람 · 김태윤 아빠</p>
 	</div>
 </AppShell>
 
 <style>
+	.pitch {
+		margin-top: 0.35rem;
+		font-size: 0.95rem;
+		line-height: 1.5;
+		text-align: center;
+	}
+
+	/* 로그인과 입단 사이의 경계. 둘이 다른 길이라는 것을 한눈에 보여 준다 */
+	.or {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		color: var(--color-ink-500);
+		font-size: 0.8rem;
+	}
+
+	.or::before,
+	.or::after {
+		flex: 1;
+		height: 1px;
+		background: var(--color-magic-200, rgb(221 213 255));
+		content: '';
+	}
+
+	.made-by {
+		margin-top: 0.25rem;
+		font-size: 0.75rem;
+		opacity: 0.85;
+	}
+
 	.gate {
 		display: flex;
 		width: 100%;

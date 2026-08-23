@@ -123,15 +123,39 @@
 				모험 시작하기
 			</Button>
 
-			<p class="text-center text-sm text-ink-500">
-				이미 대원이라면 <a href="/login" class="text-magic-600 underline" data-allow-small>로그인</a
-				>
-			</p>
+			<!-- 로그인 화면과 같은 무게. 작은 글자 링크는 아이 손가락에 너무 작다 -->
+			<div class="or" aria-hidden="true"><span>이미 대원이라면</span></div>
+			<Button variant="ghost" size="lg" fullWidth href="/login">로그인</Button>
 		</form>
+
+		<p class="made-by on-sky">만든 사람 · 김태윤 아빠</p>
 	</div>
 </AppShell>
 
 <style>
+	.or {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		color: var(--color-ink-500);
+		font-size: 0.8rem;
+	}
+
+	.or::before,
+	.or::after {
+		flex: 1;
+		height: 1px;
+		background: var(--color-magic-200, rgb(221 213 255));
+		content: '';
+	}
+
+	.made-by {
+		margin-top: 0.25rem;
+		font-size: 0.75rem;
+		opacity: 0.85;
+	}
+
 	.gate {
 		display: flex;
 		width: 100%;

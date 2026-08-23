@@ -7,7 +7,7 @@
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { deserialize } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { toasts } from '$lib/stores/toast.svelte';
 	import { sound } from '$lib/sound/index.svelte';
 	import type { FusionRecipe } from '$lib/game/fusion';
@@ -24,6 +24,21 @@
 
 	let made = $state<string[]>([]);
 	let hintTick = $state(0);
+	/*
+	 * **강한 도움은 판당 두 번.**
+	 *
+	 * 무제한이던 시절 아이가 `?` 를 남발했다. 그런데 개수만 세는 것으로는 부족했다 —
+	 * 판이 한 번 켜지면 합체마다 다음 짝이 공짜로 켜져서, 한 번 누르면 판 전체가 풀렸다.
+	 * 그 끈끈함은 PieceBoard 에서 끊었고, 여기서는 횟수만 센다.
+	 *
+	 * 두 번인 근거: 조합을 두 번 해내면 조각이 둘 남고 가능한 짝은 하나뿐이다.
+	 * 즉 **세 번째 강한 도움은 정의상 쓸모가 없다.** 예산 2는 아무것도 빼앗지 않는다.
+	 * 다 써도 버튼은 살아 있다 — 약한 도움(한 조각)이 무제한이다.
+	 */
+	const HINT_BUDGET = 2;
+	let hintLeft = $state(HINT_BUDGET);
+	/** 합체 왕복 중에는 도움을 잠근다 — 허공에 소비되지 않게 */
+	let boardBusy = $state(false);
 	let finished = $state(false);
 	let restarting = $state(false);
 
@@ -47,6 +62,7 @@
 	 */
 	interface MergeResult {
 		ok: boolean;
+		reason?: string;
 		character?: string;
 		reading?: string;
 		meaning?: string;
@@ -59,7 +75,13 @@
 		for (const piece of used) body.append('part', piece.character);
 
 		try {
-			const response = await fetch('?/fuse', { method: 'POST', body });
+			/*
+				`?/fuse` 는 상대 URL 이라 **현재 쿼리가 통째로 사라진다.**
+				서버는 focus·r 로 이 판의 목표를 다시 유도하므로, 실어 보내지 않으면
+				서버가 딴 판을 계산해 방금 맞힌 것을 거절한다.
+			*/
+			const action = `?focus=${encodeURIComponent(data.focus ?? '')}&r=${data.round ?? 0}&/fuse`;
+			const response = await fetch(action, { method: 'POST', body });
 			if (!response.ok) throw new Error('실패');
 
 			/*
@@ -74,7 +96,17 @@
 			if (result.type !== 'success') return null;
 
 			const payload = (result.data as unknown as MergeResult) ?? { ok: false };
-			if (!payload.ok) return null;
+			if (!payload.ok) {
+				/*
+				 * 만들긴 했지만 이 판의 목표가 아니다. 대결과 **글자 그대로 같은 말**을 쓴다 —
+				 * 화면마다 다른 말을 하면 아이는 게임이 아니라 화면 사용법을 배우게 된다.
+				 * 한자는 서버가 이미 줬으므로 헛수고가 아니다.
+				 */
+				if (payload.reason === 'not-target' && payload.character) {
+					toasts.success(`${payload.character}! 만들었어요.`, '🔮');
+				}
+				return null;
+			}
 
 			sound.play('discover');
 			return payload;
@@ -88,13 +120,23 @@
 		if (restarting) return;
 		restarting = true;
 		try {
-			await invalidateAll();
+			/*
+			 * **회차를 올린다.** 그냥 다시 읽으면 서버가 같은 조합을 골라
+			 * 아이가 방금 비운 것과 **똑같은 여섯 조각**을 다시 받는다.
+			 */
+			const next = (data.round ?? 0) + 1;
+			await goto(`?focus=${encodeURIComponent(data.focus ?? '')}&r=${next}`, {
+				invalidateAll: true,
+				noScroll: true
+			});
 			pieces = data.pieces.map((p) => ({ ...p }));
 			total = data.total;
 			made = [];
 			justMade = null;
 			finished = false;
 			hintTick = 0;
+			// hintTick 을 되돌리는 자리마다 예산도 나란히 되돌린다. 하나만 빠뜨리면 조용히 어긋난다
+			hintLeft = HINT_BUDGET;
 		} finally {
 			restarting = false;
 		}
@@ -118,7 +160,13 @@
 			<a href="/" class="exit" aria-label="모험 지도로 나가기">✕</a>
 			<Badge tone="magic" size="sm">복습 {made.length} / {total}</Badge>
 			{#if !finished && pieces.length > 0}
-				<HelpButton onclick={askHint} class="ml-auto" />
+				<HelpButton
+					onclick={askHint}
+					left={hintLeft}
+					total={HINT_BUDGET}
+					disabled={boardBusy}
+					class="ml-auto"
+				/>
 			{/if}
 		</header>
 
@@ -161,7 +209,11 @@
 				<h2 class="text-display-lg text-gold-600">다 풀었어요!</h2>
 				{#if made.length > 0}
 					<p class="made">
-						{#each made as ch (ch)}<span class="hanja">{ch}</span>{/each}
+						<!--
+						글자 자체를 키로 쓰면 같은 글자를 두 번 만들었을 때
+						Svelte 가 prod 에서도 each_key_duplicate 로 죽는다. 인덱스를 쓴다.
+					-->
+						{#each made as ch, i (i)}<span class="hanja">{ch}</span>{/each}
 					</p>
 				{/if}
 				<div class="flex flex-wrap justify-center gap-3">
@@ -195,6 +247,12 @@
 				<PieceBoard
 					bind:pieces
 					{hintTick}
+					{hintLeft}
+					onhintshown={(weak) => {
+						// 실제로 빛났을 때만 깎는다. 미리 깎으면 허공에 소비된 탭까지 세게 된다
+						if (!weak) hintLeft -= 1;
+					}}
+					onbusy={(b) => (boardBusy = b)}
 					height={boardHeight}
 					onmerge={async (recipe, used) => {
 						const result = await handleMerge(recipe, used);

@@ -27,6 +27,15 @@
 		 */
 		hintTick?: number;
 		/**
+		 * 남은 **강한 도움**(짝 두 개 빛내기) 횟수.
+		 * 0 이면 약한 도움(한 조각만)으로 낮아진다 — 버튼이 죽지는 않는다.
+		 */
+		hintLeft?: number;
+		/** 실제로 빛났을 때만 부른다. 부모는 여기서 예산을 깎는다 */
+		onhintshown?: (weak: boolean) => void;
+		/** 합체 왕복 중에는 부모가 도움 버튼을 잠근다 */
+		onbusy?: (busy: boolean) => void;
+		/**
 		 * 손 시범을 보일지.
 		 *
 		 * 아직 한 번도 합체해 본 적 없는 아이에게는 **무엇을 하는 화면인지 알 길이 없다.**
@@ -42,6 +51,9 @@
 		onmerge,
 		oncleared,
 		hintTick = 0,
+		hintLeft = Number.POSITIVE_INFINITY,
+		onhintshown,
+		onbusy,
 		showDemo = false,
 		height = 260
 	}: Props = $props();
@@ -66,11 +78,55 @@
 			: [];
 	}
 
+	/*
+	 * **도움은 누를 때만 켜진다.**
+	 *
+	 * 예전에는 이 이펙트가 `pieces` 를 추적해서, 한 번 `?` 를 누르면 그 뒤로
+	 * **합체할 때마다 다음 짝이 공짜로 켜졌다.** 사실상 한 번 누르면 판 전체가
+	 * 저절로 풀렸다는 뜻이다. 그 상태에서는 개수를 세도 예산이 성립하지 않는다.
+	 *
+	 * 그렇다고 조각이 바뀔 때 무조건 끄면, 늦게 끝난 합체가 방금 켠 도움을 지우는
+	 * 경합이 되살아난다 (위 주석이 기록한 그 버그다).
+	 * 그래서 **켜 둔 짝이 판에서 사라졌을 때만** 끈다.
+	 */
+	// svelte-ignore state_referenced_locally
+	let lastTick = hintTick;
+	/** 지금 켜 둔 짝 (비반응형 — 이펙트를 다시 돌리지 않는다) */
+	let litPair: number[] = [];
+
 	$effect(() => {
-		if (hintTick <= 0) return;
-		const pair = findJoinablePair(pieces);
-		hinted = pair ? [pair[0].id, pair[1].id] : [];
+		const tick = hintTick;
+		const current = pieces;
+
+		if (tick === lastTick) {
+			if (litPair.length === 0) return;
+			const gone = litPair.every((id) => !current.some((p) => p.id === id));
+			if (gone) {
+				litPair = [];
+				hinted = [];
+			} else {
+				hinted = [...litPair];
+			}
+			return;
+		}
+
+		lastTick = tick;
+		if (tick <= 0) return;
+
+		const pair = findJoinablePair(current);
+		// 짚을 것이 없으면 예산을 쓰지 않는다 — 아무것도 안 빛나는 죽은 버튼을 막는다
+		if (!pair) return;
+
+		const weak = hintLeft <= 0;
+		const ids = weak ? [pair[0].id] : [pair[0].id, pair[1].id];
+		litPair = ids;
+		hinted = ids;
+		weakHint = weak;
+		onhintshown?.(weak);
 	});
+
+	/** 지금 켜진 도움이 약한 것인가 (한 조각만) */
+	let weakHint = $state(false);
 
 	let picked = $state<number | null>(null);
 	let busy = $state(false);
@@ -168,7 +224,9 @@
 		}
 
 		busy = true;
+		onbusy?.(true);
 		hinted = [];
+		litPair = [];
 		joinable = [];
 		try {
 			const target = els.get(b.id);
@@ -188,6 +246,7 @@
 			if (pieces.length === 0) oncleared?.();
 		} finally {
 			busy = false;
+			onbusy?.(false);
 		}
 	}
 
@@ -248,6 +307,7 @@
 			style="--x:{spot.x}%; --y:{spot.y}%; --tilt:{spot.tilt}deg;"
 			data-piece-id={piece.id}
 			data-hint={hinted.includes(piece.id) || undefined}
+			data-hint-weak={(weakHint && hinted.includes(piece.id)) || undefined}
 			data-piece={piece.character}
 			data-allow-overlap
 			bind:this={
@@ -347,6 +407,22 @@
 	 * 도움을 눌렀을 때 빛나는 짝.
 	 * 클래스가 아니라 속성으로 표시한다 — 스타일 이름이 다른 곳과 겹칠 여지를 없앤다.
 	 */
+	/*
+	 * **집어 든 조각과 붙는 것들.**
+	 *
+	 * 이 클래스는 처음부터 붙고 있었는데 **CSS 규칙이 어디에도 없었다.**
+	 * "설명 한 줄 없이 규칙을 알려 주는 장치" 라고 주석까지 달아 놓고 아무것도 안 그려졌다.
+	 * 아이가 `?` 에 매달린 이유가 이것이다 — 무료 도움 단계가 죽어 있었다.
+	 *
+	 * 금색 도움(data-hint)보다 **약한 민트 링**이다. 둘의 세기가 같으면 구분이 안 된다.
+	 */
+	.piece.joinable {
+		border-color: var(--color-mint-400);
+		box-shadow:
+			0 0 0 4px rgb(122 226 190 / 0.45),
+			0 5px 0 var(--color-mint-400);
+	}
+
 	:global(.piece[data-hint]) {
 		border-color: var(--color-gold-400);
 		box-shadow:

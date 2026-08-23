@@ -17,32 +17,7 @@ export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 
 	for (let round = 0; round < maxRounds; round++) {
 		if (await outcome.isVisible().catch(() => false)) break;
-
-		if ((await page.locator('button.piece').count()) === 0) break;
-
-		// 도움을 누르면 붙는 짝이 빛난다
-		const help = page.getByRole('button', { name: '도와줘' });
-		if (!(await help.isVisible().catch(() => false))) break;
-		await help.click();
-
-		/*
-		 * 여기서 `expect(...).toHaveCount()` 로 폴링하면 계속 0 이 나온다.
-		 * 판이 다시 그려지는 사이에 힌트가 잠깐 꺼졌다 켜지는데, 폴링이 그 틈만 계속 집어낸다.
-		 * 아이 손 속도로 한 박자 쉬었다가 읽으면 그대로 잡힌다 — 그래서 명시적으로 기다린다.
-		 */
-		await page.waitForTimeout(600);
-		const ids = await page
-			.locator('button.piece[data-hint]')
-			.evaluateAll((els) => els.map((el) => el.getAttribute('data-piece-id') ?? ''));
-		expect(ids.length, '도움을 눌러도 붙는 짝이 빛나지 않는다').toBe(2);
-
-		for (const id of ids) {
-			await page.locator(`button.piece[data-piece-id="${id}"]`).click();
-		}
-
-		// 합체 연출 + 서버 왕복이 끝날 때까지 기다린다
-		// 합체 → 글자가 잠깐 떴다가 몬스터로 날아가는 시간까지 기다린다
-		await page.waitForTimeout(2400);
+		if (!(await joinOnce(page))) break;
 	}
 
 	await expect(outcome).toBeVisible({ timeout: 20_000 });
@@ -63,6 +38,70 @@ export async function breakAllSeals(page: Page, maxRounds = 8): Promise<void> {
 
 	// 승리 보상으로 레벨이 오르면 레벨업 연출이 결과 화면 전체를 덮는다
 	await settleLevelUp(page);
+}
+
+/**
+ * 판에서 짝 하나를 붙인다. 붙였으면 true.
+ *
+ * **도움에 예산이 생겼다.** 예전에는 매 라운드 `?` 를 누르고 짝 두 개가 빛나기를
+ * 하드 단언했는데, 이제 판당 두 번뿐이라 3봉인 판의 셋째 라운드에서 반드시 깨진다.
+ *
+ * 계약은 그대로다 — **한자를 한 자도 모르는 로봇이 100% 완주한다.**
+ * 수단만 "무한 힌트" 에서 "판이 구조적으로 항상 풀린다" 로 옮긴다.
+ * 아이가 예산을 다 쓰고도 끝낼 수 있어야 한다는 뜻이고, 그걸 여기서 증명한다.
+ */
+async function joinOnce(page: Page): Promise<boolean> {
+	const pieces = page.locator('button.piece');
+	const before = await pieces.count();
+	if (before === 0) return false;
+
+	const help = page.getByRole('button', { name: /도와줘/ });
+	if (!(await help.isVisible().catch(() => false))) return false;
+	if (await help.isDisabled().catch(() => false)) {
+		await page.waitForTimeout(600);
+	}
+
+	const left = Number((await help.getAttribute('data-hint-left')) ?? '0');
+	await help.click();
+
+	// 강한 도움이 남아 있다 — 짝 두 개가 빛난다
+	if (left > 0) {
+		const lit = page.locator('button.piece[data-hint]');
+		await expect(lit, '도움이 남았는데 붙는 짝이 빛나지 않는다').toHaveCount(2, {
+			timeout: 8000
+		});
+		const ids = await lit.evaluateAll((els) =>
+			els.map((el) => el.getAttribute('data-piece-id') ?? '')
+		);
+		for (const id of ids) await page.locator(`button.piece[data-piece-id="${id}"]`).click();
+		await page.waitForTimeout(2400);
+		return true;
+	}
+
+	/*
+	 * 예산이 떨어졌다. 버튼은 **죽지 않고 약해진다** — 짝 중 한 조각만 빛난다.
+	 * 그 조각을 기준으로 나머지를 차례로 대 본다. 6조각 판이라 최악 5회이고,
+	 * 안 붙는 시도는 서버 왕복 없이 340ms 튕김뿐이다.
+	 */
+	const weak = page.locator('button.piece[data-hint-weak]');
+	await expect(weak, '예산이 0인데 약한 도움도 안 나온다 — 죽은 버튼이다').toHaveCount(1, {
+		timeout: 8000
+	});
+	const anchor = await weak.getAttribute('data-piece-id');
+	const others = (
+		await pieces.evaluateAll((els) => els.map((el) => el.getAttribute('data-piece-id') ?? ''))
+	).filter((id) => id !== anchor);
+
+	for (const id of others) {
+		await page.locator(`button.piece[data-piece-id="${anchor}"]`).click();
+		await page.locator(`button.piece[data-piece-id="${id}"]`).click();
+		await page.waitForTimeout(2400);
+		if ((await pieces.count()) < before) return true;
+	}
+
+	// 조용히 넘어가지 않는다. 여기서 막히면 아이도 막힌다는 뜻이다
+	expect(false, '약한 도움을 끝까지 따라가도 판이 줄지 않는다').toBe(true);
+	return false;
 }
 
 /**
@@ -104,20 +143,15 @@ export async function clearQuizBoard(page: Page, maxRounds = 6): Promise<void> {
 		if (await done.isVisible().catch(() => false)) break;
 		if ((await page.locator('button.piece').count()) === 0) break;
 
-		const help = page.getByRole('button', { name: '도와줘' });
-		if (!(await help.isVisible().catch(() => false))) break;
-		await help.click();
-
-		// 폴링이 아니라 한 박자 기다렸다 읽는다 (대결 헬퍼와 같은 이유)
-		await page.waitForTimeout(600);
-		const ids = await page
-			.locator('button.piece[data-hint]')
-			.evaluateAll((els) => els.map((el) => el.getAttribute('data-piece-id') ?? ''));
-		if (ids.length !== 2) break;
-
-		for (const id of ids) {
-			await page.locator(`button.piece[data-piece-id="${id}"]`).click();
-		}
-		await page.waitForTimeout(1400);
+		/*
+		 * 대결과 **같은 3단 폴백**을 쓴다.
+		 *
+		 * 예전에는 짝이 두 개로 안 빛나면 조용히 `break` 했다. 그건 막힌 판을
+		 * 통과시키는 구멍이었다 — 그래서 그 뒤 "한 판 더!" 를 못 찾아 실패하고,
+		 * 실패 메시지는 엉뚱한 곳을 가리켰다.
+		 * 이제 판은 구조적으로 항상 비워지므로(목표가 아닌 조합을 서버가 거절한다)
+		 * 여기서 막히면 그것은 진짜 결함이다.
+		 */
+		if (!(await joinOnce(page))) break;
 	}
 }

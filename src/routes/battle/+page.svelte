@@ -46,6 +46,21 @@
 	let madeThisBattle = $state<string[]>([]);
 	let discoveredNew = $state(false);
 	let hintTick = $state(0);
+	/*
+	 * **강한 도움은 판당 두 번.**
+	 *
+	 * 무제한이던 시절 아이가 `?` 를 남발했다. 그런데 개수만 세는 것으로는 부족했다 —
+	 * 판이 한 번 켜지면 합체마다 다음 짝이 공짜로 켜져서, 한 번 누르면 판 전체가 풀렸다.
+	 * 그 끈끈함은 PieceBoard 에서 끊었고, 여기서는 횟수만 센다.
+	 *
+	 * 두 번인 근거: 조합을 두 번 해내면 조각이 둘 남고 가능한 짝은 하나뿐이다.
+	 * 즉 **세 번째 강한 도움은 정의상 쓸모가 없다.** 예산 2는 아무것도 빼앗지 않는다.
+	 * 다 써도 버튼은 살아 있다 — 약한 도움(한 조각)이 무제한이다.
+	 */
+	const HINT_BUDGET = 2;
+	let hintLeft = $state(HINT_BUDGET);
+	/** 합체 왕복 중에는 도움을 잠근다 — 허공에 소비되지 않게 */
+	let boardBusy = $state(false);
 	let outcome = $state<'fighting' | 'win'>('fighting');
 	let settled = $state(false);
 
@@ -139,6 +154,15 @@
 			lastDamage = 1;
 			attackTrigger += 1;
 			broken += 1;
+			/*
+			 * **봉인을 깰 때마다 실수 수를 되돌린다.**
+			 *
+			 * `firstTry` 가 판 전체의 misses 를 보고 있어서, 미끼 짝을 한 번만 밟아도
+			 * 그 판 내내 false 가 되어 별 2번(「한 번에 맞힌 봉인이 있어요」)이 통째로 죽었다.
+			 * 실측으로 대결 판의 71%에 미끼 짝(木+子=李)이 있다 — 대부분의 아이가 잃고 있었다.
+			 * 탐색이 판 전체를 벌하면 안 된다. seals.ts 의 "전부 가점" 원칙과도 맞지 않는다.
+			 */
+			misses = 0;
 			strike = {
 				character: payload.character!,
 				reading: payload.reading!,
@@ -328,6 +352,8 @@
 			broken = 0;
 			misses = 0;
 			hintTick = 0;
+			// hintTick 을 되돌리는 자리마다 예산도 나란히 되돌린다. 하나만 빠뜨리면 조용히 어긋난다
+			hintLeft = HINT_BUDGET;
 			strike = null;
 			stories = [];
 			madeThisBattle = [];
@@ -395,7 +421,13 @@
 				{/each}
 			</div>
 			{#if outcome === 'fighting'}
-				<HelpButton onclick={askHint} class="ml-auto" />
+				<HelpButton
+					onclick={askHint}
+					left={hintLeft}
+					total={HINT_BUDGET}
+					disabled={boardBusy}
+					class="ml-auto"
+				/>
 			{/if}
 		</header>
 
@@ -512,6 +544,12 @@
 				<PieceBoard
 					bind:pieces
 					{hintTick}
+					{hintLeft}
+					onhintshown={(weak) => {
+						// 실제로 빛났을 때만 깎는다. 미리 깎으면 허공에 소비된 탭까지 세게 된다
+						if (!weak) hintLeft -= 1;
+					}}
+					onbusy={(b) => (boardBusy = b)}
 					showDemo={data.showDemo}
 					height={boardHeight}
 					onmerge={handleMerge}
