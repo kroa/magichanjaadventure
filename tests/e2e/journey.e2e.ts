@@ -143,6 +143,26 @@ test.describe('아이의 첫 모험', () => {
 		await expect(page.locator('button.slot.learned')).toHaveCount(4);
 
 		/*
+		 * **아직 못 만난 칸도 눌린다.**
+		 * 예전에는 `disabled` 라 도감의 대부분이 손이 안 닿는 회색 칸이었다 —
+		 * "가고 싶은 곳" 이 아니라 "못 가는 곳" 으로 읽혔다.
+		 */
+		const notYet = page.locator('button.slot:not(.learned)').first();
+		await expect(notYet).toBeEnabled();
+		await notYet.click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toContainText('배울 수 있어요');
+		await expect(dialog.getByRole('link', { name: '배우러 가기' })).toBeVisible();
+		// 모달에는 ✕ 와 하단 닫기 둘 다 있다. ESC 로 닫는 편이 흔들리지 않는다
+		await page.keyboard.press('Escape');
+		await expect(dialog).toBeHidden();
+
+		// 필터로 모은 것만 볼 수 있다. 감출 뿐 DOM 에서 지우지 않는다
+		await page.getByRole('button', { name: '모은 것' }).click();
+		await expect(page.locator('button.slot.learned')).toHaveCount(4);
+		await expect(page.locator('button.slot:not(.learned):visible')).toHaveCount(0);
+
+		/*
 		 * 복습도 대결과 **같은 판, 같은 손동작**이다.
 		 * 예전에는 여기만 4지선다였고, 화면마다 규칙이 다르면 아이는 게임이 아니라
 		 * 화면 사용법을 배우게 된다.

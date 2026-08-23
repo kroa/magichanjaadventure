@@ -10,6 +10,7 @@ import {
 } from '$lib/server/db/shop';
 import { isCharacterClass } from '$lib/types/user';
 import { expToNextLevel } from '$lib/game/exp';
+import { GEMS_PER_BATTLE_WIN } from '$lib/game/economy';
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	if (!locals.user) redirect(303, '/login');
@@ -25,7 +26,9 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 		user: locals.user,
 		expToNext: expToNextLevel(locals.user.level),
 		ownedCharacters,
-		ownedItems
+		ownedItems,
+		/* 화면이 "대결 몇 번" 을 계산하는 근거. 하드코딩하면 보상이 바뀔 때 거짓말이 된다 */
+		gemsPerBattleWin: GEMS_PER_BATTLE_WIN
 	};
 };
 

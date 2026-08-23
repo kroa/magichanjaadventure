@@ -5,6 +5,7 @@
 	import TopNav from './TopNav.svelte';
 	import ToastHost from '$lib/components/common/ToastHost.svelte';
 	import LevelUpOverlay from '$lib/components/effects/LevelUpOverlay.svelte';
+	import PurchaseOverlay from '$lib/components/effects/PurchaseOverlay.svelte';
 	import { sound } from '$lib/sound/index.svelte';
 
 	interface Props {
@@ -47,6 +48,7 @@
 <SkyBackground {night} />
 <ToastHost />
 <LevelUpOverlay />
+<PurchaseOverlay />
 
 <!-- 키보드 사용자가 네비게이션을 건너뛸 수 있게 -->
 <!-- 포커스될 때만 보이는 접근성 링크. 다른 요소 위에 뜨는 것이 정상이다. -->

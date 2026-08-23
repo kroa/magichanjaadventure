@@ -36,14 +36,28 @@ test.describe('상점', () => {
 		await captureScreen(page, testInfo, 'shop-character');
 		await expectHealthyLayout(page);
 
-		// 보석 0 이면 구매 버튼이 잠겨 있다
-		const buyFox = page.locator('button', { hasText: '💎 200' });
-		await expect(buyFox).toBeDisabled();
+		/*
+		 * 보석 0 이면 살 수 없다 — 그런데 **회색 버튼으로 막지 않는다.**
+		 *
+		 * 예전에는 비활성 버튼 하나가 전부라 아이 입장에서는 그냥 닫힌 문이었고,
+		 * 얼마나 더 하면 열리는지도 무엇을 해야 보석이 생기는지도 알 수 없었다.
+		 * 지금은 진행 막대와 "대결 N번" 이 그 자리를 대신한다.
+		 */
+		await expect(page.locator('button', { hasText: '💎 200' })).toHaveCount(0);
+
+		// 200 짜리 여우 카드의 목표를 짚는다 (첫 목표는 더 싼 캐릭터일 수 있다)
+		const goal = page.getByTestId('locked-goal').filter({ hasText: '/ 200' });
+		await expect(goal, '얼마나 남았는지가 숫자로 보여야 한다').toBeVisible();
+		await expect(goal).toContainText('대결');
+		// 갈 곳까지 짚어 준다
+		await expect(goal.getByRole('link', { name: '대결하러 가기' })).toBeVisible();
 
 		// 장비 탭
 		await page.getByRole('button', { name: /장비/ }).click();
 		await expect(page.getByRole('heading', { name: '나무 검' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: '수호 부적' })).toBeVisible();
+
+		await expect(page.getByTestId('locked-goal').first()).toBeVisible();
 
 		await captureScreen(page, testInfo, 'shop-item');
 		await expectHealthyLayout(page);

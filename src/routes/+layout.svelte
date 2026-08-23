@@ -2,8 +2,12 @@
 	import { onMount } from 'svelte';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { enableViewTransitions } from '$lib/anim/navigate';
 
 	let { children } = $props();
+
+	// 화면을 오갈 때 부드럽게 넘어간다 (지원 안 하는 브라우저·감속 설정에서는 아무 일도 안 한다)
+	enableViewTransitions();
 
 	/*
 	 * 하이드레이션이 끝났다는 신호를 DOM 에 남긴다.

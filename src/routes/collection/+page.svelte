@@ -13,11 +13,37 @@
 	let selected = $state<HanjaWithProgress | null>(null);
 	let modalOpen = $state(false);
 
+	/*
+	 * **안 배운 칸도 눌린다.**
+	 *
+	 * 예전에는 `disabled` 라 아이가 눌러도 아무 일이 없었다. 도감의 절반 이상이
+	 * 손이 안 닿는 회색 칸이었고, 그게 "가고 싶은 곳" 이 아니라 "못 가는 곳" 으로 읽혔다.
+	 * 이제 누르면 어디서 배울 수 있는지 알려 주고 그 지역으로 데려간다.
+	 */
 	function open(hanja: HanjaWithProgress) {
-		if (!hanja.learned) return;
 		selected = hanja;
 		modalOpen = true;
 	}
+
+	type Filter = 'all' | 'have' | 'not-yet' | 'perfect';
+	let filter = $state<Filter>('all');
+
+	const FILTERS: { id: Filter; label: string }[] = [
+		{ id: 'all', label: '모두' },
+		{ id: 'have', label: '모은 것' },
+		{ id: 'not-yet', label: '아직' },
+		{ id: 'perfect', label: '👑 완벽' }
+	];
+
+	function matches(item: HanjaWithProgress): boolean {
+		if (filter === 'have') return item.learned;
+		if (filter === 'not-yet') return !item.learned;
+		if (filter === 'perfect') return item.learned && item.mastery >= 100;
+		return true;
+	}
+
+	const shown = $derived(data.hanja.filter(matches));
+	const areaName = $derived(data.areas.find((a) => a.id === data.areaId)?.name ?? '이 지역');
 </script>
 
 <svelte:head>
@@ -67,18 +93,32 @@
 			{/each}
 		</div>
 
-		<!-- 도감 격자: 못 배운 한자는 실루엣 -->
+		<div class="flex flex-wrap gap-2">
+			{#each FILTERS as f (f.id)}
+				<Chip selected={filter === f.id} onclick={() => (filter = f.id)}>{f.label}</Chip>
+			{/each}
+			<span class="self-center text-xs text-white/70">{shown.length}자</span>
+		</div>
+
+		<!--
+			도감 격자.
+
+			**필터는 `hidden` 으로 감춘다 — `{#if}` 로 지우지 않는다.**
+			DOM 에서 사라지면 "모은 것 4자" 같은 검사가 필터 상태에 따라 흔들린다.
+			보이지 않을 뿐 세어지는 것은 그대로여야 한다.
+		-->
 		<div class="grid" data-testid="collection-grid">
 			{#each data.hanja as item (item.id)}
 				<button
 					type="button"
 					class="slot tappable"
 					class:learned={item.learned}
-					disabled={!item.learned}
+					class:perfect={item.learned && item.mastery >= 100}
+					hidden={!matches(item)}
 					onclick={() => open(item)}
 					aria-label={item.learned
 						? `${item.character} ${item.meaning} ${item.reading}`
-						: '아직 배우지 않은 한자'}
+						: `아직 배우지 않은 한자 — ${areaName}에서 배울 수 있어요`}
 				>
 					{#if item.learned}
 						<span class="hanja char">{item.character}</span>
@@ -96,8 +136,27 @@
 	</div>
 </AppShell>
 
-<Modal bind:open={modalOpen} title={selected ? `${selected.meaning} ${selected.reading}` : ''}>
-	{#if selected}
+<Modal
+	bind:open={modalOpen}
+	title={selected
+		? selected.learned
+			? `${selected.meaning} ${selected.reading}`
+			: '아직 못 만난 한자'
+		: ''}
+>
+	{#if selected && !selected.learned}
+		<!--
+			**닫힌 문이 아니라 다음 목적지.**
+			예전에는 이 칸이 아예 안 눌려서, 아이는 회색 칸이 무엇인지도 어디서 얻는지도 몰랐다.
+		-->
+		<div class="flex flex-col items-center gap-3 text-center">
+			<p class="hanja text-hanja-card leading-none text-magic-300">{selected.character}</p>
+			<p class="text-ink-700">
+				이 글자는 <strong>{areaName}</strong>에서 배울 수 있어요.
+			</p>
+			<Button variant="magic" size="lg" href="/learn?area={data.areaId}">배우러 가기</Button>
+		</div>
+	{:else if selected}
 		<div class="flex flex-col items-center gap-3 text-center">
 			<p class="hanja text-hanja-card leading-none text-magic-700">{selected.character}</p>
 
@@ -140,6 +199,14 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
 		gap: 0.6rem;
+	}
+
+	/* 완벽하게 익힌 칸은 금박 테두리를 두른다 — 모은 것 중에서도 눈에 띈다 */
+	.slot.perfect {
+		border-color: var(--color-gold-400);
+		box-shadow:
+			0 0 0 3px rgb(255 201 60 / 0.35),
+			0 4px 0 var(--color-gold-700, #b8860b);
 	}
 
 	.slot {

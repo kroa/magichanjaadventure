@@ -147,6 +147,39 @@
 	text-shadow: var(--shadow-text-on-sky);
 }
 
+/*
+ * 화면 전환.
+ *
+ * 지금까지 페이지를 오갈 때 아무 일도 없었다. 내용만 툭 바뀌니
+ * "같은 앱 안에서 옮겨 갔다" 가 아니라 "화면이 갈아 끼워졌다" 로 보인다.
+ *
+ * 짧게(0.26s) 끝낸다 — 아이가 다음 화면에서 하려던 일을 기다리게 만들면 안 된다.
+ * 감속 설정에서는 아예 만들지 않는다 (navigate.ts 가 전환 자체를 건너뛴다).
+ */
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root) {
+		animation: page-out 0.18s ease both;
+	}
+
+	::view-transition-new(root) {
+		animation: page-in 0.26s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+	}
+}
+
+@keyframes page-out {
+	to {
+		opacity: 0;
+		transform: scale(0.985);
+	}
+}
+
+@keyframes page-in {
+	from {
+		opacity: 0;
+		transform: scale(1.015) translateY(6px);
+	}
+}
+
 @keyframes float {
 	0%,
 	100% {
