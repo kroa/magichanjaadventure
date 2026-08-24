@@ -6,6 +6,7 @@ import { bossWinAreas } from '$lib/server/db/battle';
 import { evaluateAreaUnlocks } from '$lib/game/areas';
 import { allPartChars } from '$lib/game/fusion';
 import { partnersOf } from '$lib/game/words';
+import { strokesOf } from '$lib/game/stroke-data';
 import { pickNextPlay } from '$lib/game/play';
 import { grantRewards } from '$lib/server/game/rewards';
 import { EXP_REWARD } from '$lib/game/exp';
@@ -97,6 +98,12 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 		},
 		areaDone: upcoming.length === 0,
 		hanja,
+		/*
+		 * 이 글자를 획순으로 배울 수 있는가.
+		 * 데이터가 있는 글자만 따라 쓰고, 나머지는 지금까지처럼 흙을 판다 —
+		 * 확신이 서지 않는 좌표를 찍으면 아이가 글자 없는 자리를 문지르게 된다.
+		 */
+		strokes: hanja ? strokesOf(hanja.character) : null,
 		nextPlay: hanja ? pickNextPlay(owned, hanja.character) : null
 	};
 };

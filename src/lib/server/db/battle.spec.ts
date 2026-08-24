@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { derive, poolForArea, tierOf } from './battle';
+import { derive, poolForArea, sealLimitOf, tierOf } from './battle';
+import { HANJA_SEED } from '../../../../database/seed/hanja';
+
+/** 글자 → 지역. battle.ts 의 AREA_OF 와 같은 표다 */
+const AREA_OF_TEST = new Map(HANJA_SEED.map((h) => [h.character, h.areaId]));
 import { SEAL_RECIPES } from '$lib/game/fusion';
 import { SEALS_PER_BATTLE } from '$lib/game/seals';
 
@@ -92,6 +96,136 @@ describe('poolForArea / tierOf', () => {
 		// tierOf 는 씨드에 없는 부품에 99 를 준다. 99 가 나오면 조합표에 오타가 있다는 뜻이다.
 		for (const recipe of SEAL_RECIPES) {
 			expect(tierOf(recipe), `${recipe.parts.join('+')} = ${recipe.result}`).toBeLessThanOrEqual(9);
+		}
+	});
+});
+
+describe('보스가 이 마을을 묻는가', () => {
+	const SEEDS = Array.from({ length: 60 }, (_, i) => [`u${i}`, `k${i}`] as const);
+
+	it('지역 2~9 의 봉인에 이 마을 글자가 최소 하나 들어간다', () => {
+		/*
+		 * 사용자 질문: "보스 대결은 이번 마을에서 배운 걸로 하는 게 맞나?"
+		 *
+		 * 예전에는 `[...easy, ...rest].slice(0,3)` 이었는데 easy 후보(明·林·好)가
+		 * 늘 3개 이상이라 **rest 레인이 100% 버려졌다.** 그래서 지역 1~5 보스가
+		 * 전부 똑같았고, 9지역 최종 보스마저 8급 글자만 물었다.
+		 *
+		 * "이 마을 글자로만" 은 데이터가 허용하지 않는다(일곱 마을에서 후보 0개).
+		 * "하나 이상" 이 최대치다.
+		 */
+		for (let area = 2; area <= 9; area++) {
+			for (const [u, k] of SEEDS) {
+				const seals = derive(u, k, area);
+				const hasAnchor = seals.some((r) =>
+					r.parts.some((p) => (AREA_OF_TEST.get(p) ?? 99) === area)
+				);
+				expect(
+					hasAnchor,
+					`area ${area} (${u}:${k}) 봉인 ${seals.map((s) => s.result).join('')} 에 이 마을 글자가 없다`
+				).toBe(true);
+			}
+		}
+	});
+
+	it('지역마다 서로 다른 판이 여러 가지 나온다', () => {
+		// 지역 1 은 후보가 셋뿐이라 예외다 (위 테스트가 그 이유를 적어 두었다)
+		for (let area = 2; area <= 9; area++) {
+			const boards = new Set(
+				SEEDS.map(([u, k]) =>
+					derive(u, k, area)
+						.map((r) => r.result)
+						.join('')
+				)
+			);
+			expect(boards.size, `area ${area} 는 판이 ${boards.size}가지뿐이다`).toBeGreaterThan(1);
+		}
+	});
+
+	it('18종 봉인이 골고루 쓰인다 — 영영 안 나오는 조합이 없다', () => {
+		const seen = new Set<string>();
+		for (let area = 1; area <= 9; area++) {
+			for (const [u, k] of SEEDS) {
+				for (const r of derive(u, k, area)) seen.add(r.result);
+			}
+		}
+		const never = SEAL_RECIPES.filter((r) => !seen.has(r.result)).map((r) => r.result);
+		expect(never, `어느 지역에서도 안 나오는 봉인: ${never.join(' ')}`).toEqual([]);
+	});
+});
+
+describe('아이가 갇히는 판이 없다', () => {
+	const SEEDS = Array.from({ length: 40 }, (_, i) => [`s${i}`, `t${i}`] as const);
+
+	it('화면에 안 깔린 봉인을 판 위 조각으로 만들 수 없다', () => {
+		/*
+		 * **이것이 막히지 않으면 게임이 통째로 멈춘다.**
+		 *
+		 * `planFor` 는 `sealLimit` 개만 깔지만 `derive` 는 늘 3개를 낸다.
+		 * 화면에 없는 3번째 봉인을 판 위 조각으로 만들 수 있으면 그 조각 둘이 사라지고,
+		 * 남은 것끼리는 안 붙어 판이 영영 안 빈다 — `finish()` 가 아예 안 불린다.
+		 * 이번 회차에 보스 승리가 지역 해금 조건이 되었으므로 그 순간 지도가 잠긴다.
+		 */
+		for (let area = 1; area <= 9; area++) {
+			for (const [u, k] of SEEDS) {
+				const seals = derive(u, k, area);
+				for (let limit = 1; limit <= seals.length; limit++) {
+					const onBoard: string[] = seals.slice(0, limit).flatMap((r) => r.parts);
+					for (const hidden of seals.slice(limit)) {
+						const bag = [...onBoard];
+						const makeable = hidden.parts.every((p) => {
+							const at = bag.indexOf(p);
+							if (at < 0) return false;
+							bag.splice(at, 1);
+							return true;
+						});
+						expect(
+							makeable,
+							`area ${area} (${u}:${k}) limit ${limit}: 화면 밖 봉인 ${hidden.result} 을 만들 수 있다 — 아이가 갇힌다`
+						).toBe(false);
+					}
+				}
+			}
+		}
+	});
+
+	it('화면에 깔린 봉인을 다 만들면 판이 정확히 빈다', () => {
+		for (let area = 1; area <= 9; area++) {
+			for (const [u, k] of SEEDS) {
+				const seals = derive(u, k, area);
+				for (let limit = 1; limit <= seals.length; limit++) {
+					const shown = seals.slice(0, limit);
+					const pieces = shown.flatMap((r) => r.parts);
+					for (const r of shown) {
+						for (const p of r.parts) {
+							const at = pieces.indexOf(p);
+							expect(at, `area ${area}: ${r.result} 의 ${p} 이 판에 없다`).toBeGreaterThanOrEqual(
+								0
+							);
+							pieces.splice(at, 1);
+						}
+					}
+					expect(pieces, `area ${area} limit ${limit}: 조각이 남았다`).toEqual([]);
+				}
+			}
+		}
+	});
+});
+
+describe('sealLimitOf', () => {
+	it('세션 키에서 봉인 수를 읽는다', () => {
+		expect(sealLimitOf('1-abc')).toBe(1);
+		expect(sealLimitOf('2-abc')).toBe(2);
+		expect(sealLimitOf('3-abc')).toBe(3);
+	});
+
+	it('이상한 키에는 안전한 최대값을 준다', () => {
+		/*
+		 * 낡은 세션 키(uuid 만)를 든 탭이 배포 뒤에도 살아 있을 수 있다.
+		 * 그때 1 로 떨어지면 판을 다 비워도 승리가 안 된다 — 크게 잡는 쪽이 안전하다.
+		 */
+		for (const bad of ['', 'abc-def', '0-x', '9-x', '-1-x']) {
+			expect(sealLimitOf(bad), bad).toBe(SEALS_PER_BATTLE);
 		}
 	});
 });

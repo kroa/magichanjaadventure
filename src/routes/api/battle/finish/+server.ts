@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { getDb } from '$lib/server/db';
 import { grantRewards } from '$lib/server/game/rewards';
 import { EXP_REWARD } from '$lib/game/exp';
-import { tallyFor } from '$lib/server/db/battle';
+import { sealLimitOf, tallyFor } from '$lib/server/db/battle';
 import { countStars } from '$lib/game/seals';
 
 /**
@@ -50,7 +50,16 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	// 이 대결 세션에서 실제로 깨뜨린 봉인을 DB 에서 센다
 	const { broken, firstTry } = await tallyFor(db, locals.user.id, sessionKey);
-	const totalSeals = Number.isInteger(sealCount) ? Math.max(0, sealCount as number) : 0;
+
+	/*
+	 * **총 봉인 수는 세션 키에서 읽는다. 클라이언트가 보낸 값을 믿지 않는다.**
+	 *
+	 * 예전에는 `sealCount` 를 그대로 썼다. 봉인 하나만 깨고 `sealCount: 1` 을 보내면
+	 * 승리로 기록됐고, 이번 회차에 지역 해금 조건이 "직전 마을 보스 격파" 가 되면서
+	 * 그 구멍이 **게임 진행을 통째로 건너뛰는 길**이 됐다.
+	 */
+	const totalSeals = sealLimitOf(sessionKey);
+	void sealCount;
 
 	const correct = broken;
 	const wrong = 0;

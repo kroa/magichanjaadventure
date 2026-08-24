@@ -5,6 +5,7 @@
 	import EmptyState from '$lib/components/common/EmptyState.svelte';
 	import HelpButton from '$lib/components/common/HelpButton.svelte';
 	import PieceBoard, { type Piece } from '$lib/components/play/PieceBoard.svelte';
+	import MergeReveal from '$lib/components/play/MergeReveal.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { deserialize } from '$app/forms';
 	import { goto } from '$app/navigation';
@@ -224,23 +225,21 @@
 				</div>
 			</div>
 		{:else if justMade}
-			<div class="reveal" data-testid="quiz-made">
-				<span class="hanja reveal-char">{justMade.character}</span>
-				<span class="font-display text-lg text-ink-900" data-testid="quiz-made-gloss">
-					{justMade.meaning}
-					{justMade.reading}
-				</span>
-				<p class="reveal-story">{justMade.story}</p>
-				<Button
-					variant="magic"
-					size="md"
-					onclick={() => {
+			<!--
+				합체 결과는 세 화면이 **같은 것**을 쓴다.
+				여기만 글자·뜻음·이야기 셋뿐이라 같은 사건인데 혼자 썰렁했다.
+			-->
+			<div data-testid="quiz-made">
+				<MergeReveal
+					character={justMade.character}
+					reading={justMade.reading}
+					meaning={justMade.meaning}
+					story={justMade.story}
+					onclose={() => {
 						justMade = null;
 						if (pieces.length === 0) finished = true;
 					}}
-				>
-					좋아!
-				</Button>
+				/>
 			</div>
 		{:else}
 			<div class="play">
@@ -323,8 +322,7 @@
 		align-content: center;
 	}
 
-	.done,
-	.reveal {
+	.done {
 		display: grid;
 		align-content: center;
 		justify-items: center;
@@ -334,18 +332,6 @@
 		background: linear-gradient(180deg, #eef4ff 0%, #f6ecff 100%);
 		box-shadow: var(--shadow-card);
 		text-align: center;
-	}
-
-	.reveal-char {
-		font-size: 3.5rem;
-		line-height: 1;
-		color: var(--color-magic-800);
-	}
-
-	.reveal-story {
-		max-width: 20rem;
-		color: var(--color-ink-700);
-		font-size: 0.85rem;
 	}
 
 	.made {

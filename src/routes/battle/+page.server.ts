@@ -2,11 +2,10 @@ import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getDb } from '$lib/server/db';
 import { learnedCountByArea } from '$lib/server/db/hanja';
-import { bossWinAreas } from '$lib/server/db/battle';
+import { bossWinAreas, planFor, sealLimitFor, sealLimitOf } from '$lib/server/db/battle';
 import { evaluateAreaUnlocks, getArea } from '$lib/game/areas';
 import { expToNextLevel } from '$lib/game/exp';
 import { statsFor } from '$lib/server/db/shop';
-import { planFor, sealLimitFor } from '$lib/server/db/battle';
 import { loadWorkshop } from '$lib/server/db/fusion';
 
 /**
@@ -37,15 +36,20 @@ export const load: PageServerLoad = async ({ locals, platform, url }) => {
 	 * 봉인은 이 키에서 유도되므로, 클라이언트가 키를 고르게 두면
 	 * 마음에 드는 봉인이 나올 때까지 키를 바꿔 볼 수 있다.
 	 */
-	const sessionKey = crypto.randomUUID();
-
 	/*
 	 * 아직 한 번도 합체해 본 적 없는 아이에게는 봉인 하나만 내고 손 시범을 보인다.
 	 * 무엇을 하는 화면인지 **글이 아니라 몸짓으로** 알려 주기 위해서다.
 	 */
 	const workshop = await loadWorkshop(db, locals.user.id);
 	const discovered = workshop.discovered.length;
-	const plan = await planFor(db, locals.user.id, sessionKey, area.id, sealLimitFor(discovered));
+
+	/*
+	 * 세션 키 앞에 **이번 판의 봉인 수**를 박는다.
+	 * 서버가 나중에 "화면에 몇 개가 깔렸었나" 를 판 도중 변하는 값(discovered)에
+	 * 기대지 않고 알 수 있어야 한다 — `sealLimitOf` 주석 참고.
+	 */
+	const sessionKey = `${sealLimitFor(discovered)}-${crypto.randomUUID()}`;
+	const plan = await planFor(db, locals.user.id, sessionKey, area.id, sealLimitOf(sessionKey));
 
 	// 장비 보너스가 더해진 최종 능력치 (서버에서 계산한다)
 	const stats = await statsFor(db, locals.user.id, locals.user.characterClass);

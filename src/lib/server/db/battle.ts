@@ -83,6 +83,22 @@ export function sealLimitFor(discovered: number): number {
 	return SEALS_PER_BATTLE;
 }
 
+/**
+ * 이번 판에 화면へ 깔린 봉인 수를 **세션 키에서 읽는다.**
+ *
+ * 왜 다시 계산하지 않는가: `sealLimitFor(discovered)` 는 아이가 만들어 본 한자 수를 보는데,
+ * `attack()` 이 봉인을 깰 때마다 결과 한자를 진도에 넣으므로 **판 도중에 discovered 가 는다.**
+ * 다시 계산하면 봉인 하나를 깬 순간 limit 이 1→2 로 올라, 판을 정직하게 다 비운 아이가
+ * "2개 중 1개" 로 재판정돼 패배 기록을 받는다. 키에 박아 두면 판이 끝날 때까지 고정이다.
+ *
+ * 형식은 `"<limit>-<uuid>"`. 파싱이 안 되면 안전한 최대값으로 본다.
+ */
+export function sealLimitOf(sessionKey: string): number {
+	const n = Number(sessionKey.split('-')[0]);
+	if (!Number.isInteger(n) || n < 1 || n > SEALS_PER_BATTLE) return SEALS_PER_BATTLE;
+	return n;
+}
+
 /** 이 아이가 각 한자를 얼마나 익혔는지 (없으면 0 = 처음 보는 것) */
 async function masteryOf(
 	db: D1Database,
@@ -124,33 +140,87 @@ async function lookup(db: D1Database, chars: string[]): Promise<Map<string, Hanj
  * 해야 답이 어긋나지 않는다. 아이의 진도에 따라 풀이 달라지면 판 도중에 정답이 바뀐다.
  */
 export function derive(userId: string, sessionKey: string, areaId: number): FusionRecipe[] {
-	const pool = poolForArea(areaId);
 	const seed = seedOf(userId, sessionKey);
+
 	/*
-	 * **쉬운 레인만 한 지역 앞을 본다.**
-	 *
-	 * 새싹 마을의 beginner 후보는 明·林 둘뿐이라 첫 대결이 늘 「明 林 + 추상어 하나」였다.
-	 * 그 하나는 항상 星·本·天·間 중 하나인데, 間 은 바로 위 주석이 지목한 그 조합이고
-	 * 本(밑동)·天 도 여덟 살에게는 그림에서 뜻으로 가는 길이 없다.
-	 *
-	 * `tierOf` 게이트를 한 칸 여는 것이 여기서 안전한 이유:
-	 * 판에 깔리는 조각은 `planFor` 가 아이의 보유 여부와 **무관하게** 조합의 부품을 그대로 펼치고,
-	 * 모든 부품에는 그림이 있다(`pictographs.spec.ts` 가 강제한다).
-	 * 즉 "부품을 본 적도 없는 문제" 걱정은 추상어가 섞이는 rest 레인에서 유효하지,
-	 * 그림 두 장으로 결과가 짐작되는 beginner 레인에는 해당하지 않는다.
-	 * 실제 효과: 새싹 마을 봉인 세 개가 전부 beginner 가 되고 好(女+子)가 들어온다.
+	 * **지역 1 은 예외다.** beginner 후보가 정확히 明·林·好 셋뿐이라 고를 여지가 없고,
+	 * 여기에 다양성을 만들려면 星·本·天·間 중 하나를 초심자용으로 올려야 하는데
+	 * 그건 위 주석이 지목한 바로 그 함정이다(그림을 다 알아도 뜻이 안 따라온다).
+	 * `battle.spec.ts` 가 지키는 자리이기도 하다.
 	 */
-	const easy = sealsFrom(
-		`${seed}:easy`,
-		SEAL_RECIPES.filter((r) => r.beginner && tierOf(r) <= areaId + 1),
-		SEALS_PER_BATTLE
-	);
-	const rest = sealsFrom(
-		`${seed}:rest`,
-		pool.filter((r) => !r.beginner),
-		SEALS_PER_BATTLE
-	);
-	return [...easy, ...rest].slice(0, SEALS_PER_BATTLE);
+	if (areaId <= 1) {
+		return sealsFrom(
+			`${seed}:easy`,
+			SEAL_RECIPES.filter((r) => r.beginner && tierOf(r) <= areaId + 1),
+			SEALS_PER_BATTLE
+		);
+	}
+
+	/*
+	 * **이 마을 닻 하나 + 지나온 마을 복습 둘.**
+	 *
+	 * 예전에는 `[...easy, ...rest].slice(0, 3)` 이었는데, easy 후보(明·林·好)가 전 지역에서
+	 * 항상 3개 이상이라 **rest 레인이 100% 버려졌다.** 그래서 지역 1~5 의 보스가 전부
+	 * 똑같이 明·林·好 였고, 18종 중 13종은 어느 지역에서도 나오지 않았으며,
+	 * **9지역 최종 보스마저 8급 글자만 물었다.** 사용자가 "이번 마을에서 배운 걸로 하는 게
+	 * 맞느냐" 고 물은 것이 정확했다.
+	 *
+	 * "이 마을 글자로만" 은 데이터가 허용하지 않는다 — 부품이 전부 그 마을 글자인 조합은
+	 * 일곱 마을에서 0개다(봉인 부품 20자 중 10자를 지역 1이 독점한다).
+	 * 그래서 **부품 하나 이상이 이 마을 글자**인 것을 닻으로 삼는다. 그것이 최대치다.
+	 */
+	const pool = poolForArea(areaId);
+	const anchors = pool.filter((r) => r.parts.some((p) => (AREA_OF.get(p) ?? 99) === areaId));
+
+	const picked: FusionRecipe[] = [];
+	const used: string[] = [];
+
+	/**
+	 * 이미 고른 봉인들의 부품만으로 만들 수 있는 조합은 **넣지 않는다.**
+	 *
+	 * 안 막으면 이런 판이 생긴다: 화면에는 봉인 2개만 깔렸는데(`sealLimitFor`),
+	 * 판 위 조각으로 화면에 없는 3번째 봉인이 만들어진다. 그 조각 둘이 사라지고
+	 * 남은 것끼리는 안 붙어 판이 영영 안 비고, `finish()` 가 아예 안 불린다.
+	 * **보스 승리가 지역 해금 조건이므로 그 순간 지도 전체가 잠긴다.**
+	 */
+	function fitsInsideUsed(recipe: FusionRecipe): boolean {
+		const bag = [...used];
+		for (const part of recipe.parts) {
+			const at = bag.indexOf(part);
+			if (at < 0) return false;
+			bag.splice(at, 1);
+		}
+		return true;
+	}
+
+	function take(candidates: readonly FusionRecipe[], salt: string, count: number) {
+		for (const recipe of sealsFrom(`${seed}:${salt}`, candidates, candidates.length)) {
+			if (picked.length >= SEALS_PER_BATTLE) return;
+			if (count <= 0) return;
+			if (picked.some((p) => p.result === recipe.result)) continue;
+			if (fitsInsideUsed(recipe)) continue;
+			picked.push(recipe);
+			used.push(...recipe.parts);
+			count -= 1;
+		}
+	}
+
+	// 닻 하나. 후보가 없으면 창을 한 칸 넓히고, 그래도 없으면 복습만으로 채운다
+	take(anchors, 'anchor', 1);
+	if (picked.length === 0) {
+		take(
+			pool.filter((r) => r.parts.some((p) => (AREA_OF.get(p) ?? 99) >= areaId - 1)),
+			'anchor2',
+			1
+		);
+	}
+
+	// 나머지는 지나온 마을 복습
+	take(pool, 'review', SEALS_PER_BATTLE - picked.length);
+	// 그래도 모자라면 지역 상한을 무시하고 채운다 (봉인 수를 못 채우는 것보다 낫다)
+	take(SEAL_RECIPES, 'fill', SEALS_PER_BATTLE - picked.length);
+
+	return picked;
 }
 
 /** 이번 판에서 이미 깬 봉인 번호 */
@@ -249,6 +319,16 @@ export async function attack(
 	const recipes = derive(userId, sessionKey, areaId);
 	const sealIndex = recipes.findIndex((r) => r.result === recipe.result);
 
+	/*
+	 * **화면에 안 깔린 봉인은 인정하지 않는다.**
+	 *
+	 * `planFor` 는 `sealLimit` 개만 깔지만 `derive` 는 늘 3개를 낸다. 그래서 판 위 조각으로
+	 * 화면에 없는 3번째 봉인을 만들 수 있으면, 그 조각 둘이 사라지고 남은 것끼리는 안 붙어
+	 * 판이 영영 안 빈다 — `finish()` 가 아예 안 불리고, 보스 승리가 해금 조건이므로
+	 * 그 순간 지도 전체가 잠긴다. `derive` 가 구조적으로 막지만 여기서 한 번 더 막는다.
+	 */
+	const visible = sealLimitOf(sessionKey);
+
 	const row = await db
 		.prepare('SELECT * FROM hanjas WHERE character = ?')
 		.bind(recipe.result)
@@ -289,7 +369,7 @@ export async function attack(
 	);
 
 	// 조합표에는 있지만 이번 봉인이 아니다 — 한자는 얻었으니 헛수고는 아니다
-	if (sealIndex < 0) return { ok: false, reason: 'not-target' };
+	if (sealIndex < 0 || sealIndex >= visible) return { ok: false, reason: 'not-target' };
 
 	// 봉인 파괴 기록. PRIMARY KEY 가 중복 정산을 막는다
 	const broke = await db

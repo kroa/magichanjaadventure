@@ -269,6 +269,78 @@ test.describe('아이의 첫 모험', () => {
 		await expect(page.locator('button.piece').first()).toBeVisible();
 	});
 
+	test('첫 글자는 획을 따라 그어서 배운다', async ({ page }, testInfo) => {
+		/*
+		 * 새싹 마을의 몇몇 글자는 획순 데이터가 있어 **한 획씩 따라 긋는다.**
+		 * 나머지는 지금까지처럼 흙을 판다 — 좌표를 눈으로 확인하지 못한 글자에
+		 * 통로를 그리면 아이가 글자 없는 자리를 문지르게 되기 때문이다.
+		 *
+		 * 첫 글자 一 은 획이 하나라 가로로 한 번 그으면 끝난다.
+		 */
+		await signUp(page, 'stroke', `${testInfo.project.name}${testInfo.workerIndex}s`);
+		await pickWizard(page);
+		await gotoReady(page, '/learn');
+
+		const glyph = page.getByTestId('trace-glyph');
+		await expect(glyph).toBeVisible();
+
+		/*
+		 * **먼저 보여 주고, 그 다음에 시킨다.**
+		 *
+		 * 처음 보는 글자에 통로만 띄우면 아이는 따라 그릴 뿐 획순을 배우지 못한다.
+		 * 그래서 흙을 걷고 획을 순서대로 써 보인 뒤 다시 덮는다.
+		 *
+		 * 시범 상태는 화면을 연 **직후 한 번에** 읽는다 — 시범은 2초 남짓이라
+		 * 다른 검사를 먼저 하고 나서 보면 이미 끝나 있을 수 있다.
+		 */
+		const stage = page.locator('[data-intro]');
+		const opening = await stage.getAttribute('data-intro');
+
+		// 획순 데이터가 없는 글자면(흙 파기) 이 검사는 건너뛴다
+		if (opening === 'none') return;
+		expect(opening, '배우기를 열면 획순 시범부터 돈다').toBe('playing');
+
+		await expect(page.getByText('금색 선을 따라')).toBeVisible();
+		await expect(stage, '시범이 끝나면 아이 차례로 넘어간다').toHaveAttribute(
+			'data-intro',
+			'done',
+			{
+				timeout: 15_000
+			}
+		);
+
+		// 한 번 보고 못 외우는 게 정상이라 언제든 다시 부를 수 있다
+		await page.getByTestId('stroke-replay').click();
+		await expect(page.getByText('이렇게 써요')).toBeVisible();
+		// 시범은 글자의 **모든** 획을 보여 준다 (따라 그릴 때는 한 획씩만 보인다)
+		const drawn = await page.locator('.guide .lane.draw').count();
+		const total = Number(await stage.getAttribute('data-strokes'));
+		expect(total).toBeGreaterThan(0);
+		expect(drawn, '시범이 일부 획만 보여 준다').toBe(total);
+
+		await expect(stage).toHaveAttribute('data-intro', 'done', { timeout: 15_000 });
+
+		const box = await glyph.boundingBox();
+		expect(box).not.toBeNull();
+
+		/*
+		 * 一 의 중심선은 상자 기준 (14,50)→(86,50) 이다.
+		 * 조금 넉넉하게 잡아 좌우로 더 긋는다 — 아이 손도 정확하지 않다.
+		 */
+		const y = box!.y + box!.height * 0.5;
+		await page.mouse.move(box!.x + box!.width * 0.12, y);
+		await page.mouse.down();
+		for (let t = 0.12; t <= 0.9; t += 0.06) {
+			await page.mouse.move(box!.x + box!.width * t, y);
+		}
+		await page.mouse.up();
+
+		// 다 그으면 저절로 제출된다 — 버튼을 한 번 더 누르지 않는다
+		await expect(page.getByTestId('learn-done'), '획을 다 그었는데 배우기가 안 끝났다').toBeVisible(
+			{ timeout: 15_000 }
+		);
+	});
+
 	test('로그인하지 않으면 게임 화면에 들어갈 수 없다', async ({ page }) => {
 		for (const path of ['/', '/learn', '/quiz', '/collection', '/battle']) {
 			await page.goto(path);

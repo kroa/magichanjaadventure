@@ -95,7 +95,7 @@ test('복습을 끝낸 뒤 "한 판 더!"를 누르면 새 판이 시작된다',
 			 * 비어 있던 것은 이 줄 하나였다.
 			 */
 			await expect(
-				page.getByTestId('quiz-made-gloss'),
+				page.getByTestId('merge-gloss'),
 				'만든 글자의 뜻·음 줄이 비어 있다'
 			).toContainText(/[가-힣]/);
 		}

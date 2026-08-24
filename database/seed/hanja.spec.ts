@@ -125,3 +125,55 @@ describe('한자 시드 데이터', () => {
 		}
 	});
 });
+
+describe('획수', () => {
+	it('부수를 세는 방식이 글자마다 어긋나지 않는다', () => {
+		/*
+		 * 배우기 화면이 획수를 **인쇄만** 할 때는 틀려도 티가 안 났다.
+		 * 획을 실제로 세는 화면이 생기면 아이가 긋는 횟수와 어긋난다.
+		 *
+		 * 시드 안에서 서로 모순되던 것들을 고쳤다:
+		 *   丁 5→2 · 蠶 10→24 · 藏 14→17 (명백한 오류)
+		 *   運 12→13 · 遠 13→14 · 選 15→16 (辶 을 3획으로 센 것 — 近·道·速·週 는 4획으로 센다)
+		 *   朗 10→11 (같은 시드의 良 7 + 月 4)
+		 */
+		const by = new Map(HANJA_SEED.map((h) => [h.character, h.strokeCount]));
+		const expected: Record<string, number> = {
+			丁: 2,
+			蠶: 24,
+			藏: 17,
+			運: 13,
+			遠: 14,
+			選: 16,
+			朗: 11
+		};
+		for (const [ch, n] of Object.entries(expected)) {
+			expect(by.get(ch), `${ch} 의 획수`).toBe(n);
+		}
+	});
+
+	it('辶 이 든 글자는 모두 같은 방식으로 센다', () => {
+		// 부수 하나를 글자마다 다르게 세면 아이가 배우는 규칙이 무너진다
+		const by = new Map(HANJA_SEED.map((h) => [h.character, h.strokeCount]));
+		const cases: [string, number][] = [
+			['近', 8],
+			['道', 13],
+			['速', 11],
+			['週', 12],
+			['運', 13],
+			['遠', 14],
+			['選', 16]
+		];
+		for (const [ch, n] of cases) {
+			if (!by.has(ch)) continue;
+			expect(by.get(ch), `${ch}`).toBe(n);
+		}
+	});
+
+	it('획수가 1 이상이고 30 이하다', () => {
+		for (const h of HANJA_SEED) {
+			expect(h.strokeCount, `${h.character}`).toBeGreaterThanOrEqual(1);
+			expect(h.strokeCount, `${h.character}`).toBeLessThanOrEqual(30);
+		}
+	});
+});

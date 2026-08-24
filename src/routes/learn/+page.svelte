@@ -141,9 +141,16 @@
 						size={208}
 						texture={data.area.soil}
 						accent={data.area.accent}
+						strokes={data.strokes}
 						oncomplete={() => claimForm?.requestSubmit()}
 					/>
-					<p class="stage-line">흙을 문질러 한자를 파내 보세요</p>
+					<p class="stage-line">
+						{#if data.strokes}
+							쓰는 순서를 보여 줄게요 · 금색 선을 따라 한 획씩 그어 보세요
+						{:else}
+							흙을 문질러 한자를 파내 보세요
+						{/if}
+					</p>
 				</section>
 			{/if}
 
