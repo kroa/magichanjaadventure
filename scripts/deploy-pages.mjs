@@ -49,6 +49,22 @@ if (dryRun) {
 	process.exit(0);
 }
 
+/*
+ * **코드보다 표를 먼저 올린다.**
+ *
+ * 이걸 안 해서 실제로 사고가 났다. 낱말 놀이를 배포했는데 `user_words` 표는
+ * 로컬 D1 에만 있었다 — 운영에서는 화면을 열자마자 500 이 났고,
+ * 아이에게는 "문제가 생겼어요" 한 줄만 보였다.
+ *
+ * `scripts/db.mjs` 는 안전을 위해 `--remote` 를 거부한다. 그래서 운영 스키마를
+ * 올릴 길이 어디에도 없었다. 배포가 그 자리를 맡는다.
+ *
+ * 순서가 중요하다: **배포 전에** 적용해야 새 코드가 뜨는 순간 표가 이미 있다.
+ * 반대로 하면 그 사이에 접속한 아이가 깨진 화면을 본다.
+ */
+console.log('[deploy-pages] 운영 D1 마이그레이션 적용...');
+run(wranglerBin, ['d1', 'migrations', 'apply', 'DB', '--remote']);
+
 console.log('[deploy-pages] Pages 프로젝트 확인...');
 run(
 	wranglerBin,

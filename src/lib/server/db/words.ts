@@ -1,4 +1,4 @@
-import { orderWordRound, joinWord, type Word } from '$lib/game/words';
+import { orderWordRound, joinWord, WORDS, type Word } from '$lib/game/words';
 
 /**
  * 낱말 놀이 — 서버 쪽.
@@ -46,7 +46,6 @@ export async function loadWordRound(
 	const goals = orderWordRound(owned, discovered, focus, round);
 
 	// 진행 표시용 — 지금 만들 수 있는 낱말 전체 수
-	const { WORDS } = await import('$lib/game/words');
 	const makeable = WORDS.filter((w) => owned.has(w.head) && owned.has(w.tail)).length;
 
 	return { goals, discovered: [...discovered], makeable, owned };

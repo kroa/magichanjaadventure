@@ -33,19 +33,36 @@
 	let sparks = $state<{ id: number; x: number; y: number }[]>([]);
 
 	let sparkId = 0;
-	let sinceCheck = 0;
 	let lastSound = 0;
+	let lastMeasure = 0;
+	/** 직전 붓 위치 — 여기서 현재 점까지 이어 판다 */
+	let last: { x: number; y: number } | null = null;
+
+	/*
+	 * `willReadFrequently` 를 켠다.
+	 *
+	 * 진행률을 재려면 `getImageData` 를 반복해서 부르는데, 기본 컨텍스트는 GPU 에 있어서
+	 * 부를 때마다 동기 전송이 일어나 프레임이 선다. 이 힌트를 주면 브라우저가
+	 * 캔버스를 CPU 쪽에 두어 읽기가 싸진다.
+	 */
+	function context(el: HTMLCanvasElement): CanvasRenderingContext2D | null {
+		return el.getContext('2d', { willReadFrequently: true });
+	}
 
 	/**
 	 * 이만큼 걷어내면 다 찾은 것으로 본다.
 	 *
-	 * 처음에 절반(0.52)으로 잡았더니 **너무 오래 문질러야 했다.**
-	 * 글자가 이미 다 보이는데도 구석의 흙이 남아 안 끝나는 일이 잦다 —
-	 * 그때부터는 배우는 게 아니라 노동이다. 가운데만 훑어도 끝나도록 낮췄다.
+	 * 처음에 절반(0.52)으로 잡았더니 **너무 오래 문질러야 했다.** 0.26 으로 낮췄는데도
+	 * 여전히 오래 걸린다는 말을 들었다 — 진짜 원인은 기준값이 아니라
+	 * 붓질 사이가 끊겨 있던 것이었다(아래 dig 주석 참고).
+	 *
+	 * 이제 궤적이 이어지므로 한 번 가로지르면 29% 가 걷힌다.
+	 * 기준을 0.40 으로 **올려** 잡았다 — 낮추면 손이 한 번 스치기만 해도 끝나 버려서
+	 * 파냈다는 느낌이 사라진다. 가로 한 번 · 세로 한 번이면 끝난다.
 	 */
-	const CLEARED = 0.26;
+	const CLEARED = 0.4;
 	/** 붓 굵기 — 아이 손가락은 굵다 */
-	const BRUSH = 32;
+	const BRUSH = 30;
 
 	/*
 	 * **발굴**.
@@ -63,7 +80,7 @@
 	) {
 		const el = canvas;
 		if (!el) return;
-		const ctx = el.getContext('2d');
+		const ctx = context(el);
 		if (!ctx) return;
 
 		const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -113,10 +130,20 @@
 		}
 	}
 
-	function dig(clientX: number, clientY: number) {
+	/**
+	 * 손가락이 지나간 **자리를 이어서** 판다.
+	 *
+	 * 예전에는 `pointermove` 가 올 때마다 원을 하나씩 찍기만 했다. 그래서 빠르게 긁으면
+	 * 원들이 **뚝뚝 떨어져** 실제로 지워지는 면적이 눈에 보이는 궤적보다 훨씬 작았다.
+	 * 아이는 분명히 여러 번 문질렀는데 흙이 안 걷혔다 — "긁는 게 잘 안 된다" 의 정체가 이것이다.
+	 *
+	 * 이제 직전 점과 현재 점을 **굵은 선**으로 잇는다. 손가락 속도와 무관하게
+	 * 지나간 자리가 전부 걷힌다.
+	 */
+	function dig(clientX: number, clientY: number, continued: boolean) {
 		const el = canvas;
 		if (!el || finished) return;
-		const ctx = el.getContext('2d');
+		const ctx = context(el);
 		if (!ctx) return;
 
 		const box = el.getBoundingClientRect();
@@ -124,9 +151,21 @@
 		const y = clientY - box.top;
 
 		ctx.globalCompositeOperation = 'destination-out';
-		ctx.beginPath();
-		ctx.arc(x, y, BRUSH, 0, Math.PI * 2);
-		ctx.fill();
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = BRUSH * 2;
+
+		if (continued && last) {
+			ctx.beginPath();
+			ctx.moveTo(last.x, last.y);
+			ctx.lineTo(x, y);
+			ctx.stroke();
+		} else {
+			ctx.beginPath();
+			ctx.arc(x, y, BRUSH, 0, Math.PI * 2);
+			ctx.fill();
+		}
+		last = { x, y };
 
 		// 흙먼지가 튄다
 		sparkId += 1;
@@ -140,33 +179,51 @@
 			sound.play('click');
 		}
 
-		sinceCheck += 1;
-		if (sinceCheck < 6) return;
-		sinceCheck = 0;
+		/*
+		 * 얼마나 걷었는지는 **시간으로** 띄엄띄엄 잰다.
+		 *
+		 * `getImageData` 는 GPU→CPU 동기 전송이라 부를 때마다 프레임이 선다.
+		 * 예전에는 붓질 6번마다 불렀는데, 빠르게 긁으면 그게 곧 초당 여러 번이라
+		 * 그때마다 move 이벤트가 유실되고 점 사이가 더 벌어졌다 — 악순환이었다.
+		 */
+		if (now - lastMeasure < 120) return;
+		lastMeasure = now;
 		measure(ctx, el);
 	}
 
 	function down(event: PointerEvent) {
 		if (finished) return;
 		digging = true;
+		last = null;
 		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-		dig(event.clientX, event.clientY);
+		dig(event.clientX, event.clientY, false);
 	}
 
 	function move(event: PointerEvent) {
 		if (!digging) return;
-		dig(event.clientX, event.clientY);
+		/*
+		 * 브라우저는 여러 개의 포인터 표본을 하나의 move 로 뭉쳐 보낸다.
+		 * 뭉친 것을 풀어 전부 훑어야 빠른 손짓에서도 궤적이 끊기지 않는다.
+		 */
+		const points = event.getCoalescedEvents?.() ?? [];
+		if (points.length > 1) {
+			for (const p of points) dig(p.clientX, p.clientY, true);
+			return;
+		}
+		dig(event.clientX, event.clientY, true);
 	}
 
 	function up() {
 		digging = false;
+		last = null;
 	}
 
 	$effect(() => {
 		// 다른 한자로 넘어가면 흙을 새로 덮는다 — 두 값을 인자로 넘겨야 의존성이 잡힌다
 		finished = false;
 		progress = 0;
-		sinceCheck = 0;
+		lastMeasure = 0;
+		last = null;
 		paintDirt(character, size, texture);
 	});
 </script>
