@@ -58,12 +58,28 @@ describe('획순 데이터', () => {
 		}
 	});
 
-	it('획순으로 배울 수 있는 글자는 전부 새싹 마을에 있다', () => {
-		// 마을마다 규칙이 바뀌면 아이가 게임이 아니라 화면 사용법을 배우게 된다
-		const area1 = new Set(HANJA_SEED.filter((h) => h.areaId === 1).map((h) => h.character));
+	/**
+	 * 획순은 **앞 마을부터 빈틈없이** 덮어야 한다.
+	 *
+	 * 한 마을 안에서 어떤 글자는 획을 긋고 어떤 글자는 흙을 파면, 아이는 게임이 아니라
+	 * 화면 사용법을 배우게 된다. 처음에 15자만 있었을 때 실제로 그랬다 —
+	 * 아이가 이미 배운 자리를 지나가 버려서 획순 화면을 한 번도 못 만났다.
+	 *
+	 * 뒤 마을로 넓힐 때는 그 마을을 통째로 덮고 여기 숫자를 올린다.
+	 */
+	const COVERED_AREAS = [1, 2];
+	/** 통째로 덮지 못한 글자와 그 이유 (stroke-data.ts 머리말에 사유가 적혀 있다) */
+	const EXCEPTIONS = new Set(['萬']);
+
+	it('덮은 마을은 통째로 덮고, 그 바깥 글자는 넣지 않는다', () => {
+		const inCovered = new Set(
+			HANJA_SEED.filter((h) => COVERED_AREAS.includes(h.areaId)).map((h) => h.character)
+		);
 		for (const ch of Object.keys(STROKES)) {
-			expect(area1.has(ch), `${ch} 은 새싹 마을 글자가 아니다`).toBe(true);
+			expect(inCovered.has(ch), `${ch} 은 획순을 덮기로 한 마을 글자가 아니다`).toBe(true);
 		}
+		const missing = [...inCovered].filter((ch) => !STROKES[ch] && !EXCEPTIONS.has(ch));
+		expect(missing, `획순이 빠진 글자가 있다: ${missing.join(' ')}`).toEqual([]);
 	});
 
 	it('strokesOf 는 없는 글자에 null 을 준다 — 그 글자는 흙을 판다', () => {

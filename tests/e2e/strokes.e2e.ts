@@ -21,6 +21,15 @@ import { waitForFonts } from '../helpers/screens';
 
 /** 표본 하나가 잉크에서 이만큼(0..100 단위) 넘게 떨어져 있으면 통로가 글자를 벗어난 것이다 */
 const TOLERANCE = 3.5;
+/**
+ * 표본 중 이만큼 넘게 잉크 **밖**에 있으면 통로가 빈 곳을 건너는 것이다.
+ *
+ * 거리만 재면 좁은 틈을 못 잡는다 — 틈 한가운데서도 사방 2~3단위면 잉크가 잡히기 때문이다.
+ * 金 의 가로획을 글자 전폭으로 그었을 때 통로가 삐침·파임 다리 사이의 빈 곳을 두 번
+ * 건넜는데도 이탈은 1.5 로 통과했다. 그래서 **표본이 잉크 위에 있는가** 를 따로 센다.
+ */
+const HOLES = 0.1;
+
 /** 재는 상자 크기(px). 클수록 정밀하지만 느리다 */
 const CELL = 400;
 
@@ -59,7 +68,21 @@ test('획순 통로가 실제 글자 위에 있다', async ({ page }, testInfo) 
 			},
 			{ ch, em: GLYPH_EM, shift: GLYPH_SHIFT, cell: CELL }
 		);
-		await page.evaluate(() => document.fonts.ready);
+		/*
+		 * **그 글자의 서브셋이 실릴 때까지 기다린다.**
+		 *
+		 * 한자 폰트는 unicode-range 로 100여 개 파일로 쪼개져 있어서, 화면에 없는 글자의
+		 * 조각은 받아오지 않는다. `document.fonts.ready` 는 *지금 받는 중인 것*만 기다리므로
+		 * 방금 넣은 글자에는 소용이 없다 — 대체 글꼴로 찍힌 그림을 재게 된다.
+		 * 실제로 그렇게 재는 바람에 十·中·白 이 "빈 곳을 건넌다" 로 잘못 걸렸다.
+		 */
+		await page.evaluate(
+			async ({ ch, px }) => {
+				await document.fonts.load(`400 ${px}px "Noto Sans KR"`, ch);
+				await document.fonts.ready;
+			},
+			{ ch, px: Math.round(CELL * GLYPH_EM) }
+		);
 
 		const shot = (await page.locator('#ink-probe').screenshot()).toString('base64');
 
@@ -79,11 +102,13 @@ test('획순 통로가 실제 글자 위에 있다', async ({ page }, testInfo) 
 					x >= 0 && y >= 0 && x < cell && y < cell && d[((y | 0) * cell + (x | 0)) * 4] < 140;
 
 				const limit = Math.ceil((tolerance / 100) * cell);
-				const out: { stroke: number; away: number; at: [number, number] }[] = [];
+				const out: { stroke: number; away: number; at: [number, number]; hole: number }[] = [];
 				strokes.forEach((samples, i) => {
 					let away = 0;
+					let off = 0;
 					let at: [number, number] = [0, 0];
 					for (const [ux, uy] of samples) {
+						if (!ink((ux / 100) * cell, (uy / 100) * cell)) off += 1;
 						const px = (ux / 100) * cell;
 						const py = (uy / 100) * cell;
 						let best = Infinity;
@@ -102,7 +127,7 @@ test('획순 통로가 실제 글자 위에 있다', async ({ page }, testInfo) 
 							at = [Math.round(ux), Math.round(uy)];
 						}
 					}
-					out.push({ stroke: i + 1, away, at });
+					out.push({ stroke: i + 1, away, at, hole: off / samples.length });
 				});
 				return out;
 			},
@@ -119,6 +144,10 @@ test('획순 통로가 실제 글자 위에 있다', async ({ page }, testInfo) 
 				failures.push(
 					`${ch} ${w.stroke}획: (${w.at[0]},${w.at[1]}) 근처에 잉크가 없다 ` +
 						`— ${w.away.toFixed(1)}단위 벗어남`
+				);
+			} else if (w.hole > HOLES) {
+				failures.push(
+					`${ch} ${w.stroke}획: 통로가 빈 곳을 건넌다 — 표본의 ${(w.hole * 100).toFixed(0)}% 가 잉크 밖`
 				);
 			}
 		}
