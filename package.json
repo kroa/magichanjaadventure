@@ -29,7 +29,8 @@
 		"build:pages": "vite build",
 		"deploy:pages": "node scripts/deploy-pages.mjs",
 		"fonts": "node scripts/fetch-fonts.mjs",
-		"stroke:atlas": "node --experimental-strip-types scripts/stroke-atlas.mjs"
+		"stroke:atlas": "node --experimental-strip-types scripts/stroke-atlas.mjs",
+		"shots:readme": "README_SHOTS=1 playwright test tests/visual/readme.e2e.ts --project=desktop"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

@@ -29,8 +29,9 @@
 			<h1 class="on-sky text-display-lg">획순 확인</h1>
 			<p class="mt-1 text-sm text-white/85">
 				금색 선이 아이가 따라 그을 통로입니다. 글자에서 벗어난 획이 있으면 그 글자는
-				<strong>데이터에서 빼야 합니다</strong> — 틀린 통로는 없느니만 못합니다. 지금 {entries.length}자
-				/ 새싹 마을 50자.
+				<strong>데이터에서 빼야 합니다</strong> — 틀린 통로는 없느니만 못합니다. 지금 {entries.length}자.
+				좌표가 실제 글자 위에 있는지는 <code>tests/e2e/strokes.e2e.ts</code> 가 폰트를 렌더해 재고,
+				여기서는 <strong>순서와 분해</strong>를 눈으로 봅니다.
 			</p>
 		</div>
 
