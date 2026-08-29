@@ -4,6 +4,7 @@ import { gotoReady, waitForHydration } from '../helpers/app';
 import { waitForFonts } from '../helpers/screens';
 import { makeTestUser } from '../fixtures/users';
 import { dismissLevelUp, settleLevelUp } from '../helpers/learn';
+import { breakAllSeals } from '../helpers/battle';
 
 /**
  * README 에 넣을 화면을 찍는다.
@@ -118,7 +119,18 @@ test.describe('README 화면', () => {
 		});
 		// 조각이 깔리기 전에 찍으면 판이 텅 비어 보인다
 		await expect(page.locator('button.piece').first()).toBeVisible({ timeout: 15_000 });
-		await shot('battle');
+
+		/*
+		 * ── 상점 ──────────────────────────────────────────────────
+		 * 대결을 한 번 이겨 보석을 벌어 둔다. 0원짜리 상점은 그림으로 아무 말도 못 한다.
+		 */
+		await breakAllSeals(page);
+		await expect(page.getByTestId('battle-outcome')).toContainText('승리');
+		await gotoReady(page, '/shop');
+		await expect(page.getByRole('button', { name: /캐릭터/ })).toBeVisible();
+		await shot('shop-characters');
+		await page.getByRole('button', { name: /장비/ }).click();
+		await shot('shop-items');
 
 		// ── 획순 확인용 스타일가이드 ──────────────────────────────
 		await gotoReady(page, '/styleguide/strokes');

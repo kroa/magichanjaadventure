@@ -30,7 +30,9 @@
 		"deploy:pages": "node scripts/deploy-pages.mjs",
 		"fonts": "node scripts/fetch-fonts.mjs",
 		"stroke:atlas": "node --experimental-strip-types scripts/stroke-atlas.mjs",
-		"shots:readme": "README_SHOTS=1 playwright test tests/visual/readme.e2e.ts --project=desktop"
+		"shots:readme": "README_SHOTS=1 playwright test tests/visual/readme.e2e.ts --project=desktop",
+		"video:play": "PLAY_VIDEO=1 playwright test tests/visual/play-video.e2e.ts --project=desktop",
+		"video:gif": "node scripts/make-gif.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -43,6 +45,7 @@
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
+		"gifenc": "^1.0.3",
 		"globals": "^17.6.0",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.1.0",
