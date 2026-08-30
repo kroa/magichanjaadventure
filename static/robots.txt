@@ -1,3 +1,15 @@
-# allow crawling everything by default
+# 사전(/hanja)은 공개 자료라 마음껏 긁어도 된다.
+# 게임 화면은 로그인 뒤에 있어 크롤러가 봐야 의미가 없다 — 로그인으로 튕길 뿐이다.
 User-agent: *
-Disallow:
+Allow: /hanja
+Disallow: /learn
+Disallow: /battle
+Disallow: /quiz
+Disallow: /fusion
+Disallow: /word
+Disallow: /collection
+Disallow: /shop
+Disallow: /character
+Disallow: /styleguide
+
+Sitemap: https://magichanjaadventure.pages.dev/sitemap.xml

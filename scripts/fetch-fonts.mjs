@@ -14,7 +14,15 @@
  *
  * 생성물(static/fonts/*)은 커밋한다. 빌드나 배포 때 네트워크가 필요 없어야 한다.
  */
-import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, statSync } from 'node:fs';
+import {
+	mkdirSync,
+	writeFileSync,
+	readFileSync,
+	rmSync,
+	existsSync,
+	readdirSync,
+	statSync
+} from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
 
@@ -27,7 +35,12 @@ const UA =
 
 const FAMILIES = [
 	{ query: 'Jua', name: 'Jua' },
-	{ query: 'Noto+Sans+KR:wght@400..700', name: 'Noto Sans KR' }
+	{ query: 'Noto+Sans+KR:wght@400..700', name: 'Noto Sans KR' },
+	/*
+	 * 명조는 **사전 쪽 전용**이다. 게임은 둥근 Jua 를 쓰고 사전은 명조를 쓴다 —
+	 * 두 영역이 다른 독자를 만나기 때문이고, 서체가 그 경계를 가장 크게 만든다.
+	 */
+	{ query: 'Noto+Serif+KR:wght@400..700', name: 'Noto Serif KR' }
 ];
 
 async function fetchText(url) {
@@ -49,8 +62,25 @@ function slug(text) {
 		.replace(/^-|-$/g, '');
 }
 
+/*
+ * 폴더를 비우되 **라이선스 원문은 지키고 간다.**
+ *
+ * SIL OFL 은 폰트를 배포할 때 라이선스 사본을 함께 두라고 요구한다.
+ * 그런데 여기서 폴더를 통째로 지우는 바람에 `OFL.txt` 가 조용히 사라졌고,
+ * 폰트를 새로 받을 때마다 라이선스만 없는 상태로 배포될 뻔했다.
+ * 지우기 전에 읽어 두었다가 다시 쓴다.
+ */
+const LICENSE = resolve(OUT_DIR, 'OFL.txt');
+const keptLicense = existsSync(LICENSE) ? readFileSync(LICENSE) : null;
+
 if (existsSync(OUT_DIR)) rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
+
+if (keptLicense) {
+	writeFileSync(LICENSE, keptLicense);
+} else {
+	console.warn('[fonts] 경고: OFL.txt 가 없다. SIL OFL 은 라이선스 사본 동봉을 요구한다.');
+}
 
 const cssChunks = [
 	'/*',

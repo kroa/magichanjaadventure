@@ -1,4 +1,5 @@
 import type { Handle } from '@sveltejs/kit';
+import { building } from '$app/environment';
 import { resolveSession, SESSION_COOKIE } from '$lib/server/auth/session';
 
 /**
@@ -11,7 +12,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.sessionToken = token;
 	event.locals.user = null;
 
-	const db = event.platform?.env?.DB;
+	/*
+	 * 빌드할 때는 세션을 찾지 않는다.
+	 *
+	 * 한자 사전(/hanja)은 프리렌더로 굽는데, 그 과정에는 D1 이 없다.
+	 * 여기서 platform.env.DB 에 손을 대면 어댑터가
+	 * "Cannot access platform.env.DB in a prerenderable route" 로 빌드를 세운다.
+	 * 사전은 어차피 로그인과 무관하므로 건너뛰어도 잃는 것이 없다.
+	 */
+	const db = building ? undefined : event.platform?.env?.DB;
 	if (token && db) {
 		try {
 			event.locals.user = await resolveSession(db, token);

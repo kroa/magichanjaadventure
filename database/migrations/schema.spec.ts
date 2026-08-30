@@ -41,8 +41,14 @@ describe('스키마', () => {
 
 		for (const file of serverSources()) {
 			const src = readFileSync(file, 'utf8');
-			// SQL 문자열 안의 표 이름만 본다
-			for (const m of src.matchAll(/(?:FROM|JOIN|INTO|UPDATE)\s+([a-z_][a-z0-9_]*)\b/gi)) {
+			/*
+			 * SQL 문자열 안의 표 이름만 본다.
+			 *
+			 * 앞쪽 `\b` 가 없으면 낱말 **속**의 글자에도 걸린다 — 실제로
+			 * 사전 화면의 `buildsInto as b` 에서 `Into as` 가 `INTO <표>` 로 읽혀
+			 * `as` 라는 표를 쓴다고 신고했다.
+			 */
+			for (const m of src.matchAll(/\b(?:FROM|JOIN|INTO|UPDATE)\s+([a-z_][a-z0-9_]*)\b/gi)) {
 				const table = m[1].toLowerCase();
 				// SQL 키워드와 서브쿼리는 건너뛴다
 				if (['select', 'values', 'set', 'on', 'where'].includes(table)) continue;
