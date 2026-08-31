@@ -31,6 +31,8 @@
 
 <svelte:head>
 	<title>로그인 · 마법한자탐험대</title>
+	<!-- 로그인 폼이 검색결과에 뜨는 것은 아무에게도 도움이 안 된다 -->
+	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <!--

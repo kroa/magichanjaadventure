@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { jsonLd } from '$lib/dict/jsonld';
+	import { DICT_ORIGIN } from '$lib/sites';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const site = 'https://magichanjaadventure.pages.dev';
+	const site = DICT_ORIGIN;
 
 	/**
 	 * 구조화 데이터.

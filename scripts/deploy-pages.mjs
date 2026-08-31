@@ -16,10 +16,26 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
+import { prepareGameCopy } from './game-build.mjs';
 
 const OUTPUT_DIR = '.svelte-kit/cloudflare';
-const PROJECT_NAME = 'magichanjaadventure';
 const PRODUCTION_BRANCH = 'main';
+
+/*
+ * **한 산출물, 두 사이트.**
+ *
+ * 게임과 한자사전은 같은 코드에서 나오지만 다른 독자를 만난다. 도메인을 나눈 이유는
+ * `src/lib/sites.ts` 에 적었다 — 요약하면 광고 대상 판정과 AdSense 심사 때문이다.
+ * 어느 경로가 어느 도메인에서 열리는지는 `hooks.server.ts` 가 호스트를 보고 가른다.
+ *
+ * 둘을 **같은 명령으로 함께** 올린다. 한쪽만 올리면 두 도메인의 코드가 어긋나
+ * 리다이렉트가 서로를 물고 도는 상황이 생긴다.
+ */
+const PROJECTS = [
+	{ name: 'hanjasajeon', dir: OUTPUT_DIR, keepDict: true },
+	{ name: 'magichanjaadventure', dir: '.svelte-kit/cloudflare-game', keepDict: false }
+];
+
 const dryRun = process.argv.includes('--dry');
 
 const wranglerBin = resolve(process.cwd(), 'node_modules', 'wrangler', 'bin', 'wrangler.js');
@@ -65,23 +81,25 @@ if (dryRun) {
 console.log('[deploy-pages] 운영 D1 마이그레이션 적용...');
 run(wranglerBin, ['d1', 'migrations', 'apply', 'DB', '--remote']);
 
-console.log('[deploy-pages] Pages 프로젝트 확인...');
-run(
-	wranglerBin,
-	['pages', 'project', 'create', PROJECT_NAME, '--production-branch', PRODUCTION_BRANCH],
-	{ allowFailure: true } // 이미 있으면 실패한다 — 정상이다
-);
+for (const project of PROJECTS) {
+	if (!project.keepDict) prepareGameCopy(OUTPUT_DIR, project.dir);
 
-console.log('[deploy-pages] Cloudflare Pages 로 배포...');
-run(wranglerBin, [
-	'pages',
-	'deploy',
-	OUTPUT_DIR,
-	'--project-name',
-	PROJECT_NAME,
-	'--branch',
-	PRODUCTION_BRANCH,
-	'--commit-dirty=true'
-]);
+	console.log(`[deploy-pages] ${project.name} 배포...`);
+	run(
+		wranglerBin,
+		['pages', 'project', 'create', project.name, '--production-branch', PRODUCTION_BRANCH],
+		{ allowFailure: true } // 이미 있으면 실패한다 — 정상이다
+	);
+	run(wranglerBin, [
+		'pages',
+		'deploy',
+		project.dir,
+		'--project-name',
+		project.name,
+		'--branch',
+		PRODUCTION_BRANCH,
+		'--commit-dirty=true'
+	]);
+}
 
 console.log('[deploy-pages] 완료.');

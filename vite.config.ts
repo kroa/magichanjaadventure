@@ -26,6 +26,8 @@ export default defineConfig({
 					include: [
 						'src/**/*.{test,spec}.{js,ts}',
 						'database/**/*.{test,spec}.{js,ts}',
+						// 배포 스크립트에도 지켜야 할 규칙이 있다 (게임 배포본에 사전이 섞이지 않는가)
+						'scripts/**/*.{test,spec}.{js,ts}',
 						// E2E 는 *.e2e.ts 라서 겹치지 않는다
 						'tests/**/*.{test,spec}.{js,ts}'
 					],

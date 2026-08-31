@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DICT_ORIGIN } from '$lib/sites';
 	import { GRADES, ALL } from '$lib/dict';
 
 	const total = ALL.length;
@@ -11,7 +12,7 @@
 		name="description"
 		content="한국어문회 배정한자 8급부터 4급까지 1,000자의 훈과 음, 총획, 쓰이는 낱말을 급수별로 정리했습니다. 글자를 이루는 조각과 획순도 함께 볼 수 있습니다."
 	/>
-	<link rel="canonical" href="https://magichanjaadventure.pages.dev/hanja" />
+	<link rel="canonical" href="{DICT_ORIGIN}/hanja" />
 </svelte:head>
 
 <header class="head">

@@ -2,11 +2,12 @@
 	import StrokeOrder from '$lib/components/dict/StrokeOrder.svelte';
 	import { withParticle } from '$lib/dict';
 	import { jsonLd } from '$lib/dict/jsonld';
+	import { DICT_ORIGIN } from '$lib/sites';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const site = 'https://magichanjaadventure.pages.dev';
+	const site = DICT_ORIGIN;
 	const e = $derived(data.entry);
 	const url = $derived(`${site}/hanja/${encodeURIComponent(e.character)}`);
 

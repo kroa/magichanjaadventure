@@ -1,4 +1,5 @@
 import { ALL, GRADES } from '$lib/dict';
+import { DICT_ORIGIN } from '$lib/sites';
 import type { RequestHandler } from './$types';
 
 /**
@@ -11,7 +12,7 @@ import type { RequestHandler } from './$types';
  */
 export const prerender = true;
 
-const SITE = 'https://magichanjaadventure.pages.dev';
+const SITE = DICT_ORIGIN;
 
 export const GET: RequestHandler = () => {
 	/*
