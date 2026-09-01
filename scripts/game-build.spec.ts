@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDictArtifact } from './game-build.mjs';
+import { DICT_REDIRECTS, isDictArtifact } from './game-build.mjs';
 
 /**
  * 게임 배포본에 사전이 섞이지 않는가.
@@ -28,6 +28,17 @@ describe('게임 배포본', () => {
 		]) {
 			expect(isDictArtifact(f), `${f} 이 잘못 걸러진다`).toBe(false);
 		}
+	});
+
+	it('사전 주소를 사전 도메인으로 넘긴다', () => {
+		/*
+		 * 파일을 지우는 것만으로는 404 가 된다 — 어댑터 워커가 프리렌더 목록에 있는 경로를
+		 * SvelteKit 을 거치지 않고 정적 자산으로 넘기기 때문이다.
+		 * Pages 의 `_redirects` 는 워커보다 앞단이라 그 목록과 무관하게 동작한다.
+		 */
+		expect(DICT_REDIRECTS).toContain('/hanja/* https://hanjasajeon.pages.dev/hanja/:splat 301');
+		expect(DICT_REDIRECTS).toContain('/hanja https://hanjasajeon.pages.dev/hanja 301');
+		expect(DICT_REDIRECTS).toContain('/sitemap.xml https://hanjasajeon.pages.dev/sitemap.xml 301');
 	});
 
 	it('이름이 비슷한 것에 속지 않는다', () => {

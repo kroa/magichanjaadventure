@@ -18,33 +18,9 @@ import type { FusionRecipe } from './fusion';
  * 서버가 언제든 다시 계산해 검증할 수 있다.
  */
 
+import { rngFrom, shuffled } from './rng';
+
 export const SEALS_PER_BATTLE = 3;
-
-/** 문자열에서 뽑아낸 결정론적 난수 발생기 (mulberry32) */
-function rngFrom(seed: string): () => number {
-	let hash = 0x811c9dc5;
-	for (let i = 0; i < seed.length; i++) {
-		hash ^= seed.charCodeAt(i);
-		hash = Math.imul(hash, 0x01000193) >>> 0;
-	}
-	let state = hash;
-	return () => {
-		state = (state + 0x6d2b79f5) >>> 0;
-		let t = state;
-		t = Math.imul(t ^ (t >>> 15), t | 1);
-		t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-	};
-}
-
-function shuffled<T>(items: readonly T[], rng: () => number): T[] {
-	const out = [...items];
-	for (let i = out.length - 1; i > 0; i--) {
-		const j = Math.floor(rng() * (i + 1));
-		[out[i], out[j]] = [out[j], out[i]];
-	}
-	return out;
-}
 
 /**
  * 이 대결의 봉인을 정한다.

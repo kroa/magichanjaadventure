@@ -56,6 +56,11 @@
 	</p>
 </header>
 
+<p class="tools">
+	<a href="/hanja/급수/{data.grade}/따라쓰기">따라쓰기 활동지 (인쇄용)</a>
+	<a href="/hanja/급수/{data.grade}/퀴즈">훈·음 맞히기 퀴즈</a>
+</p>
+
 <table>
 	<caption class="sr">{data.grade} 배정한자 목록</caption>
 	<thead>
@@ -130,9 +135,33 @@
 		color: #3a3a44;
 	}
 
+	.tools {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin: 1.5rem 0 0;
+	}
+
+	.tools a {
+		display: inline-grid;
+		place-items: center;
+		min-height: 48px;
+		padding: 0 1rem;
+		border: 1px solid var(--ink);
+		color: var(--ink);
+		font-family: var(--ui);
+		font-size: 0.875rem;
+		text-decoration: none;
+	}
+
+	.tools a:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
 	table {
 		width: 100%;
-		margin-top: 1.5rem;
+		margin-top: 1.25rem;
 		border-collapse: collapse;
 	}
 

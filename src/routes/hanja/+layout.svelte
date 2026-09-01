@@ -4,6 +4,20 @@
 	let { children } = $props();
 </script>
 
+<svelte:head>
+	<!--
+		검색엔진 소유확인.
+
+		비밀값이 아니라 **공개되어야 하는** 표식이다 — 페이지에 실려야 확인이 된다.
+		사전 레이아웃에만 둔다: 게임 도메인은 검색엔진에 등록하지 않는다(robots 가 전부 막는다).
+
+		둘 다 사전 도메인 것이다. 확인이 끝난 뒤에도 지우지 말 것 —
+		없어지면 소유가 풀리고 색인 보고서를 못 본다.
+	-->
+	<meta name="naver-site-verification" content="e4bd6671e4bfdb30e5ceb53bc0059236bb99c41e" />
+	<meta name="google-site-verification" content="q_tK5fhWjYZN1cLFRjBcbVXrrMKRO0dJPEY9ISctfK4" />
+</svelte:head>
+
 <!--
 	한자사전 — **어른이 읽는 화면.**
 
@@ -22,10 +36,11 @@
 <div class="doc">
 	<header>
 		<a class="brand" href="/hanja">한자사전</a>
-		<nav aria-label="급수">
+		<nav aria-label="차례">
 			{#each GRADES as g (g.label)}
 				<a href="/hanja/급수/{g.label}">{g.label}</a>
 			{/each}
+			<a class="words" href="/hanja/낱말">낱말</a>
 		</nav>
 	</header>
 
@@ -113,6 +128,14 @@
 		letter-spacing: 0.02em;
 		text-decoration: none;
 		transition: color 0.15s ease;
+	}
+
+	/* 낱말은 급수와 성격이 다른 축이라 한 칸 띄우고 먹색으로 세워 둔다 */
+	nav a.words {
+		margin-left: 0.4rem;
+		border-left: 1px solid var(--line);
+		color: var(--ink);
+		padding-left: 0.8rem;
 	}
 
 	nav a:hover,

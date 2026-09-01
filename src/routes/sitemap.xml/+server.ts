@@ -1,4 +1,5 @@
 import { ALL, GRADES } from '$lib/dict';
+import { ALL_WORDS } from '$lib/dict/words';
 import { DICT_ORIGIN } from '$lib/sites';
 import type { RequestHandler } from './$types';
 
@@ -25,7 +26,20 @@ export const GET: RequestHandler = () => {
 	const urls = [
 		{ loc: encodeURI(`${SITE}/hanja`), priority: '1.0' },
 		...GRADES.map((g) => ({ loc: encodeURI(`${SITE}/hanja/급수/${g.label}`), priority: '0.8' })),
-		...ALL.map((e) => ({ loc: encodeURI(`${SITE}/hanja/${e.character}`), priority: '0.6' }))
+		...GRADES.map((g) => ({
+			loc: encodeURI(`${SITE}/hanja/급수/${g.label}/따라쓰기`),
+			priority: '0.7'
+		})),
+		...GRADES.map((g) => ({
+			loc: encodeURI(`${SITE}/hanja/급수/${g.label}/퀴즈`),
+			priority: '0.7'
+		})),
+		...ALL.map((e) => ({ loc: encodeURI(`${SITE}/hanja/${e.character}`), priority: '0.6' })),
+		{ loc: encodeURI(`${SITE}/hanja/낱말`), priority: '0.9' },
+		...ALL_WORDS.map((w) => ({
+			loc: encodeURI(`${SITE}/hanja/낱말/${w.word}`),
+			priority: '0.5'
+		}))
 	];
 
 	const body =

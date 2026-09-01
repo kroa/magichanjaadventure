@@ -19,6 +19,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (!building) {
 		const site = siteOf(event.request.headers.get('host'));
 		const path = event.url.pathname;
+		/*
+		 * 사전 도메인의 첫 화면은 **사전 안에 머물러야 한다.**
+		 * 게임 도메인으로 보내 버리면 검색엔진 소유확인이 남의 도메인을 읽게 되고,
+		 * 주소를 직접 친 사람도 엉뚱한 곳에 떨어진다. 같은 호스트 안에서 목차로 보낸다.
+		 */
+		if (site === 'dict' && path === '/') {
+			redirect(301, `/hanja${event.url.search}`);
+		}
 		if (site === 'dict' && !isDictPath(path)) {
 			redirect(308, `${GAME_ORIGIN}${path}${event.url.search}`);
 		}

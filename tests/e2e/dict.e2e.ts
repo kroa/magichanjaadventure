@@ -45,6 +45,103 @@ test.describe('한자사전', () => {
 		await expectHealthyLayout(page);
 	});
 
+	test('낱말 목록에서 낱말로, 낱말에서 글자로 이어진다', async ({ page }, testInfo) => {
+		await page.goto('/hanja/낱말');
+		await expect(page.getByRole('heading', { level: 1 })).toContainText('낱말');
+
+		await waitForFonts(page);
+		await captureScreen(page, testInfo, 'dict-words');
+		await expectHealthyLayout(page);
+
+		// 목록 → 낱말
+		const first = page.locator('section ul li a').first();
+		const word = (await first.locator('b').textContent())?.trim();
+		await first.click();
+		await page.waitForURL((u) => decodeURIComponent(u.pathname) === `/hanja/낱말/${word}`);
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(word!);
+
+		// 낱말은 반드시 두 글자를 풀어 보여 준다 — 이게 없으면 낱말 페이지가 아니다
+		await expect(page.locator('.part')).toHaveCount(2);
+		await captureScreen(page, testInfo, 'dict-word');
+		await expectHealthyLayout(page);
+
+		// 낱말 → 글자
+		await page.locator('.part').first().click();
+		await page.waitForURL((u) => decodeURIComponent(u.pathname) === `/hanja/${word![0]}`);
+		await expect(page.locator('.glyph')).toHaveText(word![0]);
+	});
+
+	test('글자 페이지가 낱말로 되돌아가는 길을 연다', async ({ page }) => {
+		await page.goto('/hanja/國');
+		const link = page.locator('.wordlist a').first();
+		await expect(link).toBeVisible();
+		const word = (await link.locator('b').textContent())?.trim();
+		expect(word, '낱말에 그 글자가 없다').toContain('國');
+
+		await link.click();
+		await page.waitForURL((u) => decodeURIComponent(u.pathname) === `/hanja/낱말/${word}`);
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(word!);
+	});
+
+	test('따라쓰기 활동지가 열리고 인쇄용으로 짜여 있다', async ({ page }, testInfo) => {
+		await page.goto('/hanja/급수/8급/따라쓰기');
+		await expect(page.getByRole('heading', { level: 1 })).toContainText('따라쓰기');
+
+		// 급수의 글자 수만큼 줄이 있어야 한다 — 한 자라도 빠지면 활동지가 아니다
+		await expect(page.locator('.row')).toHaveCount(50);
+
+		// 밑글자가 실제로 깔려 있어야 따라 쓸 수 있다
+		expect(
+			await page.locator('.cell svg, .cell .ghost').count(),
+			'따라 쓸 밑글자가 없다'
+		).toBeGreaterThan(0);
+
+		await waitForFonts(page);
+		await captureScreen(page, testInfo, 'dict-worksheet');
+		await expectHealthyLayout(page);
+	});
+
+	test('퀴즈를 가입 없이 풀 수 있다', async ({ page }, testInfo) => {
+		await page.goto('/hanja/급수/8급/퀴즈');
+		await expect(page.getByRole('heading', { level: 1 })).toContainText('퀴즈');
+		await expect(page.locator('.quiz li')).toHaveCount(10);
+
+		// 첫 문제를 풀면 정답이 드러나고 그 글자로 가는 길이 열린다
+		await page.locator('.quiz li').first().locator('.choices button').first().click();
+		await expect(page.locator('.quiz li').first().locator('.after')).toBeVisible();
+		await expect(page.locator('.quiz li').first().locator('.choices button.right')).toHaveCount(1);
+
+		await waitForFonts(page);
+		await captureScreen(page, testInfo, 'dict-quiz');
+		await expectHealthyLayout(page);
+
+		// 다시 풀면 문제가 바뀐다
+		const before = await page.locator('.quiz li .ch').first().textContent();
+		await page.getByRole('button', { name: '다시 풀기' }).click();
+		await expect(page.locator('.quiz li .ch').first()).not.toHaveText(before!);
+	});
+
+	test('다른 급수로 옮기면 그 급수 문제가 나온다', async ({ page }) => {
+		/*
+		 * `$state(data.questions)` 는 처음 값만 잡는다 — 브라우저 안에서 화면만 바뀌는
+		 * 이동에서는 이전 급수 문제가 그대로 남아, 주소는 7급인데 문제는 8급인 화면이 된다.
+		 */
+		await page.goto('/hanja/급수/8급/퀴즈');
+		const eighth = await page.locator('.quiz li .ch').allTextContents();
+
+		// 주소는 퍼센트 인코딩되어 오므로 풀어서 본다
+		const at = (part: string) => (u: URL) => decodeURIComponent(u.pathname).includes(part);
+
+		// 8급 → 7급으로 화면 안에서 이동한 뒤 그 급수 퀴즈로 들어간다
+		await page.getByRole('link', { name: '7급', exact: true }).first().click();
+		await page.waitForURL(at('/급수/7급'));
+		await page.getByRole('link', { name: '훈·음 맞히기 퀴즈' }).click();
+		await page.waitForURL(at('/급수/7급/퀴즈'));
+
+		const seventh = await page.locator('.quiz li .ch').allTextContents();
+		expect(seventh, '급수를 옮겼는데 이전 문제가 그대로다').not.toEqual(eighth);
+	});
+
 	test('글자 페이지에 제목·설명·구조화 데이터가 있다', async ({ page }) => {
 		await page.goto('/hanja/明');
 
@@ -129,6 +226,35 @@ test.describe('한자사전', () => {
 		expect(dictText).toContain('hanjasajeon.pages.dev/sitemap.xml');
 	});
 
+	test('검색엔진 소유확인이 사전 안에서 끝난다', async ({ page }) => {
+		/*
+		 * 네이버는 등록한 주소(`/`)를 불러 메타 태그를 찾는다.
+		 * 그 요청이 **다른 도메인으로 넘어가면** 확인이 실패한다 —
+		 * 실제로 사전 도메인의 `/` 가 게임 도메인으로 308 되고 있었다.
+		 */
+		const dict = { host: 'hanjasajeon.pages.dev' };
+
+		const root = await page.request.get('/', { headers: dict, maxRedirects: 0 });
+		expect(root.status(), '사전 첫 화면이 리다이렉트되어야 한다').toBe(301);
+		const to = root.headers()['location'];
+		expect(to, '사전 첫 화면이 남의 도메인으로 나가면 안 된다').not.toContain(
+			'magichanjaadventure'
+		);
+		expect(to).toContain('/hanja');
+
+		/*
+		 * 도착한 곳에 소유확인 표식이 있어야 한다.
+		 * 확인이 끝난 뒤에도 지우면 안 된다 — 없어지면 소유가 풀린다.
+		 */
+		await page.goto('/hanja');
+		for (const engine of ['naver', 'google']) {
+			await expect(
+				page.locator(`meta[name="${engine}-site-verification"]`),
+				`${engine} 소유확인 표식이 없다`
+			).toHaveAttribute('content', /^[\w-]{20,}$/);
+		}
+	});
+
 	test('로그인·가입 화면은 색인하지 않는다', async ({ page }) => {
 		for (const path of ['/login', '/register']) {
 			await page.goto(path);
@@ -151,7 +277,7 @@ test.describe('한자사전', () => {
 		expect(map.ok()).toBe(true);
 		const xml = await map.text();
 		expect(xml).toContain('<urlset');
-		// 1000자 + 급수 9 + 목차 1
-		expect((xml.match(/<url>/g) ?? []).length).toBe(1010);
+		// 1000자 + 급수 9 + 따라쓰기 9 + 퀴즈 9 + 목차 1 + 낱말 목차 1 + 낱말 815
+		expect((xml.match(/<url>/g) ?? []).length).toBe(1844);
 	});
 });

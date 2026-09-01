@@ -103,37 +103,32 @@
 	</section>
 {/if}
 
-{#if e.exampleWords.length}
+{#if data.words.length}
 	<section>
 		<h2><i>03</i> 쓰이는 낱말</h2>
-		<dl class="words">
-			{#each e.exampleWords as w (w.word)}
-				<div>
-					<dt>{w.word} <span>{w.reading}</span></dt>
-					<dd>{w.meaning}</dd>
-				</div>
-			{/each}
-		</dl>
-	</section>
-{/if}
-
-{#if data.partners.length}
-	<section>
-		<h2><i>04</i> 함께 쓰는 글자</h2>
 		<p class="note">
-			{withParticle(e.character, e.reading, '과와')} 짝을 이루어 두 글자 낱말을 만든다.
+			{withParticle(e.character, e.reading, '이가')} 다른 글자와 만나 이루는 한자어다. 밑줄 그어진 낱말을
+			고르면 두 글자를 풀어 본 풀이가 나온다.
 		</p>
-		<p class="chips">
-			{#each data.partners as p (p)}
-				<a href="/hanja/{p}">{p}</a>
+		<ul class="wordlist">
+			{#each data.words as w (w.word)}
+				<li>
+					{#if w.linked}
+						<a href="/hanja/낱말/{w.word}">
+							<b>{w.word}</b><span>{w.reading}</span><i>{w.meaning}</i>
+						</a>
+					{:else}
+						<p><b>{w.word}</b><span>{w.reading}</span><i>{w.meaning}</i></p>
+					{/if}
+				</li>
 			{/each}
-		</p>
+		</ul>
 	</section>
 {/if}
 
 {#if data.buildsInto.length}
 	<section>
-		<h2><i>05</i> 이 글자가 들어가는 한자</h2>
+		<h2><i>04</i> 이 글자가 들어가는 한자</h2>
 		<p class="chips">
 			{#each data.buildsInto as b (b)}
 				<a href="/hanja/{b}">{b}</a>
@@ -143,7 +138,7 @@
 {/if}
 
 <section>
-	<h2><i>06</i> {e.gradeLabel}의 다른 글자</h2>
+	<h2><i>05</i> {e.gradeLabel}의 다른 글자</h2>
 	<ul class="nearby">
 		{#each data.nearby as n (n.character)}
 			<li>
@@ -338,36 +333,53 @@
 	}
 
 	/* ── 낱말 ─────────────────────────────────────────────── */
-	.words {
-		max-width: 38rem;
-		margin: 0;
-		border-top: 1px solid var(--line);
+	.wordlist {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+		margin: 0.9rem 0 0;
+		padding: 0;
+		list-style: none;
 	}
 
-	.words div {
+	.wordlist a,
+	.wordlist p {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem 1rem;
+		gap: 0.45rem;
 		align-items: baseline;
-		padding: 0.6rem 0;
+		min-height: 48px;
+		margin: 0;
+		padding: 0.35rem 0.5rem 0.35rem 0;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.wordlist a b {
 		border-bottom: 1px solid var(--line);
 	}
 
-	.words dt {
-		min-width: 7rem;
-		font-size: 1.125rem;
+	.wordlist a:hover b {
+		border-bottom-color: var(--accent);
+		color: var(--accent);
 	}
 
-	.words dt span {
-		color: var(--muted);
+	.wordlist b {
+		font-size: 1.0625rem;
+		font-weight: 500;
+	}
+
+	.wordlist span {
 		font-family: var(--ui);
 		font-size: 0.8125rem;
 	}
 
-	.words dd {
-		margin: 0;
-		color: #3a3a44;
-		font-size: 0.95rem;
+	.wordlist i {
+		overflow: hidden;
+		color: var(--muted);
+		font-family: var(--ui);
+		font-size: 0.75rem;
+		font-style: normal;
+		white-space: nowrap;
+		text-overflow: ellipsis;
 	}
 
 	/* ── 칩 ───────────────────────────────────────────────── */
