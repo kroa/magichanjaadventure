@@ -131,8 +131,17 @@ export function describeWord(e: WordEntry): string {
 	const out: string[] = [];
 	const named = (d: DictEntry | null, ch: string) => (d ? `${ch}(${d.meaning} ${d.reading})` : ch);
 
+	/*
+	 * 조사를 **따옴표 안의 소리**에 맞춘다.
+	 *
+	 * 처음에는 "'국어' 이라 읽고" 로 나갔다. 배포하고 나서야 보였다 —
+	 * 받침이 없는 '어' 뒤에는 '라' 가 와야 한다. 기계가 쓴 티가 나는 자리는
+	 * 대개 이런 데다.
+	 */
 	out.push(
-		`${withParticle(e.word, e.reading, '은는')} '${e.reading}' 이라 읽고, 뜻은 '${e.meaning}' 이다.`
+		`${withParticle(e.word, e.reading, '은는')} ` +
+			`${withParticle(`'${e.reading}'`, e.reading, '이라')} 읽고, ` +
+			`뜻은 ${withParticle(`'${e.meaning}'`, e.meaning, '이다')}.`
 	);
 
 	if (e.head && e.tail) {

@@ -129,7 +129,7 @@ function hasFinal(reading: string): boolean {
 	return code % 28 !== 0;
 }
 
-type Particle = '은는' | '이가' | '을를' | '과와';
+type Particle = '은는' | '이가' | '을를' | '과와' | '이라' | '이다';
 
 export function withParticle(word: string, reading: string, kind: Particle): string {
 	const f = hasFinal(reading);
@@ -137,7 +137,9 @@ export function withParticle(word: string, reading: string, kind: Particle): str
 		은는: ['은', '는'],
 		이가: ['이', '가'],
 		을를: ['을', '를'],
-		과와: ['과', '와']
+		과와: ['과', '와'],
+		이라: ['이라', '라'],
+		이다: ['이다', '다']
 	};
 	return word + pick[kind][f ? 0 : 1];
 }

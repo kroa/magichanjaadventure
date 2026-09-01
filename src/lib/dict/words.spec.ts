@@ -97,6 +97,13 @@ describe('낱말 풀이', () => {
 		expect(describeWord(wordEntry(noFinal.word)!)).toContain(`${noFinal.word}는`);
 	});
 
+	it('따옴표 뒤 조사를 그 안의 소리에 맞춘다', () => {
+		// 받침 없는 '어' 뒤에는 '라' — 배포하고 나서야 "'국어' 이라 읽고" 를 봤다
+		expect(describeWord(wordEntry('國語')!)).toContain(`'국어'라 읽고`);
+		// 받침 있는 '격' 뒤에는 '이라'
+		expect(describeWord(wordEntry('價格')!)).toContain(`'가격'이라 읽고`);
+	});
+
 	it('모든 낱말이 빈 풀이 없이 나온다', () => {
 		const bad = ALL_WORDS.filter((w) => describeWord(wordEntry(w.word)!).length < 30);
 		expect(bad.map((w) => w.word)).toEqual([]);
