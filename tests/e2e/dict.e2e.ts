@@ -163,6 +163,24 @@ test.describe('한자사전', () => {
 		expect(body.length, '내용이 너무 얇다').toBeGreaterThan(200);
 	});
 
+	test('게임 화면은 제3자에게 요청을 보내지 않는다', async ({ page }) => {
+		/*
+		 * `app.html` 이 글꼴을 자체 호스팅하는 이유로 적어 둔 원칙이다 —
+		 * **아이 브라우저가 제3자에게 요청을 보내지 않는다.** 방문 계측을 붙이면서
+		 * 그 선이 조용히 무너지기 가장 쉬워졌으므로, 여기서 못을 박아 둔다.
+		 */
+		const outside: string[] = [];
+		page.on('request', (r) => {
+			const host = new URL(r.url()).hostname;
+			if (!['localhost', '127.0.0.1'].includes(host)) outside.push(host);
+		});
+
+		await page.goto('/login');
+		await page.waitForLoadState('networkidle');
+
+		expect([...new Set(outside)], '게임 화면이 바깥으로 요청을 보냈다').toEqual([]);
+	});
+
 	test('사전에는 게임의 얼굴이 섞이지 않는다', async ({ page }) => {
 		/*
 		 * 이건 취향이 아니라 판정 요소다. 광고 정책은 시각물·캐릭터·언어를 보고

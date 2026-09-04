@@ -1,7 +1,31 @@
 <script lang="ts">
 	import { GRADES } from '$lib/dict';
+	import * as pub from '$env/static/public';
 
 	let { children } = $props();
+
+	/**
+	 * 방문 계측 — **사전에만 단다.**
+	 *
+	 * ── 왜 사전에만인가 ──────────────────────────────────────────────
+	 * `app.html` 에 글꼴을 자체 호스팅하는 이유로 적어 둔 원칙이 있다:
+	 * **아이 브라우저가 제3자에게 요청을 보내지 않는다.** 게임에 계측을 달면
+	 * 그 원칙이 깨진다. 게임은 로그인 뒤에 있고 robots 가 전부 막고 있어
+	 * 애초에 검색에서 들어오는 사람이 없으므로, 재서 얻을 것도 없다.
+	 *
+	 * 사전은 반대다. 검색으로 들어오는 어른이 독자고, "어느 검색어로 어느
+	 * 페이지에 들어왔는가" 를 모르면 다음에 무엇을 더 쓸지 정할 수가 없다.
+	 *
+	 * ── 왜 이것인가 ──────────────────────────────────────────────────
+	 * Cloudflare Web Analytics 는 쿠키를 심지 않고 개인을 식별하지 않는다.
+	 * 이미 이 사이트를 내보내고 있는 곳이라 새로 늘어나는 상대도 없다.
+	 *
+	 * ── 값이 없으면 아무것도 하지 않는다 ─────────────────────────────
+	 * 토큰은 `.env` 에 둔다(저장소에 넣지 않는다). 없으면 조용히 빠진다 —
+	 * 남이 이 저장소를 받아도 빌드가 깨지지 않아야 하므로 통째로 들여와
+	 * 있는지만 본다.
+	 */
+	const beacon: string = (pub as Record<string, string>).PUBLIC_CF_BEACON ?? '';
 </script>
 
 <svelte:head>
@@ -16,6 +40,14 @@
 	-->
 	<meta name="naver-site-verification" content="e4bd6671e4bfdb30e5ceb53bc0059236bb99c41e" />
 	<meta name="google-site-verification" content="q_tK5fhWjYZN1cLFRjBcbVXrrMKRO0dJPEY9ISctfK4" />
+
+	{#if beacon}
+		<script
+			defer
+			src="https://static.cloudflareinsights.com/beacon.min.js"
+			data-cf-beacon={JSON.stringify({ token: beacon })}
+		></script>
+	{/if}
 </svelte:head>
 
 <!--
