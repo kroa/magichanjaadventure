@@ -163,6 +163,31 @@ test.describe('한자사전', () => {
 		expect(body.length, '내용이 너무 얇다').toBeGreaterThan(200);
 	});
 
+	test('계측을 켰으면 사전에서 실제로 발사된다', async ({ page }) => {
+		/*
+		 * 스크립트 태그가 있는 것과 브라우저가 실제로 그것을 부르는 것은 다르다.
+		 * 태그만 보고 "달았다" 고 넘어갔다가 아무것도 안 쌓이는 것이 흔한 사고라,
+		 * **요청이 나가는지**를 본다. (요청은 실패해도 이벤트가 뜨므로 망 없이도 성립한다.)
+		 *
+		 * 토큰은 `.env` 에 있고 저장소에는 없다. 없는 빌드에서는 계측이 통째로
+		 * 빠지는 것이 정상이므로, 그때는 "빠졌는지" 를 대신 확인한다.
+		 */
+		const asked: string[] = [];
+		page.on('request', (r) => asked.push(new URL(r.url()).hostname));
+
+		await page.goto('/hanja');
+		const configured = (await page.content()).includes('static.cloudflareinsights.com');
+		await page.waitForLoadState('networkidle');
+
+		if (configured) {
+			expect(asked, '계측 태그는 있는데 요청이 나가지 않았다').toContain(
+				'static.cloudflareinsights.com'
+			);
+		} else {
+			expect(asked.filter((h) => h.includes('cloudflareinsights'))).toEqual([]);
+		}
+	});
+
 	test('게임 화면은 제3자에게 요청을 보내지 않는다', async ({ page }) => {
 		/*
 		 * `app.html` 이 글꼴을 자체 호스팅하는 이유로 적어 둔 원칙이다 —
