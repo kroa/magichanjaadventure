@@ -112,28 +112,56 @@ if (dry) {
 	process.exit(0);
 }
 
-let failed = 0;
-for (const endpoint of ENDPOINTS) {
-	console.log(`[indexnow] → ${endpoint.name}`);
-	for (let i = 0; i < urls.length; i += BATCH) {
-		const batch = urls.slice(i, i + BATCH);
+/** 어느 곳에만 보낼지 고를 수 있다 — 한쪽만 실패했을 때 나머지를 다시 괴롭히지 않기 위해서다 */
+const only = process.argv.find((a) => a.startsWith('--only='))?.slice('--only='.length);
+const targets = only ? ENDPOINTS.filter((e) => e.url.includes(only)) : ENDPOINTS;
+if (!targets.length) {
+	console.error(`[indexnow] --only=${only} 에 해당하는 엔드포인트가 없습니다.`);
+	process.exit(1);
+}
+
+async function sendAll(endpoint, list) {
+	const failed = [];
+	for (let i = 0; i < list.length; i += BATCH) {
+		const batch = list.slice(i, i + BATCH);
 		const { status, text } = await submit(endpoint, batch);
-		const nth = `${Math.floor(i / BATCH) + 1}/${Math.ceil(urls.length / BATCH)}`;
-		const ok = status === 200 || status === 202;
-		if (!ok) failed++;
+		const nth = `${Math.floor(i / BATCH) + 1}/${Math.ceil(list.length / BATCH)}`;
 		console.log(
 			`           ${nth} ${batch.length}개 → ${status} ${explain(status)}${text ? ` ${text}` : ''}`
 		);
+		if (status !== 200 && status !== 202) failed.push(batch);
 		if (status === 429) {
 			console.log(`           과다요청이므로 이 엔드포인트는 중단합니다.`);
 			break;
 		}
 	}
-	console.log('');
+	return failed;
 }
 
-if (failed) {
-	console.error(`[indexnow] ${failed}개 배치가 실패했습니다.`);
+let stillFailed = 0;
+for (const endpoint of targets) {
+	console.log(`[indexnow] → ${endpoint.name}`);
+	const failed = await sendAll(endpoint, urls);
+	console.log('');
+
+	/*
+	 * 실패한 배치는 **한 번 다시 보낸다.**
+	 *
+	 * 처음 보낼 때 Bing 이 `SiteVerificationNotCompleted` 로 두 배치를 거절했다 —
+	 * 키 파일은 멀쩡한데 저쪽이 아직 확인 중이었던 것이고, 세 번째 배치부터는 통과했다.
+	 * 즉 이 실패는 **기다리면 사라지는 종류**다. 사람이 다시 실행할 일이 아니다.
+	 */
+	if (failed.length) {
+		const list = failed.flat();
+		console.log(`[indexnow] ${endpoint.name}: 실패한 ${list.length}개를 다시 보냅니다`);
+		const again = await sendAll(endpoint, list);
+		stillFailed += again.flat().length;
+		console.log('');
+	}
+}
+
+if (stillFailed) {
+	console.error(`[indexnow] ${stillFailed}개 주소가 끝내 실패했습니다.`);
 	process.exit(1);
 }
 console.log('[indexnow] 통보 완료. 색인은 검색엔진이 정합니다.');
