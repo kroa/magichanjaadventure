@@ -2,12 +2,43 @@
 	import { DICT_ORIGIN } from '$lib/sites';
 	import { GRADES, ALL } from '$lib/dict';
 	import { ALL_WORDS, wordsByInitial } from '$lib/dict/words';
+	import { jsonLd } from '$lib/dict/jsonld';
 
 	const total = ALL.length;
 	const wordTotal = ALL_WORDS.length;
 	/* 목차에서는 첫소리만 보여 준다 — 815개를 여기에 다 늘어놓을 자리가 아니다 */
 	const initials = wordsByInitial();
 	const withStrokes = 99;
+
+	/*
+	 * 목차에만 구조화 데이터가 빠져 있었다.
+	 *
+	 * 1,844장을 전수로 훑다가 잡았다 — 나머지 1,843장에는 다 있는데 **문 앞만** 없었다.
+	 * 목차는 크롤러가 가장 먼저 닿는 곳이고, 여기서 "이 사이트가 무엇인가" 가 잡히지
+	 * 않으면 아래 1,843장을 무엇으로 이해할지 단서가 없다.
+	 *
+	 * 급수를 `ItemList` 로 실어 목차가 어디로 갈라지는지도 함께 알린다.
+	 */
+	const ld = jsonLd({
+		'@context': 'https://schema.org',
+		'@type': 'CollectionPage',
+		name: '한자사전',
+		url: `${DICT_ORIGIN}/hanja`,
+		inLanguage: 'ko',
+		description: `한국어문회 배정한자 8급~4급 ${total}자와 두 글자 한자어 ${wordTotal}개의 훈·음·총획·뜻풀이`,
+		about: { '@type': 'Thing', name: '한자', alternateName: '漢字' },
+		mainEntity: {
+			'@type': 'ItemList',
+			name: '급수별 배정한자',
+			numberOfItems: GRADES.length,
+			itemListElement: GRADES.map((g, i) => ({
+				'@type': 'ListItem',
+				position: i + 1,
+				name: `${g.label} 배정한자 ${g.count}자`,
+				url: `${DICT_ORIGIN}/hanja/급수/${g.label}`
+			}))
+		}
+	});
 </script>
 
 <svelte:head>
@@ -17,6 +48,8 @@
 		content="한국어문회 배정한자 8급부터 4급까지 1,000자의 훈과 음, 총획, 쓰이는 낱말을 급수별로 정리했습니다. 글자를 이루는 조각과 획순도 함께 볼 수 있습니다."
 	/>
 	<link rel="canonical" href="{DICT_ORIGIN}/hanja" />
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- jsonLd 가 `<` 를 이스케이프한다 -->
+	{@html ld}
 </svelte:head>
 
 <header class="head">

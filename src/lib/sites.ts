@@ -22,8 +22,28 @@ export const DICT_HOST = 'hanjasajeon.pages.dev';
 export const GAME_ORIGIN = `https://${GAME_HOST}`;
 export const DICT_ORIGIN = `https://${DICT_HOST}`;
 
-/** 사전 도메인에서 열려야 하는 경로 */
-const DICT_PATHS = ['/hanja', '/sitemap.xml', '/robots.txt'];
+/**
+ * IndexNow 소유확인 키.
+ *
+ * 검색엔진(네이버·Bing 등)에 "이 주소들이 바뀌었다" 고 알릴 때, 그 알림이
+ * 진짜 이 사이트 주인에게서 온 것인지를 **이 파일 하나로** 증명한다.
+ * 로그인도 계정 등록도 필요 없는 것이 요점이다.
+ *
+ * 비밀값이 아니라 **공개되어야 하는** 표식이다 — 검색엔진이 직접 받아 가서
+ * 본문이 키와 같은지 본다. 서치콘솔 소유확인 메타 태그와 같은 부류다.
+ *
+ * 파일은 `static/<키>.txt` 에 있다. 값이 바뀌면 두 곳을 함께 고쳐야 한다.
+ */
+export const INDEXNOW_KEY = '9dda83b0a5957e29009a4ea9ebd272b0';
+
+/**
+ * 사전 도메인에서 열려야 하는 경로.
+ *
+ * IndexNow 키가 여기 없으면 **게임 도메인으로 308 튕긴다.** 실제로 그랬다 —
+ * `/favicon.png` 가 308 로 넘어가는 것을 보고 알았다. 검색엔진은 키를 못 읽고
+ * 403(키가 유효하지 않음)을 돌려주므로, 알림이 통째로 무시된다.
+ */
+const DICT_PATHS = ['/hanja', '/sitemap.xml', '/robots.txt', `/${INDEXNOW_KEY}.txt`];
 
 export function isDictPath(pathname: string): boolean {
 	return DICT_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));

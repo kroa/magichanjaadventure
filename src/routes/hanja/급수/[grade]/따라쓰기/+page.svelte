@@ -38,11 +38,17 @@
 </script>
 
 <svelte:head>
-	<title>{data.grade} 한자 따라쓰기 활동지 — 인쇄용 {data.characters.length}자 | 한자사전</title>
+	<!--
+		`N급 한자 따라쓰기 pdf` 가 실제로 많이 쓰이는 검색어다.
+		그 자리를 지금 차지하고 있는 것은 블로그에 올라온 PDF 파일들이라 **받아서 열어야** 보인다.
+		이 페이지는 화면에서 바로 보이고 인쇄 창에서 PDF 로 저장된다 — 제목에 그렇게 적는다.
+		없는 기능을 적는 것이 아니라, 있는 기능을 찾는 사람의 말로 적는 것이다.
+	-->
+	<title>{data.grade} 한자 따라쓰기 {data.characters.length}자 — 인쇄·PDF 저장 | 한자사전</title>
 	<meta
 		name="description"
 		content="한국어문회 {data.grade} 배정한자 {data.characters
-			.length}자 따라쓰기 활동지입니다. 화면에서 바로 보고 인쇄하거나 PDF로 저장할 수 있습니다."
+			.length}자 따라쓰기 활동지입니다. 내려받을 필요 없이 화면에서 바로 보고, 인쇄하거나 인쇄 창에서 PDF로 저장할 수 있습니다."
 	/>
 	<link rel="canonical" href={url} />
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- jsonLd 가 `<` 를 이스케이프한다 -->

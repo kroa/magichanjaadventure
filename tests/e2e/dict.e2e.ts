@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { expectHealthyLayout } from '../helpers/layout';
 import { captureScreen, waitForFonts } from '../helpers/screens';
+import { INDEXNOW_KEY } from '../../src/lib/sites';
 
 /**
  * 한자 사전 — **로그인 없이 열리는 공개 영역.**
@@ -161,6 +162,23 @@ test.describe('한자사전', () => {
 		const body = await page.locator('main').innerText();
 		expect(body).toContain('배정한자');
 		expect(body.length, '내용이 너무 얇다').toBeGreaterThan(200);
+	});
+
+	test('IndexNow 키 파일이 두 도메인 모두에서 그대로 읽힌다', async ({ page }) => {
+		/*
+		 * 이 파일이 못 읽히면 검색엔진 통보가 통째로 무시된다(403 키 무효).
+		 *
+		 * 실제로 그럴 뻔했다 — 사전 도메인은 제 것이 아닌 경로를 전부 게임 도메인으로
+		 * 308 넘기는데, 루트의 `.txt` 가 바로 그 경로였다(`/favicon.png` 가 308 로
+		 * 나가는 것을 보고 알았다). 키 파일은 **그 파일이 놓인 호스트**의 소유를
+		 * 증명하는 물건이라, 남의 도메인으로 넘어가면 증명이 성립하지 않는다.
+		 */
+		const path = `/${INDEXNOW_KEY}.txt`;
+		for (const host of ['hanjasajeon.pages.dev', 'magichanjaadventure.pages.dev']) {
+			const res = await page.request.get(path, { headers: { host }, maxRedirects: 0 });
+			expect(res.status(), `${host} 에서 키 파일이 200 이 아니다`).toBe(200);
+			expect((await res.text()).trim(), `${host} 의 키 파일 내용이 키와 다르다`).toBe(INDEXNOW_KEY);
+		}
 	});
 
 	test('계측을 켰으면 사전에서 실제로 발사된다', async ({ page }) => {

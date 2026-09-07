@@ -32,11 +32,18 @@
 </script>
 
 <svelte:head>
-	<title>{data.grade} 한자 {data.characters.length}자 목록 — 훈·음·획수 | 한자사전</title>
+	<!--
+		제목에 '한자표' 를 쓴다.
+
+		처음에는 '목록' 이었다. 그런데 사람들이 검색창에 치는 말은 `8급 한자표` 다 —
+		두 엔진의 자동완성이 급수마다 똑같이 그 말을 제안한다. 뜻이 같은 말이라도
+		**찾는 사람의 말**로 적혀 있어야 그 사람에게 닿는다. 실제로 표이기도 하다.
+	-->
+	<title>{data.grade} 한자표 — 배정한자 {data.characters.length}자 훈·음·총획 | 한자사전</title>
 	<meta
 		name="description"
 		content="한국어문회 {data.grade} 배정한자 {data.characters
-			.length}자의 훈과 음, 총획을 한눈에 정리했습니다. 글자를 누르면 쓰이는 낱말과 획순을 볼 수 있습니다."
+			.length}자를 표로 정리했습니다. 훈과 음, 총획을 한눈에 보고, 글자를 누르면 쓰이는 낱말과 획순까지 볼 수 있습니다. 인쇄용 따라쓰기 활동지와 훈·음 맞히기 퀴즈도 함께 있습니다."
 	/>
 	<link rel="canonical" href="{site}/hanja/급수/{data.grade}" />
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- jsonLd 가 `<` 를 이스케이프해 태그 조기 종료를 막는다 -->

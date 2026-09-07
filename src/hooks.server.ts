@@ -1,7 +1,7 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { resolveSession, SESSION_COOKIE } from '$lib/server/auth/session';
-import { DICT_ORIGIN, GAME_ORIGIN, isDictPath, siteOf } from '$lib/sites';
+import { DICT_ORIGIN, GAME_ORIGIN, INDEXNOW_KEY, isDictPath, siteOf } from '$lib/sites';
 
 /**
  * 모든 요청의 첫 관문.
@@ -30,7 +30,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (site === 'dict' && !isDictPath(path)) {
 			redirect(308, `${GAME_ORIGIN}${path}${event.url.search}`);
 		}
-		if (site === 'game' && isDictPath(path) && path !== '/robots.txt') {
+		/*
+		 * 두 도메인이 **각자** 답해야 하는 것들은 넘기지 않는다.
+		 *
+		 * robots.txt 는 도메인마다 답이 다르고(사전은 열고 게임은 닫는다),
+		 * IndexNow 키 파일은 그 파일이 놓인 호스트의 소유를 증명하는 물건이라
+		 * 남의 도메인으로 넘기면 증명이 성립하지 않는다.
+		 */
+		const ownsItself = path === '/robots.txt' || path === `/${INDEXNOW_KEY}.txt`;
+		if (site === 'game' && isDictPath(path) && !ownsItself) {
 			redirect(308, `${DICT_ORIGIN}${path}${event.url.search}`);
 		}
 	}

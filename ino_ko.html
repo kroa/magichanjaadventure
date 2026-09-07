@@ -1,0 +1,1547 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>FAQ | IndexNow.org</title>
+		<meta
+			name="description"
+			content="IndexNow FAQ: 설정, API 키, URL 제출, 자동화, 고급 사용 사례, 문제 해결."
+		/>
+		<!-- Add bootstrap -->
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css"
+			rel="stylesheet"
+			integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU"
+			crossorigin="anonymous"
+		/>
+
+		<!-- Bootstrap scripts -->
+		<script
+			src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
+			integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
+			crossorigin="anonymous"
+		></script>
+
+		<!-- Add custom css -->
+		<link rel="stylesheet" href="/assets/css/styles.css" />
+
+		<link rel="icon" href="/favicon.ico" type="image/x-icon" />
+
+		<style>
+			:root {
+				--code-bg: #f6f8fa;
+				--code-border: #e5e7eb;
+				--rule: #e5e7eb;
+			}
+			body {
+				word-wrap: break-word;
+			}
+			.faq-category + .faq-category {
+				margin-top: 3rem;
+			}
+			h1,
+			h2 {
+				scroll-margin-top: 90px;
+			}
+			nav.toc .list-inline-item + .list-inline-item::before {
+				content: '• ';
+				color: #9ca3af;
+				margin: 0 0.25rem 0 0.15rem;
+			}
+			details {
+				border-top: 1px solid var(--rule);
+				padding: 0.75rem 0;
+			}
+			details:first-of-type {
+				border-top: 0;
+			}
+			summary {
+				cursor: pointer;
+				font-weight: 600;
+				list-style: none;
+			}
+			summary::-webkit-details-marker {
+				display: none;
+			}
+
+			/* Code styling */
+			pre,
+			code,
+			pre code {
+				font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+				font-size: 0.95rem;
+				line-height: 1.55;
+			}
+			pre {
+				background: var(--code-bg);
+				border: 1px solid var(--code-border);
+				border-radius: 0.5rem;
+				padding: 1rem;
+				overflow: auto;
+				margin: 1rem 0;
+				white-space: pre-wrap;
+			}
+			code {
+				background: var(--code-bg);
+				border: 1px solid var(--code-border);
+				border-radius: 0.25rem;
+				padding: 0.125rem 0.375rem;
+			}
+			pre code {
+				background: transparent;
+				border: 0;
+				padding: 0;
+			}
+
+			/* Better spacing for text & lists */
+			.mt-2 p {
+				margin-bottom: 1rem;
+				line-height: 1.65;
+			}
+			.mt-2 ul,
+			.mt-2 ol {
+				margin: 0.5rem 0 1.25rem 1.25rem;
+				padding-left: 1rem;
+			}
+			.mt-2 li {
+				margin-bottom: 0.4rem;
+			}
+
+			/* Add space between lines when bullets are written on separate lines with <br> */
+			.mt-2 p br {
+				content: '';
+				display: block;
+				margin-bottom: 0.4rem;
+			}
+
+			hr.section {
+				border-top: 1px solid var(--rule);
+				margin: 1.25rem 0 1.75rem;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div
+			class="navbar navbar-expand-lg navbar-light bg-light"
+			style="min-height: 90px"
+			id="pageHeader"
+		>
+			<div class="col-md-8 col-lg-6 container">
+				<a class="navbar-brand" href="index">IndexNow.org</a>
+
+				<div class="navbar-collapse col-sm-10">
+					<ul class="navbar-nav mb-sm-0 ms-auto mb-2">
+						<li class="nav-item" style="margin-left: 0px; margin-right: 46px">
+							<a class="nav-link" href="index"> 홈 </a>
+						</li>
+						<li class="nav-item" style="margin-left: 0px; margin-right: 46px">
+							<a class="nav-link" href="documentation"> 설명서 </a>
+						</li>
+						<li class="nav-item" style="margin-left: 0px; margin-right: 46px">
+							<a class="nav-link active" aria-current="page"> FAQ </a>
+						</li>
+						<li class="nav-item">
+							<div class="lang-dropdown">
+								<button onclick="handleDropdownClick()" class="dropbtn" id="langButton">EN</button>
+								<div id="languageDropdownMenu" class="dropdown-content">
+									<input
+										type="text"
+										placeholder="Search.."
+										id="languageInput"
+										onkeyup="filterFunction()"
+									/>
+									<div class="languageList" id="languageList">
+										<a tabindex="0" href="/faq">
+											<div class="bigLanguageText">English (United States)</div>
+											<div class="smallLanguageText">English (United States)</div>
+										</a>
+										<a tabindex="0" href="/ar_sa/faq">
+											<div class="bigLanguageText">Arabic</div>
+											<div class="smallLanguageText">العربية</div>
+										</a>
+										<a tabindex="0" href="/eu/faq">
+											<div class="bigLanguageText">Basque</div>
+											<div class="smallLanguageText">euskara</div>
+										</a>
+										<a tabindex="0" href="/bg_bg/faq">
+											<div class="bigLanguageText">Bulgarian</div>
+											<div class="smallLanguageText">български</div>
+										</a>
+										<a tabindex="0" href="/ca_es/faq">
+											<div class="bigLanguageText">Catalan</div>
+											<div class="smallLanguageText">català</div>
+										</a>
+										<a tabindex="0" href="/zh_cn/faq">
+											<div class="bigLanguageText">Chinese (Simplified) Legacy</div>
+											<div class="smallLanguageText">中文(简体) 旧版</div>
+										</a>
+										<a tabindex="0" href="/zh_tw/faq">
+											<div class="bigLanguageText">Chinese (Traditional) Legacy</div>
+											<div class="smallLanguageText">中文(繁體) 舊版</div>
+										</a>
+										<a tabindex="0" href="/hr_hr/faq">
+											<div class="bigLanguageText">Croatian</div>
+											<div class="smallLanguageText">hrvatski</div>
+										</a>
+										<a tabindex="0" href="/cs_cz/faq">
+											<div class="bigLanguageText">Czech</div>
+											<div class="smallLanguageText">čeština</div>
+										</a>
+										<a tabindex="0" href="/da_dk/faq">
+											<div class="bigLanguageText">Danish</div>
+											<div class="smallLanguageText">dansk</div>
+										</a>
+										<a tabindex="0" href="/nl_nl/faq">
+											<div class="bigLanguageText">Dutch</div>
+											<div class="smallLanguageText">Nederlands</div>
+										</a>
+										<a tabindex="0" href="/en_gb/faq">
+											<div class="bigLanguageText">English (United Kingdom)</div>
+											<div class="smallLanguageText">English (United Kingdom)</div>
+										</a>
+										<a tabindex="0" href="/et_ee/faq">
+											<div class="bigLanguageText">Estonian</div>
+											<div class="smallLanguageText">eesti</div>
+										</a>
+										<a tabindex="0" href="/fi_fi/faq">
+											<div class="bigLanguageText">Finnish</div>
+											<div class="smallLanguageText">suomi</div>
+										</a>
+										<a tabindex="0" href="/fr_fr/faq">
+											<div class="bigLanguageText">French</div>
+											<div class="smallLanguageText">français</div>
+										</a>
+										<a tabindex="0" href="/gl_es/faq">
+											<div class="bigLanguageText">Galician</div>
+											<div class="smallLanguageText">galego</div>
+										</a>
+										<a tabindex="0" href="/de_de/faq">
+											<div class="bigLanguageText">German</div>
+											<div class="smallLanguageText">Deutsch</div>
+										</a>
+										<a tabindex="0" href="/el_gr/faq">
+											<div class="bigLanguageText">Greek</div>
+											<div class="smallLanguageText">Ελληνικά</div>
+										</a>
+										<a tabindex="0" href="/he_il/faq">
+											<div class="bigLanguageText">Hebrew</div>
+											<div class="smallLanguageText">עברית</div>
+										</a>
+										<a tabindex="0" href="/hi_in/faq">
+											<div class="bigLanguageText">Hindi</div>
+											<div class="smallLanguageText">हिन्दी</div>
+										</a>
+										<a tabindex="0" href="/hu_hu/faq">
+											<div class="bigLanguageText">Hungarian</div>
+											<div class="smallLanguageText">magyar</div>
+										</a>
+										<a tabindex="0" href="/is_is/faq">
+											<div class="bigLanguageText">Icelandic</div>
+											<div class="smallLanguageText">íslenska</div>
+										</a>
+										<a tabindex="0" href="/it_it/faq">
+											<div class="bigLanguageText">Italian</div>
+											<div class="smallLanguageText">italiano</div>
+										</a>
+										<a tabindex="0" href="/ja_jp/faq">
+											<div class="bigLanguageText">Japanese</div>
+											<div class="smallLanguageText">日本語</div>
+										</a>
+										<a tabindex="0" href="/ko_kr/faq">
+											<div class="bigLanguageText">Korean</div>
+											<div class="smallLanguageText">한국어</div>
+										</a>
+										<a tabindex="0" href="/lv_lv/faq">
+											<div class="bigLanguageText">Latvian</div>
+											<div class="smallLanguageText">latviešu</div>
+										</a>
+										<a tabindex="0" href="/lt_lt/faq">
+											<div class="bigLanguageText">Lithuanian</div>
+											<div class="smallLanguageText">lietuvių</div>
+										</a>
+										<a tabindex="0" href="/ms_my/faq">
+											<div class="bigLanguageText">Malay</div>
+											<div class="smallLanguageText">Melayu</div>
+										</a>
+										<a tabindex="0" href="/nb_no/faq">
+											<div class="bigLanguageText">Norwegian, Bokmål (Norway)</div>
+											<div class="smallLanguageText">norsk bokmål (Norge)</div>
+										</a>
+										<a tabindex="0" href="/pl_pl/faq">
+											<div class="bigLanguageText">Polish</div>
+											<div class="smallLanguageText">polski</div>
+										</a>
+										<a tabindex="0" href="/pt_br/faq">
+											<div class="bigLanguageText">Portuguese (Brazil)</div>
+											<div class="smallLanguageText">português (Brasil)</div>
+										</a>
+										<a tabindex="0" href="/pt_pt/faq">
+											<div class="bigLanguageText">Portuguese (Portugal)</div>
+											<div class="smallLanguageText">português (Portugal)</div>
+										</a>
+										<a tabindex="0" href="/ro_ro/faq">
+											<div class="bigLanguageText">Romanian</div>
+											<div class="smallLanguageText">română</div>
+										</a>
+										<a tabindex="0" href="/ru_ru/faq">
+											<div class="bigLanguageText">Russian</div>
+											<div class="smallLanguageText">русский</div>
+										</a>
+										<a tabindex="0" href="/sr_cyrl_rs/faq">
+											<div class="bigLanguageText">Serbian</div>
+											<div class="smallLanguageText">srpski</div>
+										</a>
+										<a tabindex="0" href="/sk_sk/faq">
+											<div class="bigLanguageText">Slovak</div>
+											<div class="smallLanguageText">slovenčina</div>
+										</a>
+										<a tabindex="0" href="/sl_si/faq">
+											<div class="bigLanguageText">Slovenian</div>
+											<div class="smallLanguageText">slovenščina</div>
+										</a>
+										<a tabindex="0" href="/es_es/faq">
+											<div class="bigLanguageText">Spanish</div>
+											<div class="smallLanguageText">español</div>
+										</a>
+										<a tabindex="0" href="/sv_se/faq">
+											<div class="bigLanguageText">Swedish</div>
+											<div class="smallLanguageText">svenska</div>
+										</a>
+										<a tabindex="0" href="/th_th/faq">
+											<div class="bigLanguageText">Thai</div>
+											<div class="smallLanguageText">ไทย</div>
+										</a>
+										<a tabindex="0" href="/tr_tr/faq">
+											<div class="bigLanguageText">Turkish</div>
+											<div class="smallLanguageText">Türkçe</div>
+										</a>
+										<a tabindex="0" href="/uk_ua/faq">
+											<div class="bigLanguageText">Ukrainian</div>
+											<div class="smallLanguageText">українська</div>
+										</a>
+										<a tabindex="0" href="/vi_vn/faq">
+											<div class="bigLanguageText">Vietnamese</div>
+											<div class="smallLanguageText">Tiếng Việt</div>
+										</a>
+									</div>
+								</div>
+							</div>
+
+							<script>
+								function handleDropdownClick() {
+									document.getElementById('languageDropdownMenu').classList.toggle('show');
+									document.getElementById('languageInput').focus();
+								}
+
+								function filterFunction() {
+									var input, filter, ul, li, a, i;
+									input = document.getElementById('languageInput');
+									filter = input.value.toUpperCase();
+									div = document.getElementById('languageDropdownMenu');
+									a = div.getElementsByTagName('a');
+									for (i = 0; i < a.length; i++) {
+										txtValue = a[i].textContent || a[i].innerText;
+										if (txtValue.toUpperCase().indexOf(filter) > -1) {
+											a[i].style.display = '';
+										} else {
+											a[i].style.display = 'none';
+										}
+									}
+								}
+
+								function setLanguageCode() {
+									var downTriangleCode = '&#9660';
+
+									var langButton = document.getElementById('langButton');
+									langButton.innerHTML = getLanguageCode() + '&nbsp;' + downTriangleCode;
+								}
+
+								function getLanguageCode() {
+									var langCode = 'EN';
+									var splitPath = window.location.pathname.split('/');
+									if (splitPath.length > 2) {
+										var lcidSymbol = splitPath[1];
+										langCode = lcidSymbol.split('_')[0].toUpperCase();
+									}
+									return langCode;
+								}
+
+								var flag = 0;
+								window.addEventListener('click', function (event) {
+									var dropDownElem = document.getElementsByClassName('lang-dropdown')[0];
+									var langDropDownMenu = document.getElementById('languageDropdownMenu');
+									if (
+										event.target != dropDownElem &&
+										event.target.parentNode != dropDownElem &&
+										flag % 2 != 0
+									) {
+										if (langDropDownMenu.classList.contains('show')) {
+											langDropDownMenu.classList.remove('show');
+										}
+									}
+									flag += 1;
+								});
+
+								setLanguageCode();
+							</script>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+
+		<main class="col-sm-12 col-md-8 col-lg-6 container py-3">
+			<h1 class="page-title">FAQ</h1>
+
+			<nav aria-label="FAQ 카테고리" class="toc mb-4">
+				<ul class="list-inline">
+					<li class="list-inline-item"><a href="#setup-and-installation">설정 및 설치</a></li>
+					<li class="list-inline-item"><a href="#api-key-and-verification">API 키 및 인증</a></li>
+					<li class="list-inline-item"><a href="#url-submission">URL 제출</a></li>
+					<li class="list-inline-item">
+						<a href="#automation-and-scripting">자동화 및 스크립팅</a>
+					</li>
+					<li class="list-inline-item"><a href="#advanced-use-cases">고급 사용 사례</a></li>
+					<li class="list-inline-item"><a href="#troubleshooting">IndexNow 문제 해결</a></li>
+				</ul>
+			</nav>
+
+			<!-- 설정 및 설치 -->
+			<section id="setup-and-installation" class="faq-category">
+				<h2>설정 및 설치</h2>
+				<hr class="section" />
+
+				<details>
+					<summary>IndexNow를 시작하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow를 시작하려면 콘텐츠 관리 시스템(CMS), 호스팅 제공업체 또는 SEO 플러그인이
+							이미 IndexNow를 지원하는지 확인하세요. 많은 플랫폼이 기본 지원 또는 호환 가능한
+							애드온을 제공하므로 수동 설정이 필요하지 않을 수 있습니다.
+						</p>
+						<p>
+							플랫폼이 IndexNow를 지원하지 않는 경우, 키 파일을 생성하고, 웹사이트를 인증하고,
+							IndexNow API를 사용하여 URL을 제출하면 수동으로 구현할 수 있습니다.
+						</p>
+						<p>
+							IndexNow를 수동으로 설정하기 전에 CMS 설명서 또는 플러그인 라이브러리를 확인해 주세요.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 지원하는 콘텐츠 관리 시스템은 무엇입니까?</summary>
+					<div class="mt-2">
+						<p>
+							다음 CMS는 네이티브 IndexNow 통합을 제공하거나 SEO 플러그인 또는 확장 프로그램을 통해
+							지원합니다:
+						</p>
+						<ul>
+							<li><strong>WordPress</strong></li>
+							<li><strong>Shopify</strong></li>
+							<li><strong>Wix</strong></li>
+							<li><strong>GoDaddy</strong></li>
+							<li><strong>Duda</strong></li>
+							<li><strong>XenForo</strong></li>
+							<li><strong>Milestone</strong></li>
+							<li><strong>Joomla!</strong></li>
+							<li><strong>Drupal</strong></li>
+							<li><strong>Bitrix24</strong></li>
+							<li><strong>PrestaShop</strong></li>
+							<li><strong>MODX</strong></li>
+							<li><strong>Shopware</strong></li>
+							<li><strong>OpenCart</strong></li>
+							<li><strong>Typo3</strong></li>
+							<li><strong>Umbraco</strong></li>
+						</ul>
+						<p>
+							다른 콘텐츠 관리 시스템도 플러그인 라이브러리에서 제공되는 서드파티 플러그인 또는 확장
+							프로그램을 통해 IndexNow를 네이티브로 지원할 수 있습니다. 웹사이트에서 IndexNow를
+							활성화하는 방법은 CMS 또는 호스팅 제공업체에 확인하세요.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 지원하는 콘텐츠 전송 네트워크는 무엇입니까?</summary>
+					<div class="mt-2">
+						<p>
+							Cloudflare는 네이티브 IndexNow 통합을 제공합니다. 그러나 이 목록은 완전하지 않습니다.
+							웹사이트에서 IndexNow를 활성화하는 구체적인 단계에 대해서는 제공업체에 문의하세요.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>
+						검색 엔진 크롤러에 의존하는 대신 IndexNow를 사용해야 하는 이유는 무엇입니까?
+					</summary>
+					<div class="mt-2">
+						<p>
+							기존 검색 엔진은 웹 크롤러에 의존하여 콘텐츠 업데이트를 발견하지만, 이 과정은 느리며
+							며칠에서 몇 주까지 걸릴 수 있습니다. IndexNow를 사용하면 콘텐츠가 추가, 업데이트 또는
+							삭제될 때 즉시 URL을 제출할 수 있습니다.
+						</p>
+						<p>
+							이를 통해 지원하는 검색 엔진에서 사이트의 색인 생성 속도가 향상되고, AI 기반 검색
+							결과에서 콘텐츠를 최신 상태로 유지할 수 있습니다. 더 빠른 색인 생성은 가시성 향상과
+							검색 결과에 적시 표시로 이어져 SEO 성과를 개선하는 데 도움이 될 수 있습니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 사용하여 검색 엔진에 언제 알려야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							웹사이트는 콘텐츠가 <strong>추가, 업데이트 또는 삭제</strong>될 때마다 IndexNow로
+							알려서 검색 엔진이 인덱스에 최신 버전을 반영할 수 있도록 해야 합니다.
+						</p>
+						<p>일반적인 사례는 다음과 같습니다:</p>
+						<ul>
+							<li>
+								<strong>새 콘텐츠:</strong> 제품 페이지, 비디오, 여행 목록, 구인 공고, 블로그 게시물
+								또는 이벤트 공지.
+							</li>
+							<li>
+								<strong>업데이트된 콘텐츠:</strong> 제품 설명, 비디오 제목/메타데이터, 여행 가이드,
+								비즈니스 프로필 또는 정책 페이지.
+							</li>
+							<li><strong>가격 또는 재고 변경:</strong> 재고 현황, 프로모션 또는 만료된 제안.</li>
+							<li>
+								<strong>사용자 생성 콘텐츠:</strong> 새로운 리뷰, 댓글 또는 포럼 게시물(과도한
+								알림을 피하기 위해 단계적으로 제출, 예: 1~20개는 각 리뷰마다, 이후 100개까지는
+								5개마다, 1000개까지는 10개마다).
+							</li>
+							<li>
+								<strong>삭제된 콘텐츠:</strong> 삭제된 제품, 비디오, 여행 정보 또는 만료된 이벤트.
+							</li>
+						</ul>
+						<p>
+							이러한 시점에서 IndexNow로 알리면 검색 엔진이 사이트의 정확한 버전을 더 빠르고
+							효율적으로 색인하는 데 도움이 됩니다.
+						</p>
+					</div>
+				</details>
+			</section>
+
+			<!-- API 키 및 인증 -->
+			<section id="api-key-and-verification" class="faq-category">
+				<h2>API 키 및 인증</h2>
+				<hr class="section" />
+
+				<details>
+					<summary>IndexNow API 키를 생성하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							CMS, 호스팅 제공업체 또는 SEO 플러그인이 IndexNow를 지원하는 경우 키 파일이 필요하지
+							않습니다. 제출은 자동으로 처리됩니다.
+						</p>
+						<p>
+							수동 설정의 경우 API 키를 만들어야 합니다. 이 키는 도메인 소유권을 증명하고 제출을
+							인증하여 검색 엔진이 제출이 합법적인 소스에서 온 것인지 확인할 수 있게 합니다.
+						</p>
+
+						<p><strong>API 키 생성 단계</strong></p>
+
+						<p><strong>1. 키 문자열 생성</strong></p>
+						<ul>
+							<li>GUID/UUID 생성기 또는 명령줄 도구를 사용합니다.</li>
+							<li>키 길이는 <strong>8~128자</strong>여야 합니다.</li>
+							<li>허용되는 문자: 소문자(a~z), 대문자(A~Z), 숫자(0~9) 및 하이픈(-).</li>
+						</ul>
+
+						<p><strong>2. 키 파일 만들기</strong></p>
+						<ul>
+							<li>텍스트 편집기 또는 코드 편집기(예: Notepad, TextEdit, VS Code)를 엽니다.</li>
+							<li>API 키를 파일에 붙여넣습니다.</li>
+							<li>키를 파일 이름으로 사용하고 .txt를 붙여 UTF-8 인코딩으로 저장합니다.</li>
+							<li>예: 키가 abcd1234인 경우, 내용이 abcd1234인 abcd1234.txt 파일을 만듭니다.</li>
+						</ul>
+
+						<p><strong>3. 파일 업로드</strong></p>
+						<ul>
+							<li>
+								키 파일을 사이트의 루트 디렉터리 또는 동일한 호스트의 공개적으로 접근 가능한
+								폴더(로그인 불필요)에 배치합니다.
+							</li>
+							<li>
+								공개 URL에서 접근 가능한지 확인합니다. 예:
+								<code>https://yourdomain.com/{your-key}.txt</code>
+							</li>
+							<li>
+								<em>예:</em> 도메인이 yourdomain.com이고 키가 I-love-IndexNow-3000인 경우, 파일은
+								<code>https://yourdomain.com/I-love-IndexNow-3000.txt</code>에 배치되어야 합니다.
+							</li>
+							<li>
+								또는 다른 공개 위치를 사용할 수도 있습니다. 예:
+								<code>https://yourdomain.com/keys/well-known.txt</code>. 루트가 아닌 위치를 사용하는
+								경우, URL 제출 시 <code>keyLocation</code> 매개변수를 사용하여 키 파일 위치를
+								지정합니다.
+							</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 위해 웹사이트 소유권을 인증하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>키 파일을 생성한 후, 다음 위치 중 하나에 업로드합니다:</p>
+						<ul>
+							<li>웹사이트의 <strong>루트 디렉터리</strong>(권장).</li>
+							<li>
+								또는 루트 접근이 불가능한 경우, 호스팅 제공업체의
+								<strong>공개적으로 접근 가능한 폴더</strong>(로그인 불필요).
+							</li>
+						</ul>
+
+						<p>
+							그런 다음 브라우저에서 파일 URL을 엽니다:<br />
+							<strong>https://yourdomain.com/{your-key}.txt</strong>
+						</p>
+
+						<p>
+							파일이 로드되고 키만 표시되면 사이트가 인증된 것입니다. 검색 엔진은 IndexNow 제출을
+							수락하기 전에 이 파일을 사용하여 도메인 소유권을 확인합니다. 인증에 실패하면 일반적인
+							해결 방법에 대한 아래 <strong>문제 해결</strong> 섹션을 참조하세요.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow API 키를 업데이트하거나 교체하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>서비스 중단 없이 다음 단계에 따라 IndexNow API 키를 교체할 수 있습니다:</p>
+
+						<p>
+							<strong>새 키를 생성합니다</strong>. 처음 사용한 것과 동일한 방법(수동 또는 도구
+							기반)을 사용합니다.
+						</p>
+
+						<ul>
+							<li>
+								<strong>루트 디렉터리의 이전 키 파일을</strong> 새 {key}.txt 파일로 교체합니다.
+							</li>
+							<li>
+								<strong>새 키를 사용하여 URL 제출을 시작합니다.</strong> 이렇게 하면 다음 제출 시
+								검색 엔진이 자동으로 새 키를 인증합니다.
+							</li>
+						</ul>
+
+						<p>URL 제출 시 업데이트된 키가 감지되면 검색 엔진은 자동으로 소유권을 재인증합니다.</p>
+					</div>
+				</details>
+			</section>
+
+			<!-- URL 제출 -->
+			<section id="url-submission" class="faq-category">
+				<h2>URL 제출</h2>
+				<hr class="section" />
+
+				<details>
+					<summary>IndexNow를 사용하여 URL을 제출하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							콘텐츠를 추가, 업데이트 또는 삭제할 때 URL을 IndexNow API에 제출하여 검색 엔진에 즉시
+							알릴 수 있습니다.
+						</p>
+
+						<p><strong>1. 요청 URL을 포맷합니다:</strong></p>
+						<p>
+							다음 참여 엔드포인트 중 하나에 요청을 보낼 수 있습니다.<br />
+							각 엔드포인트는 제출을 해당 검색 엔진에 직접 전달하며, 모든 IndexNow 지원 검색 엔진과
+							제출이 공유됩니다:
+						</p>
+
+						<ul>
+							<li>
+								<strong>IndexNow 글로벌 엔드포인트:</strong>
+								<code
+									>https://api.indexnow.org/indexnow?url={your-added-or-updated-or-deleted-url}&amp;key={your-key}</code
+								>
+							</li>
+							<li>
+								<strong>Amazon:</strong>
+								<code
+									>https://indexnow.amazonbot.amazon/indexnow?url={your-url}&amp;key={your-key}</code
+								>
+							</li>
+							<li>
+								<strong>Bing:</strong>
+								<code>https://www.bing.com/indexnow?url={your-url}&amp;key={your-key}</code>
+							</li>
+							<li>
+								<strong>Naver:</strong>
+								<code
+									>https://searchadvisor.naver.com/indexnow?url={your-url}&amp;key={your-key}</code
+								>
+							</li>
+							<li>
+								<strong>Seznam.cz:</strong>
+								<code>https://search.seznam.cz/indexnow?url={your-url}&amp;key={your-key}</code>
+							</li>
+							<li>
+								<strong>Yandex:</strong>
+								<code>https://yandex.com/indexnow?url={your-url}&amp;key={your-key}</code>
+							</li>
+							<li>
+								<strong>Yep:</strong>
+								<code>https://indexnow.yep.com/indexnow?url={your-url}&amp;key={your-key}</code>
+							</li>
+						</ul>
+
+						<p>
+							<strong>2.</strong> <code>{your-url}</code>을 추가, 업데이트 또는 삭제한 페이지의 전체
+							URL로, <code>{your-key}</code>를 인증된 IndexNow API 키로 바꿉니다.
+						</p>
+						<p>
+							<strong>3.</strong> 브라우저, 스크립트 또는 HTTP 클라이언트를 사용하여 요청을
+							보냅니다.
+						</p>
+						<p><strong>4. 제출 성공 여부를 확인합니다:</strong></p>
+						<ul>
+							<li><strong>HTTP 200</strong> 응답을 받으면 제출이 수락되어 처리된 것입니다.</li>
+							<li>
+								<strong>참고:</strong> <strong>첫 번째 요청</strong>에서는
+								<strong>HTTP 202</strong> 응답을 받을 수 있습니다. 이는 URL이 수신되었으며 검색
+								엔진이 콘텐츠를 색인하기 전에 키를 인증할 것임을 의미합니다. 인증이 완료되면 이후
+								성공적인 제출은 일반적으로 HTTP 200을 반환합니다.
+							</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 사용하여 여러 URL을 한 번에 제출하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow는 단일 POST 요청으로 최대 10,000개의 URL을 일괄 제출하는 것을 지원합니다.
+							여러 페이지의 업데이트, 추가 또는 삭제를 하나의 배치로 검색 엔진에 알릴 때 유용합니다.
+						</p>
+
+						<p><strong>POST 요청에서 다음 JSON 형식을 사용합니다:</strong></p>
+						<pre><code>POST /indexnow HTTP/1.1
+Host: &lt;searchengine&gt;
+Content-Type: application/json; charset=utf-8
+
+{
+  "host": "www.example.com",
+  "key": "fa8c0a469da44e9b8f6a769f291829f5",
+  "urlList": [
+    "https://www.example.com/url1",
+    "https://www.example.com/folder/url2",
+    "https://www.example.com/url3"
+  ]
+}
+</code></pre>
+
+						<p>
+							<strong>POST 요청 전송 대상:</strong><br />
+							<code>https://api.indexnow.org/indexnow</code>
+						</p>
+
+						<p><strong>여러 URL 제출 시 참고 사항:</strong></p>
+						<ul>
+							<li>한 번의 요청으로 10,000개 이하의 URL을 제출하세요.</li>
+							<li>UTF-8 인코딩을 사용하고 적절한 Content-Type 헤더를 설정하세요.</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow POST 요청의 최대 페이로드 크기는 얼마입니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow는 단일 JSON 페이로드에서 <strong>POST 요청당 최대 10,000개의 URL</strong>을
+							허용합니다. 이를 초과하면 요청이 실패하거나 HTTP 422(Unprocessable Entity) 응답이
+							반환될 수 있습니다.
+						</p>
+						<p>성공적인 처리를 위해 일괄 제출은 항상 10,000개 URL 제한 이하로 유지하세요.</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow 알림 URL은 어떻게 포맷합니까?</summary>
+					<div class="mt-2">
+						<p>참여하는 모든 검색 엔진에 다음 URL 구조를 사용하여 제출할 수 있습니다:</p>
+						<p>
+							<strong
+								><code
+									>https://&lt;searchengine&gt;/indexnow?url={your-url}&amp;key={your-key}</code
+								></strong
+							>
+						</p>
+
+						<p>예를 들어, IndexNow에 제출하는 경우 URL은 다음과 같습니다:</p>
+						<p>
+							<strong
+								><code
+									>https://api.indexnow.org/indexnow?url=https%3A%2F%2Fwww.example.com%2Fpage1&amp;key=50283fcd8c764cfd9bd79a8b4002f647</code
+								></strong
+							>
+						</p>
+
+						<p><strong>IndexNow 제출 URL을 올바르게 포맷하는 방법:</strong></p>
+						<ul>
+							<li>key 매개변수를 실제 IndexNow API 키로 바꿉니다.</li>
+							<li>
+								제출하는 페이지 URL을 반드시 <strong>URL 인코딩</strong>하세요(예: %3A는 :, %2F는
+								/).
+							</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow용 URL을 올바르게 인코딩하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow에서는 URL을
+							<a href="https://datatracker.ietf.org/doc/html/rfc3986">RFC-3986</a> 표준에 따라
+							인코딩해야 합니다. 이를 통해 특수 문자가 API를 통해 안전하게 전송됩니다.
+						</p>
+
+						<p><strong>일반적인 URL 인코딩 예:</strong></p>
+						<ul>
+							<li><code>:</code>는 <code>%3A</code>가 됩니다</li>
+							<li><code>/</code>는 <code>%2F</code>가 됩니다</li>
+							<li><code>?</code>는 <code>%3F</code>가 됩니다</li>
+							<li><code>=</code>는 <code>%3D</code>가 됩니다</li>
+							<li><code>&amp;</code>는 <code>%26</code>이 됩니다</li>
+						</ul>
+
+						<p><strong>IndexNow URL을 올바르게 인코딩하는 것이 중요한 이유:</strong></p>
+						<p>
+							올바른 인코딩은 IndexNow URL이 검색 엔진에 의해 올바르게 파싱되고 처리되도록
+							보장합니다. URL 인코딩을 하지 않으면 오류가 발생하거나 제출이 건너뛰어질 수 있습니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 사용하여 URL을 제출한 후 어떻게 됩니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow를 사용하여 URL을 제출한 후, 검색 엔진은 크롤링 할당량, 예약 로직 및 품질
+							신호를 기반으로 URL을 크롤링할지 여부를 평가합니다. 페이지가 내부 검사를 통과하면 최신
+							콘텐츠를 가져오기 위해 크롤링됩니다.
+						</p>
+						<p>
+							<strong>URL 제출은 즉각적인 색인 생성을 보장하지 않습니다.</strong> 그러나 IndexNow를
+							통해 중요한 변경 사항이 더 빠르게 발견되고 크롤링될 가능성이 높아져, 검색 엔진이
+							콘텐츠를 더 빠르게 표시하는 데 도움이 됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 통해 제출된 URL은 크롤링 할당량에 포함됩니까?</summary>
+					<div class="mt-2">
+						<p>
+							<strong
+								>예. IndexNow를 통해 제출된 모든 URL은 사이트의 크롤링 할당량에 포함됩니다.</strong
+							>
+						</p>
+						<p>
+							그러나 IndexNow를 사용하면 이러한 URL이 중요하며 우선 순위가 높다는 것을 검색 엔진에
+							알리는 것이 됩니다. 이를 통해 일반적으로 제출된 URL은 제출되지 않은 페이지보다 더
+							빠르게 크롤링됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>같은 URL을 하루에 여러 번 제출할 수 있습니까?</summary>
+					<div class="mt-2">
+						<p>
+							의미 있는 콘텐츠 변경이 없는 한 같은 URL을 하루에 여러 번 제출하는 것은 피하세요. 자주
+							업데이트되는 페이지의 경우, 재제출 전에 업데이트 간격을 최소 5분 두는 것이 모범
+							사례입니다.
+						</p>
+						<p>
+							빈번한 업데이트의 경우, 콘텐츠나 구조에 영향을 미치는 실질적인 변경에만 IndexNow를
+							사용하는 데 집중하세요. 불필요한 업데이트를 제출하면 가시성 향상 없이 크롤링 할당량만
+							소비할 수 있습니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>자주 변경되는 콘텐츠의 제출을 어떻게 처리합니까?</summary>
+					<div class="mt-2">
+						<p>
+							콘텐츠가 자주 업데이트되는 경우, 페이지 콘텐츠, 가격, 재고 업데이트 등 의미 있는
+							변경에 IndexNow 제출을 집중하세요. 레이아웃이나 외관상의 작은 변경마다 제출하는 것은
+							피하세요.
+						</p>
+
+						<p>빈번한 업데이트를 효과적으로 처리하려면:</p>
+						<ul>
+							<li>
+								실제 콘텐츠 변경을 감지하는 스크립트를 사용하여
+								<strong>제출을 자동화</strong>합니다.
+							</li>
+							<li>같은 URL을 재제출하기 전에 <strong>최소 5분</strong>을 기다립니다.</li>
+							<li>
+								콘텐츠 신선도와 크롤링 효율성의 균형을 맞추기 위해
+								<strong>색인 동작을 모니터링</strong>합니다.
+							</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>리디렉션되거나 삭제된 URL을 IndexNow로 제출할 수 있습니까?</summary>
+					<div class="mt-2">
+						<p>
+							예. 리디렉션된 URL과 HTTP 404 또는 HTTP 410 상태 코드를 반환하는 페이지를 제출해야
+							합니다.
+						</p>
+
+						<p>
+							<strong
+								>IndexNow로 리디렉션되거나 삭제된 URL을 제출하면 검색 엔진은 다음을 수행할 수
+								있습니다:</strong
+							>
+						</p>
+						<ul>
+							<li>
+								301, 302 또는 메타 리프레시를 사용하여 페이지가 리디렉션된 경우 인덱스를
+								업데이트합니다.
+							</li>
+							<li>
+								페이지가 삭제되어 404 또는 410을 반환하는 경우 오래되거나 깨진 링크를 제거합니다.
+							</li>
+							<li>사용자를 위해 정확하고 최신의 검색 결과를 유지합니다.</li>
+						</ul>
+
+						<p>
+							IndexNow는 삭제, 이동 또는 리디렉션된 콘텐츠의 URL 제출을 지원합니다. 이러한
+							업데이트를 포함하면 검색 엔진이 사이트의 가장 정확한 구조를 반영하고 크롤링 효율성을
+							개선하는 데 도움이 됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow를 사용하여 사이트의 모든 URL을 제출할 수 있습니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow는 <strong>최근 추가, 업데이트 또는 삭제된</strong> URL에 대해 검색 엔진에
+							알리기 위한 것입니다. 사이트의 모든 URL을 한꺼번에 제출하도록 설계되지 않았습니다.
+						</p>
+
+						<p>
+							마이그레이션이나 리디자인 후와 같이 전체 사이트가 최근 업데이트된 경우, IndexNow를
+							사용하여 모든 URL을 제출하는 것은 괜찮습니다. 지속적인 발견과 장기 색인 생성에는 XML
+							사이트맵을 사용하세요.
+						</p>
+
+						<p><strong>색인 범위와 신선도를 개선하려면 다음 접근 방식을 사용하세요:</strong></p>
+						<ul>
+							<li>
+								<strong>IndexNow</strong>를 사용하여 우선순위가 높거나 자주 변경되는 페이지를
+								제출합니다.
+							</li>
+							<li>
+								<strong>사이트맵</strong>을 사용하여 웹사이트의 모든 URL의 전체 목록을 검색 엔진에
+								제공합니다.
+							</li>
+						</ul>
+
+						<p>
+							이 조합을 통해 빠른 콘텐츠 발견과 검색 결과에서의 포괄적인 가시성을 모두 확보할 수
+							있습니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow와 사이트맵을 함께 사용해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							예. IndexNow와 사이트맵을 함께 사용하면 콘텐츠 가시성이 향상되고 검색 엔진에 의한 더
+							넓은 범위가 보장됩니다.
+						</p>
+
+						<p><strong>IndexNow는 다음을 제공하여 검색 가시성을 향상시킵니다:</strong></p>
+						<ul>
+							<li>콘텐츠가 추가, 업데이트 또는 삭제될 때 즉각적인 알림.</li>
+							<li>중요한 변경 사항의 더 빠른 발견.</li>
+							<li>자주 변경되는 콘텐츠에 대한 실시간 업데이트.</li>
+						</ul>
+
+						<p><strong>사이트맵은 다음을 제공하여 검색 범위를 강화합니다:</strong></p>
+						<ul>
+							<li>사이트의 모든 URL의 전체 목록.</li>
+							<li>자주 변경되지 않거나 사이트 구조 깊은 곳에 있는 페이지 발견.</li>
+							<li>포괄적인 색인 생성을 위한 장기 크롤링 지원.</li>
+						</ul>
+
+						<p>
+							IndexNow와 사이트맵을 결합하면 기존 및 AI 기반 검색 엔진 모두에서 콘텐츠가 빠르게
+							표시되고 완전히 발견되도록 보장됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow 사용을 시작하기 전에 변경된 URL을 제출해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							<strong>아니요.</strong> IndexNow는 최근 추가, 업데이트 또는 삭제에 대해 검색 엔진에
+							알리도록 설계되었습니다. 과거 변경 사항을 소급하여 제출하기 위한 것이 아닙니다.
+						</p>
+
+						<p>
+							이전에 업데이트된 페이지를 검색 엔진이 발견할 수 있도록 하려면 다음 접근 방식을
+							따르세요:
+						</p>
+						<ul>
+							<li>IndexNow 설정 후 변경된 URL을 제출하려면 IndexNow를 사용합니다.</li>
+							<li>
+								구현 전에 업데이트된 콘텐츠를 표시하려면 정확한 <code>lastmod</code> 값이 있는
+								사이트맵을 사용합니다.
+							</li>
+							<li>이 조합을 통해 최근 변경 사항과 과거 변경 사항 모두 검색 엔진에 표시됩니다.</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>소규모 웹사이트에 IndexNow를 사용해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							<strong>예.</strong> IndexNow는 몇 페이지만 있는 소규모 웹사이트에도 유용합니다.
+							업데이트에 대해 검색 엔진에 즉시 알릴 수 있어 더 빠른 크롤링과 색인 생성 가능성이
+							높아집니다.
+						</p>
+
+						<p><strong>소규모 사이트에서 IndexNow를 사용하면 다음이 가능합니다:</strong></p>
+						<ul>
+							<li>새롭거나 업데이트된 콘텐츠의 더 빠른 가시성 달성.</li>
+							<li>변경된 페이지를 타겟팅하여 크롤링 효율성 향상.</li>
+							<li>업데이트가 검색 결과에 표시되는 속도 제어.</li>
+						</ul>
+					</div>
+				</details>
+			</section>
+
+			<!-- 자동화 및 스크립팅 -->
+			<section id="automation-and-scripting" class="faq-category">
+				<h2>자동화 및 스크립팅</h2>
+				<hr class="section" />
+
+				<details>
+					<summary>IndexNow 제출을 자동화하기 위한 모범 사례는 무엇입니까?</summary>
+					<div class="mt-2">
+						<p>
+							자동화는 검색 엔진에 과부하를 주거나 속도 제한을 초과하지 않으면서 적시에 URL을 알리는
+							데 도움이 됩니다. 핵심은 실제 변경을 감지하고 중요한 것만 제출하는 것입니다.
+						</p>
+
+						<p><strong>IndexNow를 효과적으로 자동화하려면:</strong></p>
+						<ul>
+							<li>
+								<strong>백엔드 스크립트 또는 CMS 후크</strong>를 사용하여 콘텐츠가 추가, 업데이트
+								또는 삭제될 때 제출을 트리거합니다.
+							</li>
+							<li>
+								외관이나 레이아웃만의 변경이 아닌
+								<strong>의미 있는 업데이트(가격, 재고, 콘텐츠 등)를 감지하고 필터링</strong>합니다.
+							</li>
+							<li>
+								급격한 재제출을 방지하기 위해 디바운스 로직을 구현합니다(예: 같은 URL 제출 간격을
+								5분 이상 유지).
+							</li>
+							<li>
+								<strong>각 제출을 기록</strong>하고 문제에 대한 HTTP 응답 코드를 모니터링합니다.
+							</li>
+							<li>
+								<strong>IndexNow를 게시 워크플로우 또는 배포 파이프라인에 통합</strong>하여 제출이
+								자동으로 안정적으로 이루어지도록 합니다.
+							</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>스크립트를 사용하여 IndexNow 제출을 자동화하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							동적 콘텐츠 변경을 감지하고 업데이트된 URL을 IndexNow API에 직접 제출하는 스크립트를
+							작성하여 IndexNow 제출을 자동화할 수 있습니다. 이를 통해 중요한 콘텐츠가 변경될 때
+							검색 엔진에 실시간으로 알립니다.<br />
+							다음은 콘텐츠 데이터베이스에서 최근 변경된 URL을 확인하고 자동으로 IndexNow에 제출하는
+							Python 예제입니다.
+						</p>
+
+						<p>
+							시뮬레이션된 content_db 딕셔너리를 CMS, 게시 플랫폼 또는 백엔드 데이터베이스를
+							쿼리하여 최근 업데이트된 콘텐츠를 감지하는 라이브 통합으로 교체하세요.
+						</p>
+
+						<pre><code>import requests
+import time
+
+# 설정
+API_KEY = "your-api-key"
+HOST = "example.org"
+KEY_LOCATION = "https://{HOST}/{API_KEY}.txt"
+INDEXNOW_API_URL = "https://api.indexnow.org/indexnow"
+
+# 시뮬레이션된 콘텐츠 데이터베이스 (타임스탬프 = 현재 - 임의 오프셋)
+content_db = {
+    "/product?id=101": int(time.time()) - 100,  # 약 100초 전 변경
+    "/news?id=202": int(time.time()) - 4000,   # 약 1시간 이상 전 변경
+    "/blog?id=303": int(time.time()) - 200     # 약 200초 전 변경
+}
+
+def detect_dynamic_changes():
+    current_time = int(time.time())
+    changed_urls = []
+    for url, last_modified in content_db.items():
+        if current_time - last_modified &lt; 3600:  # 최근 1시간
+            changed_urls.append(f"https://{HOST}{url}")
+    return changed_urls
+
+def submit_urls(url_list):
+    payload = {
+        "host": HOST,
+        "key": API_KEY,
+        "keyLocation": KEY_LOCATION,
+        "urlList": url_list
+    }
+    headers = {"Content-Type": "application/json; charset=utf-8"}
+    response = requests.post(INDEXNOW_API_URL, json=payload, headers=headers)
+
+    if response.status_code in (200, 202):
+        print("URLs sent successfully:", url_list)
+    elif response.status_code == 429:
+        print("Rate limited. Try again later.")
+    else:
+        print("Failed:", response.status_code, response.text)
+
+if __name__ == "__main__":
+    changed_urls = detect_dynamic_changes()
+    if changed_urls:
+        submit_urls(changed_urls)
+    else:
+        print("동적 콘텐츠 변경이 감지되지 않았습니다.")
+</code></pre>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow에서 어떤 HTTP 응답 코드가 반환됩니까?</summary>
+					<div class="mt-2">
+						<p>URL을 제출할 때 다음 HTTP 응답 코드가 반환될 수 있습니다:</p>
+						<ul>
+							<li><strong>200 OK:</strong> URL이 성공적으로 수신되었습니다.</li>
+							<li><strong>202 Accepted:</strong> 제출이 수락되었지만 아직 처리되지 않았습니다.</li>
+							<li>
+								<strong>400 Bad Request:</strong> URL 또는 API 키 형식이 올바르지 않을 수 있습니다.
+							</li>
+							<li>
+								<strong>422 Unprocessable Entity:</strong> 서버가 요청을 이해했지만 처리할 수
+								없었습니다.
+							</li>
+							<li>
+								<strong>429 Too Many Requests:</strong> 속도 제한에 도달했습니다. 나중에 다시
+								시도하세요.
+							</li>
+						</ul>
+						<p>
+							<strong>HTTP 응답을 기록하여 제출 성공을 모니터링하고 문제를 식별하세요.</strong> 이를
+							통해 특히 속도 제한이나 형식 오류와 관련된 문제를 조기에 감지할 수 있습니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow 제출에 어떤 로깅을 설정해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							적절한 로깅을 설정하면 URL 제출을 모니터링하고 IndexNow 통합의 오류를 문제 해결하는 데
+							도움이 됩니다.
+						</p>
+
+						<p><strong>IndexNow 로깅 시스템에 포함해야 할 핵심 필드:</strong></p>
+						<ul>
+							<li>제출 타임스탬프</li>
+							<li>제출된 전체 URL</li>
+							<li>HTTP 응답 코드(예: 200, 400, 429)</li>
+							<li>재시도 또는 실패</li>
+							<li>제출 방법(GET 또는 POST)</li>
+							<li>사용된 API 키(여러 키를 관리하는 경우 선택 사항)</li>
+						</ul>
+
+						<p><strong>IndexNow에서 로깅이 중요한 이유:</strong></p>
+						<ul>
+							<li>제출 패턴과 반복되는 오류를 감지하는 데 도움이 됩니다.</li>
+							<li>실패한 제출을 쉽게 감지하고 수정할 수 있습니다.</li>
+							<li>URL이 수락되고 올바르게 색인되었는지 확인할 수 있습니다.</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow 제출을 모니터링하고 테스트하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow 구현의 모니터링과 테스트를 통해 URL이 올바르게 제출되고 검색 엔진에 수신되고
+							있는지 확인할 수 있습니다.
+						</p>
+
+						<p><strong>IndexNow 제출을 효과적으로 모니터링하고 테스트하려면:</strong></p>
+						<ul>
+							<li>
+								curl이나 wget과 같은 도구를 사용하여 URL 제출을 테스트하고 HTTP 응답 코드를
+								확인합니다.
+							</li>
+							<li>성공 응답(HTTP 200) 또는 오류(예: 400, 429)를 확인합니다.</li>
+							<li>타임스탬프와 서버 응답과 함께 모든 제출을 기록합니다.</li>
+							<li>
+								검색 엔진이 제공하는 색인 보고서 또는 도구를 확인하여 크롤링 동작을 추적합니다.
+							</li>
+						</ul>
+					</div>
+				</details>
+			</section>
+
+			<!-- 고급 사용 사례 -->
+			<section id="advanced-use-cases" class="faq-category">
+				<h2>고급 사용 사례</h2>
+				<hr class="section" />
+
+				<details>
+					<summary>여러 하위 도메인에서 IndexNow를 사용하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							각 하위 도메인은 개별 호스트로 취급되므로, 각각에 대해 별도의 키 파일을 생성하고
+							관리해야 합니다.
+						</p>
+
+						<p><strong>다음과 같은 하위 도메인을 가진 사이트의 경우:</strong></p>
+						<ul>
+							<li>blog.example.com</li>
+							<li>shop.example.com</li>
+							<li>support.example.com</li>
+						</ul>
+
+						<p><strong>각 하위 도메인에 대해 다음을 수행해야 합니다:</strong></p>
+						<ul>
+							<li>하위 도메인의 루트 디렉터리에 고유한 {key}.txt 파일을 호스팅합니다.</li>
+							<li>해당 하위 도메인의 고유 API 키를 사용하여 URL을 제출합니다.</li>
+						</ul>
+
+						<p>
+							이를 통해 각 하위 도메인이 독립적으로 인증되고 검색 엔진 전체에서 올바르게 색인됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>다국어 웹사이트에서 IndexNow를 사용하려면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							웹사이트가 여러 언어로 콘텐츠를 제공하는 경우, 각 언어 버전의 URL을 IndexNow에
+							개별적으로 제출하세요.
+						</p>
+
+						<p>예:</p>
+						<ul>
+							<li><code>https://example.com/en/product</code></li>
+							<li><code>https://example.com/fr/product</code></li>
+							<li><code>https://example.com/de/product</code></li>
+						</ul>
+
+						<p><strong>IndexNow에서 다국어 제출을 최적화하는 방법:</strong></p>
+						<ul>
+							<li>각 언어 버전에 대해 개별 URL을 제출합니다.</li>
+							<li>해당하는 경우 각 버전이 canonical 및 hreflang 태그를 사용하는지 확인합니다.</li>
+							<li>제출되는 모든 링크를 RFC-3986 표준에 따라 URL 인코딩합니다.</li>
+						</ul>
+
+						<p>
+							이 방법으로 IndexNow를 사용하면 검색 엔진이 현지화된 콘텐츠를 더 빠르게 발견하고
+							크롤링하는 데 도움이 됩니다.
+						</p>
+					</div>
+				</details>
+			</section>
+
+			<!-- 문제 해결 -->
+			<section id="troubleshooting" class="faq-category">
+				<h2>IndexNow 문제 해결</h2>
+				<hr class="section" />
+
+				<details>
+					<summary>IndexNow 키 파일이 인증되지 않는 이유는 무엇입니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow 키 파일이 업로드되었는데 인증되지 않는 경우, 일반적으로 파일 이름, 배치 또는
+							접근에 문제가 있음을 의미합니다.
+						</p>
+
+						<ul>
+							<li>
+								<strong>파일 이름:</strong> 파일은 API 키와 정확히 일치하는 이름에 .txt가 붙어야
+								합니다(예: 키가 I-love-IndexNow-3000이면 파일 이름은 I-love-IndexNow-3000.txt).
+							</li>
+							<li>
+								<strong>파일 위치:</strong> 도메인의 <strong>루트 디렉터리</strong>에 배치해야
+								합니다(호스트에서 별도로 요구하지 않는 한 하위 폴더가 아님).
+							</li>
+						</ul>
+
+						<p>확인해야 할 일반적인 문제:</p>
+						<ul>
+							<li><strong>파일 내용:</strong> 파일 내 텍스트는 API 키와 정확히 일치해야 합니다.</li>
+							<li>
+								<strong>파일 접근성:</strong> 로그인, 방화벽 또는 IP 제한 없이
+								<strong>https://yourdomain.com/{your-key}.txt</strong>에서 접근 가능해야 합니다.
+							</li>
+						</ul>
+
+						<p><strong>테스트 방법</strong></p>
+						<p>
+							브라우저에서 파일 URL을 엽니다. 키만 일반 텍스트로 표시되면 검색 엔진이 사이트를
+							인증할 수 있습니다. 파일이 없거나, 일치하지 않거나, 차단된 경우 IndexNow 제출은
+							수락되지 않습니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow에 URL을 제출한 후 왜 색인되지 않습니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow로 URL을 제출하면 콘텐츠가 변경되었음을 검색 엔진에 알리지만, 색인 생성을
+							보장하지는 않습니다. URL이 색인되지 않는 이유는 다음과 같습니다:
+						</p>
+						<ul>
+							<li>도메인의 크롤링 할당량 제한.</li>
+							<li>저품질, 빈약하거나 중복된 콘텐츠.</li>
+							<li>404 오류, robots.txt 차단 또는 noindex 태그와 같은 기술적 문제.</li>
+							<li>크롤링 스케줄링으로 인한 색인 지연.</li>
+							<li>검색 엔진이 알고리즘에 따라 URL을 색인하지 않기로 선택할 수 있습니다.</li>
+						</ul>
+						<p>
+							<strong
+								>콘텐츠가 고품질이고, 내부적으로 링크되어 있으며, 크롤러가 접근할 수 있는지
+								확인하세요.</strong
+							>
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>
+						IndexNow URL이 하나의 검색 엔진에서는 색인되지만 다른 검색 엔진에서는 색인되지 않는
+						이유는 무엇입니까?
+					</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow를 통해 URL을 제출하면 모든 참여 검색 엔진에 콘텐츠 변경이 알려지지만, 각
+							엔진은 색인할지 여부를 독립적으로 결정합니다.
+						</p>
+
+						<p>
+							<strong>URL이 하나의 엔진에서는 색인되고 다른 엔진에서는 색인되지 않는 이유:</strong>
+						</p>
+						<ul>
+							<li>각 검색 엔진의 콘텐츠 품질 평가 차이.</li>
+							<li>크롤링 예산이나 URL 우선순위 전략의 차이.</li>
+							<li>고유한 색인 알고리즘 및 순위 시스템.</li>
+							<li>엔진 간의 타이밍 또는 크롤링 스케줄링 차이.</li>
+						</ul>
+
+						<p>
+							검색 엔진은 검색 결과에 표시할 콘텐츠를 결정하기 위해 자체 기준을 사용합니다. URL이
+							색인되었는지 확인하려면 각 엔진의 사이트 검사 또는 보고 도구를 사용하세요.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow의 속도 제한은 무엇입니까?</summary>
+					<div class="mt-2">
+						<p>
+							IndexNow는 정확한 속도 제한을 공개하지 않습니다. 각 참여 검색 엔진이 사이트별로 자체
+							일일 제출 임계값을 설정합니다.
+						</p>
+
+						<p>
+							<strong>HTTP 429(Too Many Requests) 응답을 받은 경우 다음 단계를 수행하세요:</strong>
+						</p>
+						<ul>
+							<li>제출을 일시 중지하고 Retry-After 헤더에 지정된 시간 후에 재시도합니다.</li>
+							<li>제출 빈도 또는 배치 크기를 줄입니다.</li>
+							<li>제출 활동을 기록하여 속도 제한 오류를 모니터링합니다.</li>
+						</ul>
+
+						<p><strong>속도 제한에 도달하지 않으려면 다음 모범 사례를 따르세요:</strong></p>
+						<ul>
+							<li>콘텐츠가 변경된 경우에만 제출하세요. 변경되지 않은 URL을 재제출하지 마세요.</li>
+							<li>HTTP 응답 코드를 모니터링하고 제출 패턴을 적절히 조정하세요.</li>
+						</ul>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow에서 400 Bad Request 오류가 반환되면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							HTTP 400 Bad Request 오류는 요청이 제대로 포맷되지 않았거나 필수 정보가 누락되어
+							IndexNow 제출이 실패했음을 의미합니다.
+						</p>
+
+						<p><strong>IndexNow가 400 오류를 반환하는 일반적인 이유:</strong></p>
+						<ul>
+							<li>IndexNow API 키가 누락되었거나 올바르지 않습니다.</li>
+							<li>제출된 URL이 적절하게 URL 인코딩되지 않았습니다.</li>
+							<li>요청 구조가 IndexNow 형식을 따르지 않습니다.</li>
+							<li>url이나 key와 같은 매개변수의 철자가 틀리거나 누락되었습니다.</li>
+						</ul>
+
+						<p><strong>IndexNow 사용 시 400 오류 수정 방법:</strong></p>
+						<ul>
+							<li>
+								<strong>IndexNow API 키를 확인합니다</strong> &mdash; 제출의 키가 키 파일에 호스팅된
+								것과 일치하는지 확인합니다.
+							</li>
+							<li>
+								<strong>제출된 URL이 적절하게 인코딩되어 있는지 확인합니다</strong> &mdash; :, / 및
+								&amp;와 같은 문자에 RFC-3986 준수 인코딩을 사용합니다.
+							</li>
+							<li>
+								<strong>IndexNow 요청 구조를 확인합니다</strong> &mdash; GET 또는 POST로 제출할 때
+								형식이 IndexNow 프로토콜 지침을 따르는지 확인합니다.
+							</li>
+							<li>
+								<strong>오타 및 포맷 문제를 수정합니다</strong> &mdash; 후행 쉼표나 잘못 배치된
+								괄호와 같은 불필요한 문자가 없는지 확인합니다.
+							</li>
+							<li>
+								<strong>로그를 사용하여 IndexNow 제출을 모니터링합니다</strong> &mdash; 오류와 응답
+								코드를 추적하여 반복되는 문제를 식별하고 수정합니다.
+							</li>
+						</ul>
+
+						<p>
+							이러한 문제를 해결하면 IndexNow 제출이 참여 검색 엔진에 수락되고 올바르게 처리됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>
+						IndexNow에서 422 Unprocessable Entity 오류가 반환되면 어떻게 해야 합니까?
+					</summary>
+					<div class="mt-2">
+						<p>
+							HTTP 422 Unprocessable Entity 오류는 서버가 IndexNow 제출을 이해했지만 하나 이상의
+							문제로 인해 처리할 수 없었음을 의미합니다.
+						</p>
+
+						<p><strong>IndexNow가 422 오류를 반환하는 일반적인 이유:</strong></p>
+						<ul>
+							<li>제출된 URL이 인증된 도메인과 일치하지 않습니다.</li>
+							<li>IndexNow 키 파일이 누락되었거나 접근할 수 없습니다.</li>
+							<li>의미 있는 변경 없이 동일한 URL이 반복적으로 제출되고 있습니다.</li>
+						</ul>
+
+						<p><strong>IndexNow에서 422 오류를 해결하는 방법:</strong></p>
+						<ul>
+							<li>
+								<strong>키 파일 위치와 접근성을 확인합니다</strong> &mdash; 키 파일이 루트
+								디렉터리에 올바르게 호스팅되고
+								<strong>https://yourdomain.com/{your-key}.txt</strong>에서 공개적으로 접근 가능한지
+								확인합니다.
+							</li>
+							<li>
+								<strong>도메인이 키와 일치하는지 확인합니다</strong> &mdash; 인증된 IndexNow 키와
+								일치하는 도메인의 URL만 제출합니다.
+							</li>
+							<li>
+								<strong>최근 변경된 콘텐츠만 제출합니다</strong> &mdash; 변경되지 않은 URL의 제출을
+								피합니다. IndexNow는 새로운, 업데이트되거나 삭제된 콘텐츠를 위해 설계되었습니다.
+							</li>
+							<li>
+								<strong>제출을 모니터링하고 기록합니다</strong> &mdash; 로그를 사용하여 반복되는
+								오류를 추적하고, 중복 제출을 피하고, 정상적인 전달을 확인합니다.
+							</li>
+						</ul>
+
+						<p>이러한 문제를 수정하면 IndexNow 요청이 참여 검색 엔진에 수락되고 처리됩니다.</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow에서 429 Too Many Requests 오류가 반환되면 어떻게 해야 합니까?</summary>
+					<div class="mt-2">
+						<p>
+							429 오류는 짧은 시간 내에 IndexNow에 너무 많은 URL을 제출하여
+							<strong>사이트의 제출 속도 제한을 초과</strong>했음을 의미합니다.
+						</p>
+
+						<p><strong>IndexNow 429 오류 해결 방법:</strong></p>
+						<ul>
+							<li>
+								<strong>Retry-After 헤더를 확인</strong>하여 재제출까지 대기할 시간을 파악합니다.
+							</li>
+							<li>불필요하거나 중복된 제출을 피하여 <strong>제출 빈도를 줄입니다</strong>.</li>
+							<li>
+								크게 변경되지 않는 한 같은 URL을 재제출하기 전에 <strong>최소 10분</strong>을
+								기다립니다.
+							</li>
+							<li>
+								속도 제한 재도달을 피하기 위해
+								<strong>요청을 기록하고 응답 코드를 모니터링</strong>합니다.
+							</li>
+						</ul>
+
+						<p>
+							각 검색 엔진은 IndexNow에 대한 자체 제한을 설정합니다. 제출을 늦추고 간격을 두면 전달
+							성공률이 향상됩니다.
+						</p>
+					</div>
+				</details>
+
+				<details>
+					<summary>IndexNow 구현 시 피해야 할 일반적인 실수는 무엇입니까?</summary>
+					<div class="mt-2">
+						<p>다음은 IndexNow가 올바르게 작동하지 않는 원인이 되는 일반적인 구현 문제입니다:</p>
+						<ul>
+							<li>키 파일을 도메인 루트 외부에 호스팅합니다.</li>
+							<li>
+								잘못된 파일 이름을 사용합니다(키와 정확히 일치해야 하며 .txt로 끝나야 합니다).
+							</li>
+							<li>제출 URL의 특수 문자에 대한 URL 인코딩을 잊어버립니다.</li>
+							<li>변경되지 않은 URL을 반복적으로 제출합니다.</li>
+							<li>인증되지 않았거나 일치하지 않는 키를 사용합니다.</li>
+							<li>키 파일이 공개적으로 접근 가능하기 전에 제출합니다.</li>
+						</ul>
+						<p>
+							키 파일이 올바르게 배치되고, 공개적으로 접근 가능하며, 제출 요청이 적절하게 포맷되어
+							있는지 확인하세요.
+						</p>
+					</div>
+				</details>
+			</section>
+
+			<div class="px-0" style="opacity: 1; background: #ffffff">
+				<hr style="margin-top: 13px; margin-bottom: 13px" />
+				<div class="footer">
+					<a href="terms" style="text-decoration: none">이용 약관</a>
+				</div>
+			</div>
+
+			<script src="/assets/scripts/faq.js"></script>
+		</main>
+	</body>
+</html>

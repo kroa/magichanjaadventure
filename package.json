@@ -32,7 +32,9 @@
 		"stroke:atlas": "node --experimental-strip-types scripts/stroke-atlas.mjs",
 		"shots:readme": "README_SHOTS=1 playwright test tests/visual/readme.e2e.ts --project=desktop",
 		"video:play": "PLAY_VIDEO=1 playwright test tests/visual/play-video.e2e.ts --project=desktop",
-		"video:gif": "node scripts/make-gif.mjs"
+		"video:gif": "node scripts/make-gif.mjs",
+		"audit:seo": "node scripts/seo-audit.mjs",
+		"indexnow": "node scripts/indexnow.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
