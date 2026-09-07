@@ -72,6 +72,26 @@ test.describe('한자사전', () => {
 		await expect(page.locator('.glyph')).toHaveText(word![0]);
 	});
 
+	test('낱말 페이지가 획순과 동음 낱말까지 보여 준다', async ({ page }, testInfo) => {
+		/*
+		 * 낱말을 찾은 사람은 대개 그 글자를 **쓸 줄 모른다.** 획순은 이 사전이 따로
+		 * 만들어 가진 것인데 글자 페이지에만 있어서, 한 번 더 눌러야 보였다.
+		 */
+		await page.goto('/hanja/낱말/江山');
+		await expect(page.getByRole('heading', { name: '획순' })).toBeVisible();
+		await expect(page.locator('.stroke-card'), '두 글자 모두 획순이 나와야 한다').toHaveCount(2);
+
+		await waitForFonts(page);
+		await captureScreen(page, testInfo, 'dict-word-strokes');
+		await expectHealthyLayout(page);
+
+		// 소리가 같고 한자가 다른 낱말 — 한자를 봐야 갈리는 자리다
+		await page.goto('/hanja/낱말/救助');
+		await expect(page.getByRole('heading', { name: '소리가 같은 다른 낱말' })).toBeVisible();
+		const homo = page.locator('.words a').first();
+		await expect(homo.locator('b')).toHaveText('構造');
+	});
+
 	test('글자 페이지가 낱말로 되돌아가는 길을 연다', async ({ page }) => {
 		await page.goto('/hanja/國');
 		const link = page.locator('.wordlist a').first();

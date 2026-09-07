@@ -1,0 +1,3672 @@
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+
+<meta charset="UTF-8">
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,user-scalable=yes">
+
+<meta name="title" content="사단법인 한국어문회">
+<meta name="_csrf_parameter" content="_csrf" /><meta name="_csrf_header" content="X-CSRF-TOKEN" /><meta name="_csrf" content="bc657ba8-906a-482a-8b59-fde80be2d84d" />
+<title>사단법인 한국어문회</title>
+
+<!-- 공통 CSS -->
+<link rel="stylesheet" href="/common/css/common.css">
+<link rel="stylesheet" href="/common/css/default.css">
+<link rel="stylesheet" href="/common/css/layout.css">
+<link rel="stylesheet" href="/common/css/layout_respond.css">
+
+<!-- 서브 콘텐츠 CSS -->
+<link rel="stylesheet" href="/sub1/css/sub01.css">
+<link rel="stylesheet" href="/sub1/css/sub02.css">
+<link rel="stylesheet" href="/sub1/css/contents.css">
+<link rel="stylesheet" href="/sub1/css/contents_respond.css">
+<link rel="stylesheet" href="/sub1/css/tabMenu.css">
+
+<!-- 절차 디자인인 CSS -->
+<link rel="stylesheet" href="/sub1/css/flow.css">
+
+<!-- dataTable CSS -->
+<link rel="stylesheet" href="/sub1/css/dataTables.css">
+
+
+
+
+
+<meta name="_csrf" content="bc657ba8-906a-482a-8b59-fde80be2d84d" />
+<meta name="_csrf_header" content="X-CSRF-TOKEN" />
+
+<script type="text/javascript"	src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+
+
+<script type="text/javascript"	src="/js/polyfill.min.js"></script>
+<script type="text/javascript"	src="/js/formdata.min.js"></script>
+<script type="text/javascript"	src="/js/jquery.tmpl.js"></script>
+<script type="text/javascript"	src="/js/jquery.fileDownload.js"></script>
+
+<!-- DataTables -->
+<link rel="stylesheet" href='/js/datatables/dataTables.bootstrap4.min.css' >
+<link rel="stylesheet" href='/js/datatables/responsive.bootstrap4.min.css' >
+<script src='/js/datatables/jquery.dataTables.min.js' ></script>
+<script src='/js/datatables/dataTables.bootstrap4.min.js' ></script>
+<script src='/js/datatables/dataTables.responsive.min.js' ></script>
+<script src='/js/datatables/responsive.bootstrap4.min.js' ></script>
+
+
+<link rel="stylesheet" href='/js/sweet/bootstrap-4.min.css' >
+<script src='/js/sweet/sweetalert2.all.min.js' ></script>
+
+
+
+
+
+<script type="text/javascript">
+
+$(document).ajaxSend(function( event, jqxhr, settings ) {
+	jqxhr.setRequestHeader('X-Ajax-Yn', 'Y' );
+	
+	var _csrf_header = $("meta[name='_csrf_header']").attr("content");
+	var _csrf = $("meta[name='_csrf']").attr("content");
+	 if( !$.isEmptyObject( _csrf ) ){
+		 jqxhr.setRequestHeader( _csrf_header, _csrf );
+	 }
+});
+
+
+$(document).ajaxError( function ( event, jqxhr, settings, thrownError ) {
+	var movePage = new MovePage();
+	movePage._method = "GET";
+
+	var status = jqxhr.status;
+    var responseText = jqxhr.responseText;
+
+    // 응답이 없는 경우 또는 비어있는 응답
+    if (!responseText || responseText.trim() === "") {
+        alert('[VIEW] 응답이 없습니다.');
+        return false;
+    }
+
+    // 서버 응답이 정상적으로 JSON일 경우 처리
+    try {
+        var result = $.parseJSON(responseText);
+
+        // 응답에서 필요한 정보를 추출
+        if (status === 401) {
+            // 로그인하지 않은 사용자 처리
+            movePage._action = "/login_page.do";
+            movePage.move();
+            return false;
+        } else if (status === 403) {
+            // 권한이 없는 사용자 처리
+            movePage._action = "/";
+            movePage.move();
+            return false;
+        } else {
+            // 에러 함수 처리 실행
+            errorFunction(result);
+        }
+    } catch (exception) {
+        alert('[VIEW] 서비스에서 정의되지 않은 오류 발생');
+    }
+});
+
+
+function errorFunction( errorResponse ){
+	if( $.isEmptyObject( errorResponse ) ){
+		var basicAlert = new BasicAlert();
+		basicAlert._type = "error";
+		basicAlert._html = "알수없는 내부 서버 오류";
+		basicAlert.fire();
+		return;
+	}
+	
+	var errorCode		= errorResponse.errorCode;
+	var errorMessage	= errorResponse.errorMessage;
+	var errorViewUrl		= errorResponse.errorViewUrl;
+
+	if( ! $.isEmptyObject( errorMessage )  ){
+		var confirm_func = function(){
+			if( ! $.isEmptyObject( errorViewUrl )  ){
+				
+				var movePage = new MovePage();
+					movePage._method = "GET";
+					movePage._action = errorViewUrl;
+					movePage.move();
+			}
+		};
+
+		var basicAlert = new BasicAlert();
+			basicAlert._type = "error";
+			basicAlert._html = errorMessage;
+			basicAlert._confirm_func = confirm_func;
+			basicAlert.fire();
+	}
+	
+	
+	loading_hidden();
+}
+
+
+
+
+function MovePage(){
+	var _action;
+	var _method;
+	var _formData;
+	var _target;
+
+
+	MovePage.prototype.move = function(){
+		var action = this._action;
+		var method = this._method;
+		var formData = this._formData;
+		var target  = this._target;
+
+		if( $.isEmptyObject( action ) ){
+			alert('movePage 이동할 URL 이 존재하지 않습니다.');
+			return;
+		}
+		
+		if( !(formData instanceof FormData) ){
+			formData = new FormData();
+		}
+
+		if( method != "GET" ){
+			
+			var csrfParameter = $("meta[name='_csrf_parameter']").attr("content");
+	        var csrfToken = $("meta[name='_csrf']").attr("content");
+	        if( !$.isEmptyObject( csrfToken ) ){
+	        	formData.append( csrfParameter ,csrfToken );
+	        }
+		}
+
+
+		var contextPath = '';
+		var url = contextPath + action;
+
+
+		var params = null;
+		if( url.indexOf('?') > 0 ){
+			
+			var params = url.substring( url.indexOf( '?' )+1, url.length );
+				 params = params.split( "&" );
+		}
+
+		
+		if(  !$.isEmptyObject( params ) ){
+			$.each( params, function( index, param ){
+				try{
+					paramData = param.split('=');
+					var name  = paramData[0];
+					var value = paramData[1];
+					formData.append(name, value );
+				}catch( exception ) {}
+			});
+		}
+
+		var $form = $('<form></form>');
+		$form.attr('action', url);
+		$form.attr('method', method);
+
+		if( !$.isEmptyObject( target ) ){
+			$form.attr('target', target );
+		}
+
+
+		
+		var es, e, pair;
+	    for (es = formData.entries(); !(e = es.next()).done && (pair = e.value);) {
+	        var name = pair[0];
+	        var value = pair[1];
+
+			var field = $('<input></input>');
+			field.attr("type", "hidden");
+			field.attr("name", name);
+			field.attr("value", value);
+
+			$form.append( field );
+	    }
+
+		$form.appendTo('body');
+		$form.submit();
+	};
+
+}
+
+
+function AjaxForm(){
+	var _method;
+	var _action;
+	var _form_data;
+	var _succ_func;
+
+	AjaxForm.prototype.send = function(){
+		var method = this._method;
+		var url = '' + this._action;
+
+		var form_data = this._form_data;
+		if( !(form_data instanceof FormData)  ){
+			form_data = new FormData();
+		}
+		var succ_func = this._succ_func;
+
+		$.ajax({
+			type: method,
+			url:  url ,
+			data: form_data,
+	        cache: false,
+	        processData: false,
+			contentType: false,
+			success: function( resData, status ){
+				
+				if( ! $.isEmptyObject( resData ) ) {
+					
+					
+					try{
+						var result = $.parseJSON( resData );
+					} catch(e) {
+						var result = resData;
+					}
+					
+					if( ! $.isEmptyObject( result.errorMessage ) ) {
+						
+						errorFunction( result );
+						return;
+					}
+				}
+				
+				if( $.isFunction( succ_func ) ){
+					succ_func( resData, status );
+				}
+				
+				 
+			}
+		});
+
+	};
+}
+
+
+function AjaxJson(){
+	var _method;
+	var _action;
+	var _json;
+	var _succ_func;
+
+	AjaxJson.prototype.send = function(){
+		var method = this._method;
+		var url = '' + this._action;
+
+		var json = this._json;
+		var succ_func = this._succ_func;
+
+		$.ajax({
+			type: method ,
+			url:  url ,
+			data: json,
+			dataType:'json',
+			timeout:( 1000 * 30 * 5 ),
+			success: function( resData, status ){
+				if( $.isFunction( succ_func ) ){
+					succ_func( resData, status );
+				}
+			}
+		});
+
+	};
+}
+
+
+function FileDownloadOnce(){
+	var _file_seq;
+	var _succ_func;
+	var _fail_func;
+
+	FileDownloadOnce.prototype.download = function(){
+		var file_seq = this._file_seq;
+		var succ_func = this._succ_func;
+		var fail_func = this._fail_func;
+
+		if( ! $.isNumeric( file_seq ) ){
+			alert('파일다운로드 필수값 file_seq 가 유효하지 않습니다.');
+			return;
+		}
+		var url = '' + '/file/download.do';
+		var params = {   'X-Ajax-Yn': 'Y' ,'file_seq' : file_seq };
+
+		
+		var csrfParameter = $("meta[name='_csrf_parameter']").attr("content");
+	    var csrfToken = $("meta[name='_csrf']").attr("content");
+	    if( !$.isEmptyObject( csrfToken ) ){
+	    	params[csrfParameter] = csrfToken;
+	    }
+
+		$.fileDownload(url,{
+			 httpMethod : "POST"
+			,data: params
+			,successCallback: function (url) {
+				if(  $.isFunction( succ_func ) ){
+					
+					succ_func();
+				}
+			}
+			,failCallback: function (responseHtml, url) {
+				if( $.isFunction( fail_func ) ){
+					
+					fail_func();
+					return;
+				}
+
+				try{
+					var result = $.parseJSON(  responseHtml  );
+				}catch( exception ) {
+					alert( '서비스에서 정의되지 않은 오류 발생 ' );
+				}
+			}
+		 });
+
+	};
+}
+
+
+function BasicConfirm(){
+	
+	this._type;
+	
+	this._title;
+	
+	this._html;
+
+	
+	this._confirm_text;
+	
+	this._confirm_func;
+
+	
+	this._cancel_text;
+	
+	this._cancel_func;
+
+	
+	this._target_element;
+
+	BasicConfirm.prototype.fire = function(){
+		var type = 			( !$.isEmptyObject( this._type ) ) ? this._type : "";
+		var title =  			( !$.isEmptyObject( this._title ) ) ? this._title : "";
+		var html = 			( !$.isEmptyObject( this._html ) ) ? this._html : "";
+
+		var confirm_text =  ( !$.isEmptyObject( this._confirm_text ) ) ? this._confirm_text : "확인";
+		var confirm_func = ( $.isFunction( this._confirm_func ) ) ? this._confirm_func : function(){};
+
+		var cancel_text =  	( !$.isEmptyObject( this._cancel_text ) ) ? this._cancel_text : "취소";
+		var cancel_func = ( $.isFunction( this._cancel_func ) ) ? this._cancel_func : function(){};
+
+		var target_element = this._target_element;
+
+		swal.fire({
+			type: type,
+		    title: title,
+		    html: html,
+		    allowOutsideClick: false,
+		    confirmButtonText: confirm_text,
+		    cancelButtonText: cancel_text,
+		    showCancelButton: true,
+		  	onAfterClose: function() {
+		  		if( !$.isEmptyObject( target_element ) ){
+		 			try{
+		 				$( target_element ).focus();
+					}catch(excep){
+					}
+		  		}
+		  	}
+		}).then( function ( result ) {
+			if( result.value == true  ){
+				if( $.isFunction( confirm_func )  ){
+					
+					confirm_func();
+				}
+			}else{
+				if( $.isFunction( cancel_func )  ){
+					
+					cancel_func();
+				}
+			}
+		});
+
+
+	};
+}
+
+
+function BasicAlert(){
+	
+	this._type;
+	
+	this._title;
+	
+	this._html;
+	
+	this._confirm_text;
+	
+	this._confirm_func;
+	
+	this._target_element;
+
+	BasicAlert.prototype.fire = function(){
+		
+		var type = 			( !$.isEmptyObject( this._type ) ) ? this._type : "";
+		var title =  			( !$.isEmptyObject( this._title ) ) ? this._title : "";
+		var html = 			( !$.isEmptyObject( this._html ) ) ? this._html : "";
+		var confirm_text =  ( !$.isEmptyObject( this._confirm_text ) ) ? this._confirm_text : "확인";
+		var confirm_func = ( $.isFunction( this._confirm_func ) ) ? this._confirm_func : function(){};
+		var target_element = this._target_element;
+
+		swal.fire({
+			type: type,
+		    title: title,
+		    html: html,
+		    allowOutsideClick: false,
+		  	onOpen: function(){
+		  		Swal.getConfirmButton().focus();
+		  	},
+		  	onAfterClose: function() {
+		  		if( !$.isEmptyObject( target_element ) ){
+		 			try{
+		 				$( target_element ).focus();
+					}catch(excep){
+					}
+		  		}
+		  	},
+		    confirmButtonText: confirm_text
+
+		}).then( function ( result ) {
+			if( result.value == true  ){
+				
+				confirm_func();
+			}
+		});
+	};
+}
+
+
+
+function BasicModal(){
+	
+	this._modal_id;
+	
+	this._action;
+	
+	this._is_request_json = false;
+	
+	this._form_data;
+	
+	this._json_data;
+	
+	this._open_succ_func;
+
+
+	BasicModal.prototype.close = function(){
+		 $( "#"+ this._modal_id ).modal( "hide" );
+		 $( "#"+ this._modal_id ).html( "" );
+	};
+
+	BasicModal.prototype.open = function(){
+		var modal_id = this._modal_id;
+		var action = this._action;
+		var is_request_json =  this._is_request_json;
+		if( $.isEmptyObject( modal_id )  ){
+			alert("모달아이디가 존재하지 않습니다."); return;
+		}
+		if( $.isEmptyObject( action )  ){
+			alert("모달ACTION 이 존재하지 않습니다."); return;
+		}
+		if( is_request_json != true && is_request_json != false ){
+			alert("요청값 JSON 여부가 존재하지 않습니다."); return;
+		}
+
+		var form_data = ( this._form_data instanceof FormData  ) ? this._form_data : new FormData() ;
+		var json_data  = ( !$.isEmptyObject( this._json_data ) ) ? this._json_data : {} ;
+		var open_succ_func = ( $.isFunction( this._open_succ_func ) ) ? this._open_succ_func : function(){};
+
+		
+		var open_func = function( resData, status ){
+			$( "#"+ modal_id ).html( resData );
+
+			
+			var _modal_object = $( "#"+ modal_id ).modal(
+					{    backdrop: 'static'
+						,keyboard: false
+						,focus: false
+					}
+			);
+
+			
+			var _focus_element = null;
+
+			
+			 var _modal_input_elements = $(_modal_object ).find( "input:text, select, input:checkbox, input:radio, textarea" )
+			 														  .not(".flatpickr-with-time, .flatpickr-with-week, .flatpickr-without-time, .flatpickr-custom-time");
+
+			 if( _modal_input_elements.length > 0 ){
+				
+				_focus_element = _modal_input_elements[0];
+			 }else{
+				 
+				 var _modal_show_elements = $(_modal_object ).find( ":input:not([type=hidden])" );
+				 if( _modal_show_elements.length > 0 ){
+					 
+					 _focus_element =  $( _modal_show_elements ).last();
+				 }
+			 }
+
+			 /** https://blog.naver.com/romeoyo/120188644234 **/
+
+			 
+			 if( _focus_element != null ){
+		 		 setTimeout(
+		 			function() {
+		 				$( _focus_element ).focus();
+		 			}
+		 			,460
+			     );
+			 }
+
+			 if( $.isFunction( open_succ_func ) ){
+		 		 setTimeout(
+		 			function() {
+		 				open_succ_func( resData, status );
+		 			}
+		 			,460
+			     );
+			 }
+		};
+
+
+
+		if( is_request_json == true ){
+			
+			appendFormdata( form_data , json_data );
+		}
+		form_data.append( "modal_id" , modal_id );
+
+		
+		var ajaxForm = new AjaxForm();
+		ajaxForm._method = "POST";
+		ajaxForm._action = action;
+		ajaxForm._form_data = form_data;
+		ajaxForm._succ_func = open_func;
+		ajaxForm.send();
+	};
+
+}
+
+
+
+function jsonToFormData( json ){
+	var fom_data = new FormData();
+
+	appendFormdata( fom_data, json );
+
+	return fom_data;
+}
+
+
+function appendFormdata(FormData, data, name){
+    name = name || '';
+    if (typeof data === 'object'){
+        $.each(data, function(index, value){
+            if (name == ''){
+                appendFormdata(FormData, value, index);
+            } else {
+                appendFormdata(FormData, value, name + '['+index+']');
+            }
+        })
+    } else {
+        FormData.append(name, data);
+    }
+}
+
+
+function BasicDataTable(){
+	
+	this._table_id = "";
+	
+	var _paging = true;
+	
+	var _ordering = true;
+
+	
+	var _page_length = 10;
+	
+	var _length_menu = [];
+	
+	var _order = [];
+	
+	var _columns = [];
+	
+	var _column_defs = [];
+
+	
+	this._view_total_cnt = true;
+
+	
+	var _ajax_method = "";
+	
+	var _ajax_action = "";
+	
+	var _ajax_data = function(){};
+
+	
+	this._dbclick_func = function(){};
+	
+	this._init_complete_func = function( data_table ){};
+
+	
+	this._draw_complete_func = function(){};
+
+	
+	this._valid_func = null;
+
+	
+	this._is_dnd = false;
+	
+	this._dnd_options = null;
+
+	
+	this._is_init_table_draw = true;
+
+	
+	this._is_tbody_tr_seleted = false;
+
+	
+	this._data_table = null;
+
+	
+	this._display_start = 0;
+
+	
+	BasicDataTable.prototype.getPageNaviData = function(){
+		var paged_navi_data = new Object();
+			paged_navi_data.order = this._data_table.order();
+			paged_navi_data.pageLength = this._data_table.page.len();
+			paged_navi_data.start = this._data_table.page.info().start;
+		return JSON.stringify( paged_navi_data );
+	};
+
+	
+	BasicDataTable.prototype.initPageNaviData = function( paged_navi_data ){
+		try{
+			var navi_data = JSON.parse( paged_navi_data );
+			var order = navi_data.order;
+			var pageLength = navi_data.pageLength;
+			var start = navi_data.start;
+
+			if( !$.isArray( order ) ) { return false; }
+			if( !$.isNumeric( pageLength ) ){ return false; }
+			if( !$.isNumeric( start ) ){ return false; }
+
+			this._order = order;
+			this._page_length = pageLength;
+			this._display_start = start;
+
+			return true;
+		}catch( exception ){
+			return false;
+		}
+	};
+
+	
+	BasicDataTable.prototype.getDataList = function(){
+		var result = new Array();
+		var _tbody_trs = this.getTbody().find("tr");
+
+		if( _tbody_trs.length == 0 ){
+			return result;
+		}
+		$.each( _tbody_trs, function( index, _tbody_tr ) {
+			result.push( $(_tbody_tr).data() );
+		});
+		return result;
+	};
+
+	
+	BasicDataTable.prototype.getAjaxData = function(){
+		return this._data_table.context[0].oAjaxData;
+	};
+
+	
+	BasicDataTable.prototype.reload = function( callback_func, resetPaging ){
+		if( !$.isFunction( callback_func ) ){
+			callback_func = null;
+		}
+		if( resetPaging != true && resetPaging != false  ){
+			resetPaging = true;
+		}
+		this._data_table.ajax.reload( callback_func, resetPaging );
+	};
+
+	
+	BasicDataTable.prototype.getCheckedAll = function( td_index ){
+		if( !$.isNumeric( td_index ) ){
+			alert("tb_index 필수"); return;
+		}
+		var result = new Array();
+
+		
+		var tbody_trs = this._data_table.$('tbody tr');
+		var tbody_tds = tbody_trs.find( "td:eq("+td_index+")" );
+		var target_trs = tbody_tds.find( "input:checked" ).parents("tr");
+
+		if( target_trs.length == 0 ){
+			return result;
+		}
+
+		$.each( target_trs, function( index, target_tr ) {
+			var checked_data = $(target_tr).data();
+			checked_data.sortableItem = null;
+			result.push( checked_data );
+		});
+		return result;
+	};
+
+	
+	BasicDataTable.prototype.doCheck = function( td_index , checked_value ){
+		if( !$.isNumeric( td_index ) ){
+			alert("tb_index 필수"); return;
+		}
+		var tbody_trs = this._data_table.$('tbody tr');
+		var tbody_tds = tbody_trs.find( "td:eq("+td_index+")" );
+		var checkbox_collection = tbody_tds.find("input:checkbox");
+
+		$.each( checkbox_collection, function( index, checkbox ) {
+			var value = $(checkbox).val();
+			if( value == checked_value ){
+				 $(checkbox).prop('checked', true).change();
+			}
+		});
+
+	};
+
+	
+	BasicDataTable.prototype.doUnCheckAll = function( td_index  ){
+		if( !$.isNumeric( td_index ) ){
+			alert("tb_index 필수"); return;
+		}
+		var tbody_trs = this._data_table.$('tbody tr');
+		var tbody_tds = tbody_trs.find( "td:eq("+td_index+")" );
+		var checkbox_collection = tbody_tds.find("input:checkbox");
+		$(checkbox_collection).prop('checked', false).change();
+	};
+
+	
+	BasicDataTable.prototype.getUnChecked = function( td_index ){
+		if( !$.isNumeric( td_index ) ){
+			alert("tb_index 필수"); return;
+		}
+		
+		var tbody_trs = this._data_table.$('tbody tr');
+		var tbody_tds = tbody_trs.find( "td:eq("+td_index+")" );
+
+		
+		var unchecked_collection = tbody_tds.find(" input:not(:checked)");
+
+		var result = new Array();
+		if( unchecked_collection.length == 0 ){
+			return result;
+		}
+		$.each( unchecked_collection, function( index, element ) {
+			var data = $(element).val();
+ 			result.push( data );
+		});
+		return result;
+	};
+
+
+	
+	BasicDataTable.prototype.getChecked = function( td_index ){
+		if( !$.isNumeric( td_index ) ){
+			alert("tb_index 필수"); return;
+		}
+		
+		var tbody_trs = this._data_table.$('tbody tr');
+		var tbody_tds = tbody_trs.find( "td:eq("+td_index+")" );
+		
+		var checked_collection = tbody_tds.find(" input:checked");
+
+		var result = new Array();
+		if( checked_collection.length == 0 ){
+			return result;
+		}
+
+		$.each( checked_collection, function( index, element ) {
+			var data = $(element).val();
+ 			result.push( data );
+		});
+
+		return result;
+	};
+
+	
+	BasicDataTable.prototype.getSelected = function(){
+		var selected_datas = this._data_table.rows(  [ ".selected" ]  ).data();
+		if( selected_datas.length == 0 ){
+			return;
+		}
+		if( selected_datas.length != 1 ){
+			doErrorAlert( "테이블 항목은 하나만 선택할수 있습니다.", null, null );
+			return;
+		}
+		var data = selected_datas[0];
+		return data;
+	};
+
+	
+	BasicDataTable.prototype.getColumn = function( column_index ){
+		return this._data_table.column( column_index );
+	};
+	BasicDataTable.prototype.doShowColumn = function ( column_index ){
+		var column = this.getColumn( column_index );
+		column.visible( true );
+	};
+	BasicDataTable.prototype.doHideColumn = function( column_index ){
+		var column = this.getColumn( column_index );
+		column.visible( false );
+	};
+
+	
+	BasicDataTable.prototype.clear = function(){
+		var _table_tbody = $('#'+ this._table_id ).find( "tbody" );
+		var _paginate =   $('#'+ this._table_id  + "_paginate" );
+		_table_tbody.empty();
+		_paginate.empty();
+	};
+
+	
+	BasicDataTable.prototype.getTbody = function(){
+		var _table = $('#'+ this._table_id );
+		var _table_tbody =  $( _table  ).children("tbody");
+		return _table_tbody;
+	};
+
+	
+	BasicDataTable.prototype.bindTbodyClick = function(){
+		var _table_tbody = this.getTbody();
+
+		
+		$( _table_tbody ).off('click' ,'tr' );
+
+		
+		$( _table_tbody ).on('click', 'tr',  function () {
+			var _selected_rows = _table_tbody.find( "tr.selected" );
+			if ( $(this).hasClass('selected') ) {
+				$(this).removeClass('selected');
+			}else{
+				$( _selected_rows ).removeClass("selected");
+				$(this).toggleClass('selected');
+			}
+		});
+	};
+
+	
+	BasicDataTable.prototype.bindTbodyDoubleClick= function( dbclick_func ){
+		if(  !$.isFunction( dbclick_func ) ){
+			return ;
+		}
+		var _table_tbody = this.getTbody();
+		var _data_table  = this._data_table;
+
+		
+		$( _table_tbody ).off('dblclick', 'tr');
+
+		
+		$( _table_tbody ).on('dblclick', 'tr', function () {
+			var row_data = _data_table.row( this ).data();
+			dbclick_func( row_data, this );
+		});
+	};
+
+	
+	BasicDataTable.prototype.init= function(){
+		var data_table = null;
+		var _table = $('#'+ this._table_id );
+		if(  $.isEmptyObject( _table ) ||  _table.length == 0  ){
+			alert("테이블 객체가 존재하지 않습니다. ID="+ this._table_id );
+			return;
+		}
+		if(  _table.length != 1  ){
+			alert("DOM 상에 같은 테이블이 1건 이상 존재합니다.");
+			return;
+		}
+
+		
+		_table.addClass( "table-hover" );
+
+		var _table_id = this._table_id;
+		var _dbclick_func = this._dbclick_func;
+
+		
+		var _total_cnt_div_classs     = _table_id + "_total_cnt_div_classs";
+		var _total_cnt_id 	  = _table_id + "_total_cnt";
+		var _table_length_id  = _table_id + "_length";
+		var _table_row_class  = _table_id + "_row_class";
+
+		
+		var _table_row_com_class = "datatable-paging";
+
+		
+		var _is_dnd = this._is_dnd;
+		
+		var _dnd_options = this._dnd_options;
+
+
+		var _ajax_method = this._ajax_method;
+		var _ajax_action = this._ajax_action;
+		var _ajax_data = this._ajax_data;
+		var _valid_func =  this._valid_func;
+
+		var _data_table = this._data_table;
+		
+		var _init_complete_func = this._init_complete_func;
+		
+		var _draw_complete_func = this._draw_complete_func;
+
+		
+		var _is_init_table_draw = this._is_init_table_draw;
+
+		
+		if( ! $.isNumeric( this._display_start ) ){
+			this._display_start = 0;
+		}
+		if( ! $.isNumeric( this._page_length ) ){
+			this._page_length = 10;
+		}
+
+
+		data_table = _table.DataTable({
+
+		dom: '<"top" <"total '+_total_cnt_div_classs+' "> >'
+				+ 'rt'
+				+'<"row '+_table_row_com_class+' '+_table_row_class+'  " <"col"  > <"col6" <"row" <"mr10"l> <""p>  > > <"col"> > ',
+		paging: this._paging,
+	    ordering: this._ordering,
+	    info: false,
+	    filter: false, // 사용자 정의 검색 form 사용
+	    lengthChange: true,
+	    order: this._order,
+	    stateSave: false,
+	    pagingType: "full_numbers", 
+	    scrollX: false,
+	    scrollCollapse: false,
+	    processing: true,
+	    serverSide: true,
+	    autoWidth: false,
+	    responsive: true,
+	    pageLength: this._page_length,
+		lengthMenu: this._length_menu,
+		displayStart: this._display_start,
+
+		
+		initComplete: function(settings, json) {
+			if(  $.isFunction( _init_complete_func ) ){
+				
+				_init_complete_func( this );
+			}
+		},
+
+		createdRow: function(row, data, dataIndex){
+			
+			$(row).data( data );
+		},
+
+		drawCallback: function ( data ) {
+			
+			var _table_thead =  $( _table  ).children("thead");
+			
+			var _table_thead_ths =$( _table_thead ).children( "tr:first" ).children( "th" );
+			
+			var _thead_checkboxs = $( _table_thead_ths ).find( ":checkbox" );
+
+
+			
+			var _table_tbody = $( _table  ).children("tbody");
+			
+			var _table_tbody_trs = $( _table_tbody ).children( "tr" );
+
+			$.each( _thead_checkboxs, function( index, _thead_check_box ){
+				var thead_th = $( _thead_check_box ).parents("th");
+				var thead_index  = $( _table_thead_ths ).index( thead_th );
+
+				
+				var tbody_tds =  $( _table_tbody_trs ).find( "td:eq("+thead_index+")" );
+				
+				var tbody_checkbox_cnt = $( tbody_tds ).find( ":checkbox:enabled" ).length;
+				
+				var tbody_checked_cnt = $( tbody_tds ).find(" input:checked:enabled").length;
+
+				if( tbody_checkbox_cnt > 0 ){
+
+
+					if( tbody_checkbox_cnt == tbody_checked_cnt ){
+						$( _thead_check_box ).prop('checked', true);
+					}else{
+						$( _thead_check_box ).prop('checked', false);
+					}
+
+				}else{
+
+					
+					$( _thead_check_box ).prop('checked', false);
+				}
+
+			});
+
+			var total_cnt = data._iRecordsTotal;
+			$( '#' + _total_cnt_id  ).html( total_cnt ); 
+
+			
+			if( _is_dnd == true ){
+				
+				$( _table_tbody ).sortable( _dnd_options );
+			}
+
+			
+			if(  $.isFunction( _draw_complete_func ) ){
+				_draw_complete_func( data );
+			}
+
+		},
+
+		preDrawCallback: function( settings ){
+
+			if( _is_init_table_draw == false ){
+				
+			    _is_init_table_draw = true;
+				return false;
+			}
+
+			if(  $.isFunction( _valid_func ) ){
+				var is_valid =  _valid_func();
+				return is_valid;
+			}
+			return true;
+		},
+		ajax: function ( data, callback, settings ){
+
+			if(  $.isFunction( _ajax_data ) ){
+				var req_json = _ajax_data();
+				if(  !$.isEmptyObject( req_json ) ){
+					try{
+						$.each( req_json, function(key, value) {
+							data[key] = value;
+						});
+					}catch( exception ) {}
+				}
+			}
+			
+			doAjaxDataTable( _ajax_method
+								  ,_ajax_action
+								  ,data
+								  ,callback  );
+		},
+	    columns: this._columns,
+	    columnDefs: this._column_defs,
+	    language: {
+				lengthMenu: "_MENU_",
+				zeroRecords: "데이터가 존재하지 않습니다",
+				info: "Showing page _PAGE_ of _PAGES_",
+				infoEmpty: "No records available",
+				infoFiltered: "(filtered from _MAX_ total records)",
+				paginate: {
+					first: '<<',
+					last: '>>',
+					previous: "<",
+					next: ">"
+				}
+	    },
+		});
+
+		if( this._view_total_cnt == true  ){
+			 $("."+ _total_cnt_div_classs ).html('<div class="table-total">TOTAL <span id="'+_total_cnt_id+'">0</span> 건</div>');
+		}
+		$("#" + _table_length_id ).css('margin-top', '3px');
+
+		
+		var _table_thead =  $( _table  ).children("thead");
+		var _table_thead_ths =$( _table_thead ).children( "tr:first" ).children( "th" );
+
+		
+		var _table_tbody =  $( _table  ).children("tbody");
+
+		
+		var _header_checkbox = $( _table_thead ).find( ":checkbox" );
+
+		
+		$( _header_checkbox ).click(function(){
+			
+			var _target_th =$(this).parents( "th" );
+			
+			var _target_th_index = $( _table_thead_ths ).index( _target_th );
+
+			if(  _target_th_index >= 0   ){
+				var is_check = $( this ).prop("checked");
+				var body_trs = $( _table_tbody ).children( "tr" );
+				var body_tds =  $( body_trs ).find( "td:eq("+_target_th_index+")" );
+				
+				var body_checkboxs = $( body_tds ).find( ":checkbox:enabled" );
+
+				if ( is_check == true ) {
+					$( body_checkboxs ).prop('checked', true).change();
+				}else{
+					$( body_checkboxs ).prop('checked', false).change();
+				}
+			}
+		});
+
+
+		
+		$( _table_tbody ).on('change', ':checkbox', function () {
+
+			var body_tr = $(this).parents("tr");
+			var body_tds = 	$( body_tr ).children( "td" );
+			var target_td = $(this).parents("td");
+			var target_td_index = $( body_tds ).index( target_td );
+
+			
+			var is_check = $( this ).prop("checked");
+			if ( is_check == true ) {
+				$( body_tr ).addClass("checked");
+			}else{
+				$( body_tr ).removeClass("checked");
+			}
+
+			
+			var y_tbody_tds = $( _table_tbody ).children( "tr" ).find( "td:eq("+target_td_index+")" ) ;
+
+			
+			var y_body_checkbox_cnt =  $( y_tbody_tds ).find( ":checkbox:enabled" ).length;
+
+			
+			var y_body_checked_cnt = $( y_tbody_tds ).find(" input:checked:enabled").length;
+
+			
+			var is_header_check = $( _header_checkbox ).prop("checked");
+
+			
+			var y_header_checkbox =  $( _table_thead_ths ).eq( target_td_index ).find( ":checkbox" );
+
+			if(  y_body_checkbox_cnt  !=  y_body_checked_cnt  ){
+				$( y_header_checkbox ).prop('checked', false).change();
+
+			}else if(  y_body_checkbox_cnt  ==  y_body_checked_cnt  ){
+				$( y_header_checkbox ).prop('checked', true).change();
+
+			}
+
+		});
+
+		
+		this._data_table = data_table;
+
+		if( this._is_tbody_tr_seleted == true  ){
+			
+			this.bindTbodyClick();
+		}
+
+		if(  $.isFunction( _dbclick_func ) ){
+			
+			this.bindTbodyDoubleClick( _dbclick_func );
+		}
+
+		return data_table;
+	};
+
+
+
+
+}
+
+
+
+
+function doAjaxDataTable( method, action, data, succFunc ){
+	var contextPath = '';
+	var url = contextPath + action;
+
+	
+	var columns = data.columns;
+	if(  !$.isEmptyObject( columns ) ){
+		$.each( columns, function( index, column ){
+	        column.searchRegex = column.search.regex;
+	        column.searchValue = column.search.value;
+	        delete( column.search );
+		});
+	}
+	$.ajax({
+		type: method ,
+		url:  url ,
+		data: data,
+		dataType:'json',
+		timeout:( 1000*30*5 ),
+		success: function( resData, status ){
+			if( $.isFunction( succFunc ) ){
+				succFunc( resData );
+			}
+		}
+	});
+}
+
+
+
+function BasicPaging(){
+	var _method;
+	var _action;
+	var _form_id;
+
+
+	BasicPaging.prototype.validate = function(){
+		if( $.isEmptyObject( this._form_id ) ){
+			alert("FORM ID 가 존재하지 않습니다.");
+			return false;
+		}
+
+		var _form = $('#'+ this._form_id );
+
+		if(  $.isEmptyObject( _form ) ||  _form.length == 0  ){
+			alert("대상 FORM 이 존재하지 않습니다. ID="+ this._form_id );
+			return false;
+		}
+
+		if(  $( _form ).is("form") == false  ){
+			alert("FORM 객체가 아닙니다. ID="+ this._form_id );
+			return false;
+		}
+
+		if(  _form.length != 1  ){
+			alert("DOM 상에 같은 FORM 이 1건 이상 존재합니다.");
+			return false;
+		}
+
+		if( $.isEmptyObject( this._method ) ){
+			alert("METHOD 가 존재하지 않습니다.");
+			return false;
+		}
+
+		if( $.isEmptyObject( this._action ) ){
+			alert("ACTION 이 존재하지 않습니다.");
+			return false;
+		}
+
+		return true;
+	};
+
+	
+	BasicPaging.prototype.get_form_data = function (){
+		var target_form = $( "#"+ this._form_id );
+		var form_data = new FormData( target_form[0] );
+		return form_data;
+	};
+
+	
+	BasicPaging.prototype.move_page_no = function( page_no ){
+		var form_data = this.get_form_data();
+		var range_no =  form_data.get("rangeNo");
+			range_no = parseInt( range_no );
+		var range_size = form_data.get("rangeSize");
+			range_size = parseInt( range_size );
+		if (page_no > range_no * range_size) {
+			range_no = range_no + 1;
+		}
+		if (page_no < (range_no - 1) * range_size + 1) {
+			range_no = range_no - 1;
+		}
+		this.move( page_no, range_no  );
+	};
+
+	
+	BasicPaging.prototype.move_next_range = function(){
+		var form_data = this.get_form_data();
+		var range_no =  form_data.get("rangeNo");
+			 range_no = parseInt( range_no );
+		var range_size = form_data.get("rangeSize");
+			 range_size = parseInt( range_size );
+		var page_no = ( range_no * range_size )  + 1;
+
+		this.move( page_no, ( range_no + 1 ) );
+	};
+
+	
+	BasicPaging.prototype.move_prev_range = function(){
+		var form_data = this.get_form_data();
+		var range_no =  form_data.get("rangeNo");
+		 	 range_no = parseInt( range_no );
+		var range_size = form_data.get("rangeSize");
+			 range_size = parseInt( range_size );
+		var page_no = ( (range_no - 2) * range_size ) + 1;
+
+		this.move( page_no, ( range_no - 1 ) );
+	};
+
+
+	
+	BasicPaging.prototype.move_next_page = function(){
+		var form_data = this.get_form_data();
+		
+		var page_no = form_data.get("pageNo");
+			 page_no = parseInt( page_no );
+		
+		var range_no = form_data.get("rangeNo");
+			 range_no = parseInt( range_no );
+		
+		var page_count = form_data.get("pageCount");
+			 page_count = parseInt( page_count );
+		
+		var range_size = form_data.get("rangeSize");
+			 range_size = parseInt( range_size );
+
+		if( page_no >= page_count ){
+			alert("다음페이지가 존재하지 않습니다.");
+			return;
+		}
+
+		
+		page_no = page_no + 1;
+
+		if(  ( range_no * range_size ) < page_no  ){
+			
+			range_no = range_no + 1;
+		}
+		this.move( page_no, range_no );
+	};
+
+	
+	BasicPaging.prototype.move_prev_page = function(){
+		var form_data = this.get_form_data();
+		
+		var page_no = form_data.get("pageNo");
+			 page_no = parseInt( page_no );
+		
+		var range_no = form_data.get("rangeNo");
+			 range_no = parseInt( range_no );
+		
+		var range_size = form_data.get("rangeSize");
+			 range_size = parseInt( range_size );
+
+		if( page_no <= 1  ){
+			alert("이전페이지가 존재하지 않습니다.");
+			return;
+		}
+		
+		page_no = page_no - 1;
+
+		if( range_no > 1 ){
+			if( ( (range_no - 1) * range_size )  >=  page_no    ){
+				
+				range_no = range_no - 1;
+			}
+		}
+		this.move( page_no, range_no );
+	};
+
+	
+	BasicPaging.prototype.move_first_page = function(){
+		this.move( 1, 1 );
+	};
+
+	
+	BasicPaging.prototype.move_last_page = function(){
+		var form_data = this.get_form_data();
+		var page_count = form_data.get("pageCount");
+			 page_count = parseInt( page_count );
+		var range_count = form_data.get("rangeCount");
+			 range_count = parseInt( range_count );
+		this.move( page_count, range_count );
+	};
+
+	
+	BasicPaging.prototype.move = function( page_no, range_no ){
+		var form_data = this.get_form_data();
+			form_data.delete("pageNo");
+			form_data.delete("rangeNo");
+			form_data.append( "pageNo", page_no );
+			form_data.append( "rangeNo", range_no );
+
+		var movePage = new MovePage();
+		movePage._method = this._method;
+		movePage._action = this._action;
+		movePage._formData = form_data;
+		movePage.move();
+	};
+}
+
+
+
+function BasicReModal(){
+	
+	this._remodal_element;
+	
+	this._open_succ_func;
+
+	this._remodal_instance;
+
+	BasicReModal.prototype.open = function(){
+		if(  this._remodal_element == null ){
+			alert("대상 REMODAL 객체가 존재하지 않습니다.");
+			return;
+		}
+		if( this._remodal_element.length != 1  ){
+			alert("대상 REMODAL 객체가 1건이 아닙니다.");
+			return;
+		}
+		this._remodal_instance = $( this._remodal_element ).remodal();
+
+
+		
+
+		var settings = this._remodal_instance.settings;
+		
+		settings.hashTracking = false;
+		settings.closeOnEscape = false;
+		settings.closeOnOutsideClick = true;
+
+		
+		this._remodal_instance.open();
+
+		
+		var _focus_element = null;
+
+		var _modal_input_elements = $( this._remodal_element ).find( "input:text, select, input:checkbox, input:radio, textarea" )
+		 																	 .not(".flatpickr-with-time, .flatpickr-with-week, .flatpickr-without-time, .flatpickr-custom-time");
+		if( _modal_input_elements.length > 0 ){
+			
+			_focus_element = _modal_input_elements[0];
+		}else{
+			 
+			 var _modal_show_elements = $(this._remodal_element ).find( ":input:not([type=hidden])" );
+			 if( _modal_show_elements.length > 0 ){
+				 
+				 _focus_element =  $( _modal_show_elements ).last();
+			 }
+		 }
+		 if( _focus_element != null ){
+	 		 setTimeout(
+	 			function() {
+	 				$( _focus_element ).focus();
+	 			}
+	 			,460
+		     );
+		 }
+		 
+		 var target_function =  this._open_succ_func;
+		 if( $.isFunction( target_function ) ){
+	 		 setTimeout(
+	 			function() {
+	 				target_function();
+	 			}
+	 			,460
+			);
+
+		 }
+	};
+
+	BasicReModal.prototype.close = function(){
+		this._remodal_instance.close();
+	};
+	BasicReModal.prototype.getState = function(){
+		this._remodal_instance.getState();
+	};
+	BasicReModal.prototype.destroy = function(){
+		this._remodal_instance.destroy();
+	};
+
+}
+
+
+function BasicToastr(){
+	this.options =  {
+            closeButton: true,
+            progressBar: true,
+            showMethod: 'slideDown',
+            timeOut: 4000
+        };
+
+	this.title;
+
+	BasicToastr.prototype.success = function( contents ){
+		var title  = ( !$.isEmptyObject( this.title ) ) ? this.title : "" ;
+		contents  = ( !$.isEmptyObject( contents ) ) ? contents : "" ;
+
+		toastr.options = this.options;
+		toastr.success( contents , title );
+	};
+	BasicToastr.prototype.info = function( contents ){
+		var title  = ( !$.isEmptyObject( this.title ) ) ? this.title : "" ;
+		contents  = ( !$.isEmptyObject( contents ) ) ? contents : "" ;
+
+		toastr.options = this.options;
+		toastr.info( contents , title );
+	};
+	BasicToastr.prototype.warning = function( contents ){
+		var title  = ( !$.isEmptyObject( this.title ) ) ? this.title : "" ;
+		contents  = ( !$.isEmptyObject( contents ) ) ? contents : "" ;
+
+		toastr.options = this.options;
+		toastr.warning( contents , title );
+	};
+	BasicToastr.prototype.error = function( contents ){
+		var title  = ( !$.isEmptyObject( this.title ) ) ? this.title : "" ;
+		contents  = ( !$.isEmptyObject( contents ) ) ? contents : "" ;
+
+		toastr.options = this.options;
+		toastr.error( contents , title );
+	};
+
+}
+
+
+
+function BasicWindow(){
+
+	this._action = "";
+	this._pop_name = "";
+
+	
+	this._width = 0;
+	
+	this._height = 0;
+	
+	this._left=0;
+	
+	this._top=0;
+	
+	this._toolbar = 'no';
+	
+	this._status = 'no';
+	
+	this._resizable = 'yes';
+	
+	this._scrollbars ='no';
+	
+	this._is_inner = true;
+
+	BasicWindow.prototype.close =  function(){
+
+	};
+	BasicWindow.prototype.open =  function(){
+		var contextPath = '';
+
+		if( isEmpty( this._pop_name ) ){
+			alert("팝업 명 필수");
+			return;
+		}
+
+		var url = "";
+
+		if( !isEmpty( this._action ) ){
+			if( this._is_inner == true ){
+				
+				url = contextPath + this._action;
+			}else{
+				
+				url = this._action;
+			}
+
+		}
+
+
+		var options  = "";
+			options += "width="+ this._width;
+			options += ",height="+ this._height;
+			options += ",left="+ this._left;
+			options += ",top="+ this._top;
+			options += ",toolbar="+ this._toolbar;
+			options += ",status="+ this._status;
+			options += ",scrollbars="+ this._scrollbars;
+			options += ",resizable="+ this._resizable;
+
+		window.open( url ,this._pop_name ,options );
+	};
+}
+
+function isEmpty( val ){
+	if( val == undefined || val == null || val == "" ){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+
+
+
+function BasicChart() {
+	
+	
+	this._type;
+	
+	
+	this._target;
+	
+	
+	this._labels = [];
+	
+		
+	this._data_sets = [];
+	
+	
+	this._line_color = "black";
+	
+	
+	this._label_font_size = 16;
+	
+	
+	this._label_font_color = "black";
+	
+	
+	this._data_font_size = 14;
+	
+	
+	this._data_font_color = "black";
+	
+	
+	this._label_click_func;
+	
+	
+	this._max_count;
+	
+	
+	this._fontFamily = 'Noto Sans KR';
+	
+	
+	this._on_click_func;
+
+	BasicChart.prototype.validate = function(){
+		
+		if( $.isEmptyObject( this._target ) ){
+			alert("타겟을 지정하지 않았습니다.");
+			return false;
+		}
+		
+		
+		if( $.isEmptyObject( this._target ) || this._target == 0 ){
+			alert("타겟 이 존재하지 않습니다. TARGET="+ this._target );
+			return false;
+		}
+		
+		if(  this._target.length != 1  ){
+			alert("DOM 상에 같은 TARGET 이 1건 이상 존재합니다. TARGET="+ this._target );
+			return false;
+		}
+		
+		if( $.isEmptyObject( this._type ) ){
+			alert("타입을 지정하지 않았습니다.");
+			return false;
+		}
+		
+		
+		return true;
+	};
+	
+	BasicChart.prototype.init = function() {
+		var is_valid = this.validate();
+		if( is_valid != true ) {
+			return;
+		}
+		
+		
+		if( this._type == 'radar' ) {
+			
+			var _target_ = $( this._target )[0];
+			var ctx = _target_.getContext('2d');
+			var label_click_func = this._label_click_func;
+			
+			var myChart = new Chart( ctx, {
+				type: this._type,
+				data: {
+					labels: this._labels,
+					datasets: this._data_sets
+				},
+				options: {
+					maintainAspectRatio: false,
+	                legend: {
+	                	 position: 'bottom', 
+	                	 display: true,
+	                     labels: {
+	                             fontSize: this._label_font_size,
+	                             fontFamily: this._fontFamily,
+	                             fontColor: this._label_font_color,
+	                             fontStyle: 'bold',
+	                     }
+	                },
+	                
+	                scale: {
+	                	gridLines: {
+	                		color: this._line_color,
+	                		lineWidth: 1
+	                	},
+	                	angleLines: {
+	                		display: true
+	                	},
+	                    ticks: {
+	                    	beginAtZero: true,
+	                    	min: 0,
+	                    	//max: 100,
+	                    	stepSize: this._max_count / 5,
+	                    },
+		                pointLabels: {
+		                    fontSize: this._data_font_size,
+		                    fontColor: this._data_font_color,
+		                    hoverBorderColor: "orange",
+		                    fontFamily: this._fontFamily,
+		                    fontStyle : "500"
+		                }
+	                },
+	                
+	                onClick: function( e ) {
+	                	
+						var scale = this.scale;
+						var mouseX = e.offsetX; 
+						var mouseY = e.offsetY;
+						label_location_list = get_label_location( this, mouseX, mouseY );
+				        
+				        $( label_location_list ).each( function( i, item ){
+				        	if( mouseX >= item.left && mouseX <= item.right && mouseY <= item.bottom && mouseY >= item.top ) {
+								if( $.isFunction( label_click_func ) ) {
+									var label_index = i + 1;
+									label_click_func( label_index );
+								}
+				        	}
+				        	
+				        });
+					},
+					
+					tooltips: {
+						enabled: true,
+				        callbacks: {
+				            title: function( tooltipItem, data ){
+				            	
+				            }, label: function( tooltipItem, data ) {
+				            	var _show_label_ = data.labels[tooltipItem.index];
+				            	var _show_value_ = Number( data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index] );
+				            	
+				            	
+				            	return _show_label_ + ' : ' + _show_value_;
+				            }
+				        }
+				    }
+	         	}
+			});
+			
+			
+			
+			
+			
+		} else if( this._type == 'line' ) {
+			var myChart = new Chart( this._target, {
+				type: this._type,
+				data: {
+					labels: this._labels,
+					datasets: this._data_sets
+				},
+				options: {
+	                maintainAspectRatio: false,
+	                legend: {
+	                	 position: 'bottom', 
+	                	 display: true,
+	                     labels: {
+	                             fontSize: this._label_font_size,
+	                             fontFamily: 'sans-serif',
+	                             fontColor: this._label_font_color,
+	                             fontStyle: 'bold',
+	                     }
+	                }
+	         	}
+			})
+		} else if( this._type == 'bar' ) {
+			var myChart = new Chart( this._target, {
+				type: this._type,
+				data: {
+					labels: this._labels,
+					datasets: this._data_sets
+				},
+				options: {
+	                maintainAspectRatio: false,
+	                legend: {
+	                	 position: 'bottom', 
+	                	 display: true,
+	                     labels: {
+	                             fontSize: this._label_font_size,
+	                             fontFamily: 'sans-serif',
+	                             fontColor: this._label_font_color,
+	                             fontStyle: 'bold',
+	                     }
+	                }
+	         	}
+			})
+		} else if( this._type == 'pie' ) {
+			
+			Chart.plugins.register(ChartDataLabels);
+			var on_click_func = this._on_click_func;
+			
+			var myChart = new Chart( this._target, {
+				type: this._type,
+				data: {
+					labels: this._labels,
+					datasets: this._data_sets
+				},
+				options: {
+	                maintainAspectRatio: true,
+	                legend: {
+	                	 position: 'top', 
+	                	 display: true,
+	                     labels: {
+	                             fontSize: this._label_font_size,
+	                             fontFamily: this._fontFamily,
+	                             fontColor: this._label_font_color,
+	                             fontStyle: 'bold',
+	                     }
+	                },
+	                
+					onClick: function( event, element ) {
+						   var activeElement = element[0];
+						   var data = activeElement._chart.data;
+						   var barIndex = activeElement._index;
+						   var datasetIndex = activeElement._datasetIndex;
+
+						   var datasetLabel = data.datasets[datasetIndex].label;
+						   var xLabel = data.labels[barIndex];
+						   var yLabel = data.datasets[datasetIndex].data[barIndex];
+						   var url = data.datasets[datasetIndex].urls[barIndex];
+
+						   
+						   if( $.isFunction( on_click_func ) ){
+							   on_click_func( url );
+							}
+	                	
+					},
+					
+					onHover: function ( event, element ){
+						if(element.length == 1){
+							event.target.style.cursor = 'pointer';
+						}
+						
+						if(element.length == 0){
+							event.target.style.cursor = 'default';
+						}
+					},
+					
+					plugins: {
+						datalabels: {
+							color: 'A8A8A8',
+							font: {
+								size: 14,
+								weight: 'bold'
+							},
+							align: 'end',
+							formatter: function ( value, ctx ) {
+								var sum = 0;
+								var val = Number(value); 
+								var dataArr = ctx.chart.data.datasets[0].data;
+								dataArr.map(data => {
+				                  sum += Number(data);
+				                });
+								if (sum == 0){
+									return "데이터가 없습니다.";
+								} else {
+									var percentage = (val * 100 / sum).toFixed(1) + "%";
+									return percentage;	
+								}
+								
+							}
+							
+						}
+					}
+	         	}
+			});
+			
+		}
+		
+		
+		
+		if( $.isFunction( this._label_click_func ) ){
+			$( this._target ).on( "mousemove", function(e){
+				var mouseX = e.offsetX; 
+				var mouseY = e.offsetY;
+				label_location_list = get_label_location( myChart, mouseX, mouseY );
+		        
+				var check = false;
+		        $( label_location_list ).each( function( i, item ){
+		        	if( mouseX >= item.left && mouseX <= item.right && mouseY <= item.bottom && mouseY >= item.top ) {
+		        		check = true;
+		        		return;
+		        	}
+		        	
+		        });
+		        
+		        if( check == true ) {
+		        	$( this ).css( "cursor", "pointer" );
+					return;			        	
+		        }
+		        
+		        $( this ).css( "cursor", "auto" );
+		        
+			});
+		}
+		
+		
+		var get_label_location = function( chart_instance, mouseX, mouseY ) {
+			var helpers = Chart.helpers;
+	        var scale = chart_instance.scale;
+	        var opts = scale.options;
+	        var tickOpts = opts.ticks;
+					
+	        
+	        // var mouseX = e.offsetX;
+	        // var mouseY = e.offsetY;
+	        
+	        
+	        var labelPadding = 5;
+	        
+	        
+	        
+	        var tickBackdropHeight = (tickOpts.display && opts.display) ?
+	            helpers.valueOrDefault(tickOpts.fontSize, Chart.defaults.global.defaultFontSize) + 5: 0;
+	        var outerDistance = scale.getDistanceFromCenterForValue(opts.ticks.reverse ? scale.min : scale.max);
+	        
+	        
+	        var label_location_list = new Array();
+	        
+	        
+	        $( scale.pointLabels ).each( function( index, point_label ){
+	        	var extra = ( index === 0 ? tickBackdropHeight / 2 : 0 );
+	        	var pointLabelPosition = scale.getPointPosition( index, outerDistance + extra + 5 );
+	        	
+	        	var plSize = scale._pointLabelSizes[ index ];
+	        	
+	        	var angleRadians = scale.getIndexAngle( index );
+        		var angle = helpers.toDegrees( angleRadians );
+        		
+        		var textAlign = 'right';
+	            if (angle == 0 || angle == 180) {
+	                textAlign = 'center';
+	            } else if (angle < 180) {
+	                textAlign = 'left';
+	            }
+	            
+	            
+	            var verticalTextOffset = 0;
+	            
+	            if (angle === 90 || angle === 270) {
+	                verticalTextOffset = plSize.h / 2;
+	            } else if (angle > 270 || angle < 90) {
+	                verticalTextOffset = plSize.h;
+	            }
+	            
+	            
+	            var labelTop = pointLabelPosition.y - verticalTextOffset - labelPadding;
+	            var labelHeight = 2*labelPadding + plSize.h;
+	            var labelBottom = labelTop + labelHeight;
+
+				var labelWidth = plSize.w + 2*labelPadding;
+	            var labelLeft;
+	            
+	            
+				switch (textAlign) {
+					case 'center':
+						var labelLeft = pointLabelPosition.x - labelWidth/2;
+						break;
+					case 'left':
+						var labelLeft = pointLabelPosition.x - labelPadding;
+						break;
+					case 'right':
+						var labelLeft = pointLabelPosition.x - labelWidth + labelPadding;
+						break;
+					default:
+				}
+	            
+				var labelRight = labelLeft + labelWidth;
+	            
+				
+	            var labe_location = {
+	            	top : labelTop,
+	            	bottom : labelBottom,
+	            	left : labelLeft,
+	            	right : labelRight,
+	            	width: labelWidth,
+	            	height: labelHeight
+	            };
+	            
+	            label_location_list.push( labe_location );
+	        });
+	        
+	        return label_location_list;
+		}
+		
+	}
+}
+
+
+
+
+function BasicFlatpickr() {
+	
+	
+	this._target;
+	
+	this._type;
+	
+	this._default_date;
+	
+	this._default_hour;
+	
+	this._default_minute;
+	
+	
+	this._min_date;
+	
+	this._max_date;
+	
+	this._min_month_date;
+	
+	this._max_month_date;
+	
+	this._disable = [];
+	
+	this._enable = [];
+	
+	BasicFlatpickr.prototype.init = function(){
+		
+		
+		if( $.isEmptyObject( this._default_date ) ) { 
+			this._default_date =  $.isEmptyObject( $( this._target ).val() ) ? new Date() : $( this._target ).val(); 
+		}
+		
+		if( this._type == "with-time" ) {
+			
+			
+			var default_date = new Date( this._default_date );
+			
+			
+			if( ! $.isEmptyObject( this._default_hour ) ) { 
+				default_date.setHours( this._default_hour );
+			}
+			
+			
+			if( ! $.isEmptyObject( this._default_minute ) ) { 
+				default_date.setMinutes( this._default_minute );
+			}
+			
+			$( this._target ).flatpickr({
+				enableTime: true,
+				locale: 'kr',
+				defaultDate: default_date,
+				dateFormat: "Y-m-d H:i",
+				minDate: this._min_date,
+				maxDate: this._max_date,
+				
+			});
+		}
+		
+		if( this._type == "with-week" ) {
+			$( this._target ).flatpickr({
+				enableTime: false,
+				locale: 'kr',
+				defaultDate: this._default_date,
+				dateFormat: "Y-m-d D",
+				minDate: this._min_date,
+				maxDate: this._max_date,
+				disable: this._disable,
+				enable: this._enable,
+			});
+		}
+		
+		if( this._type == "without-time" ) {
+			
+			var target = this._target;
+			
+			$( this._target ).flatpickr({
+				defaultDate: this._default_date,
+				locale: 'kr',
+				enableTime: false,
+				minDate: this._min_date,
+				maxDate: this._max_date,
+				disable: this._disable,
+				enable: this._enable,
+				onOpen: function(){
+				}
+			})
+		}
+		
+		if( this._type == "monthSelect" ) {
+			$( this._target ).flatpickr({
+				enableTime: false,
+				locale: 'kr',
+				defaultDate: default_date,
+				plugins: [
+					new monthSelectPlugin({
+						shorthand: true, //defaults to false
+						dateFormat: "Y-m", //defaults to "F Y"
+						altFormat: "F Y", //defaults to "F Y"
+					})
+				],
+				minDate: this._min_month_date,
+				maxDate: this._max_month_date,
+			});
+		}
+	}
+}
+
+
+
+function BasicSummerNote() {
+	
+	
+	this._targets;
+	
+	
+	this._size = { "height" : 300,
+					"minHeight" : null,
+					"maxHeight" : null
+				 };
+	
+	
+	this._focus = true;
+	
+	this._lang = "ko-KR";
+	
+	
+	this._disable = false;
+	
+	
+	this._enable = false;
+	
+	this._placeholder = "";
+	
+	
+	BasicSummerNote.prototype.validate = function(){
+		if( $.isEmptyObject( this._targets ) ){
+			alert("타겟을 지정하지 않았습니다.");
+			return false;
+		}
+
+		var element_check = true;
+		$.each( this._targets, function( index, target ){
+			
+			var element = $( target );
+			
+			if( $.isEmptyObject( element ) || element == 0 ){
+				alert("타겟 이 존재하지 않습니다. TARGET="+ target );
+				element_check = false;
+				return false;
+			}
+			
+			if(  element.length != 1  ){
+				alert("DOM 상에 같은 TARGET 이 1건 이상 존재합니다. TARGET="+ target );
+				element_check = false;
+				return false;
+			}
+		});
+
+		return element_check;
+	};
+	
+	BasicSummerNote.prototype.init = function() {
+		
+		var is_valid = this.validate();
+		if( is_valid != true ) {
+			return;
+		}
+		
+		var editor_size = this._size;
+		var targets = this._targets;
+		var disable = this._disable;
+		
+		$.each( targets, function( index, target ){
+			$( target ).summernote({
+				height: editor_size[ "height" ],
+				minHeight: editor_size[ "minHeight" ],
+				maxHeight: editor_size[ "maxHeight" ],
+				focus: this._focus,
+				lang: this._lang,
+				placeholder: this._placeholder,
+				toolbar: [
+					['fontname', ['fontname']],
+					['fontsize', ['fontsize']],
+					['style', ['bold', 'italic', 'underline','strikethrough', 'clear']],
+					['color', ['forecolor','color']],
+					['table', ['table']],
+					['para', ['ul', 'ol', 'paragraph']],
+					['height', ['height']],
+					['insert',['picture','link','video']],
+					['view', ['fullscreen', 'help']]
+				],
+				fontNames: [ 'Arial'
+							,'Arial Black'
+							,'Comic Sans MS'
+							,'Courier New'
+							,'Helvetica'
+							,'Impact'
+							,'Tahoma'
+							,'Times New Roman'
+							,'Verdana'
+							,'맑은 고딕'
+							,'궁서'
+							,'굴림체'
+							,'굴림'
+							,'돋움체'
+							,'바탕체'
+							,'휴먼명조' ],
+				fontSizes: ['8','9','10','11','12','14','16','18','20','22','24','28','30','36','50','72']
+			});
+			
+			
+			if( disable == true ) {
+				$( target ).summernote( 'disable' );
+			}
+			
+			
+			$( "#backColorPicker" ).attr( "id" , "backColorPicker_"+index );
+			$( "#foreColorPicker" ).attr( "id" , "foreColorPicker_"+index );
+		});
+	}
+}
+
+
+
+
+function loading_show( height ) {
+	
+	
+	var document_height = $( document ).height();
+	var document_width = $( document ).width();
+			
+	$( ".loading-background" ).css({ 'width': document_width
+					, 'height': document_height
+					, 'opacity': '0.3' });
+	
+	
+	
+	var top = height == undefined ? $(window).scrollTop() + $(window).height() * 0.5 : height;
+	
+	$( ".loading-bar" ).css( { 'top' : top } );
+	
+	
+	$( ".loading-background" ).show();
+	$( ".loading-bar" ).show();
+}
+
+
+window.addEventListener('pageshow', function(event) {
+  // 로딩 바를 숨기는 코드
+	loading_hidden();
+    hideLoadingOverlay();
+	});
+
+
+function loading_hidden() {
+	$( ".loading-background" ).hide();
+	$( ".loading-bar" ).hide();
+}
+
+
+// 로딩 오버레이 표시 함수
+function showLoadingOverlay() {
+    // 이미 있으면 생성하지 않음
+    if (document.getElementById('loadingOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'loadingOverlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = '9999';
+
+    const spinner = document.createElement('div');
+    spinner.classList.add('spinner');
+    spinner.style.width = '50px';
+    spinner.style.height = '50px';
+    spinner.style.border = '5px solid #f3f3f3';
+    spinner.style.borderTop = '5px solid #3498db';
+    spinner.style.borderRadius = '50%';
+    spinner.style.animation = 'spin 1s linear infinite';
+
+    // 애니메이션 키프레임 추가
+    if (!document.getElementById('spinnerStyle')) {
+        const style = document.createElement('style');
+        style.id = 'spinnerStyle';
+        style.textContent = `
+				@keyframes spin {
+					0% { transform: rotate(0deg); }
+					100% { transform: rotate(360deg); }
+				}
+			`;
+        document.head.appendChild(style);
+    }
+
+    overlay.appendChild(spinner);
+    document.body.appendChild(overlay);
+}
+
+// 로딩 오버레이 숨기기 함수
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        document.body.removeChild(overlay);
+    }
+}
+</script>
+
+
+
+
+
+<script type="text/javascript" src="/js/jquery-validation/jquery.validate.js"></script>
+<script type="text/javascript" src="/js/jquery-validation/additional-methods.js"></script>
+<script type="text/javascript" src="/js/jquery-validation/localization/messages_ko.js"></script>
+
+
+
+<link rel="stylesheet" type="text/css" href="/js/toastr/toastr.min.css" />
+<script type="text/javascript" src="/js/toastr/toastr.min.js" ></script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+	
+	var today = new Date();
+	var maintenanceStartDate = new Date('3/17/2021 16:00:00');
+	var maintenanceEndDate = new Date('3/17/2021 16:30:00');
+	
+	
+	if(today >= maintenanceStartDate && today <= maintenanceEndDate) {
+		if(window.location.pathname.search('maintenance.do') == -1) {
+			move_get('/maintenance.do', null);
+		}
+	}
+	
+});
+
+
+
+function alert_success( html, confirm_func ){
+	var basicAlert = new BasicAlert();
+	basicAlert._type = "success";
+	basicAlert._html = html; basicAlert._confirm_func = confirm_func;
+	basicAlert.fire();
+}
+
+function alert_warning( html, confirm_func ){
+	var basicAlert = new BasicAlert();
+	basicAlert._type = "warning";
+	basicAlert._html = html; basicAlert._confirm_func = confirm_func;
+	basicAlert.fire();
+}
+
+function alert_error( html, confirm_func ){
+	var basicAlert = new BasicAlert();
+	basicAlert._type = "error";
+	basicAlert._html = html; basicAlert._confirm_func = confirm_func;
+	basicAlert.fire();
+}
+
+function alert_info( html, confirm_func ){
+	var basicAlert = new BasicAlert();
+	basicAlert._type = "info";
+	basicAlert._html = html; basicAlert._confirm_func = confirm_func;
+	basicAlert.fire();
+}
+
+
+
+function confirm_success( html, confirm_func, cancel_func  ){
+	var basicConfirm = new BasicConfirm();
+	basicConfirm._type = "success";
+	basicConfirm._html = html; basicConfirm._confirm_func = confirm_func; basicConfirm._cancel_func = cancel_func;
+	basicConfirm.fire();
+}
+
+function confirm_warning( html, confirm_func, cancel_func  ){
+	var basicConfirm = new BasicConfirm();
+	basicConfirm._type = "warning";
+	basicConfirm._html = html; basicConfirm._confirm_func = confirm_func; basicConfirm._cancel_func = cancel_func;
+	basicConfirm.fire();
+}
+
+function confirm_error( html, confirm_func, cancel_func  ){
+	var basicConfirm = new BasicConfirm();
+	basicConfirm._type = "error";
+	basicConfirm._html = html; basicConfirm._confirm_func = confirm_func; basicConfirm._cancel_func = cancel_func;
+	basicConfirm.fire();
+}
+
+function confirm_info( html, confirm_func, cancel_func  ){
+	var basicConfirm = new BasicConfirm();
+	basicConfirm._type = "info";
+	basicConfirm._html = html; basicConfirm._confirm_func = confirm_func; basicConfirm._cancel_func = cancel_func;
+	basicConfirm.fire();
+}
+
+
+
+function excel_down_datatable( action, form_data, ajax_data ){
+	var columns = null;
+	var order = null;
+	var search = null;
+
+	if(  !$.isEmptyObject( ajax_data ) ){
+		columns = ajax_data.columns;
+		order = ajax_data.order;
+		search = ajax_data.search;
+	}
+
+	
+	if( !( form_data instanceof FormData) ){
+		form_data = new FormData();
+	}
+	if(  !$.isEmptyObject( columns ) ){
+		$.each( columns, function( index,  column ){
+			try{
+				$.each( column, function(key, value){
+					var attr_name = "columns" + "["+index+"]"+"["+key+"]";
+					form_data.append(attr_name ,value);
+				});
+			}catch( exception ) {}
+		});
+	}
+
+	if(  !$.isEmptyObject( order ) ){
+		$.each( order, function( index,  ord ){
+			try{
+				$.each( ord, function(key, value){
+					var attr_name = "order" + "["+index+"]"+"["+key+"]";
+					form_data.append(attr_name ,value);
+				});
+			}catch( exception ) {}
+		});
+	}
+
+	if(  !$.isEmptyObject( search ) ){
+		try{
+			$.each( search, function(key, value){
+				var attr_name = "search"+"["+key+"]";
+				form_data.append(attr_name ,value);
+			});
+		}catch( exception ) {}
+	}
+
+	var movePage = new MovePage();
+	movePage._method = "POST"; movePage._action = action; movePage._formData = form_data;
+	
+	movePage._target = "_hidden_iframe";
+	movePage.move();
+}
+
+
+function is_device_pc(){
+	var device_is_normal = $("meta[name='_device_is_normal']").attr("content");
+	if( $.isEmptyObject( device_is_normal ) ){
+		return false;
+	}
+	return device_is_normal == "true";
+}
+
+
+function excel_down( action, form_data ){
+	var movePage = new MovePage();
+	movePage._method = "POST"; movePage._action = action; movePage._formData = form_data;
+	if( is_device_pc() ){
+		
+		movePage._target = "_hidden_iframe";
+	}
+	movePage.move();
+}
+
+
+
+let isDownloading = false;
+
+function check_and_download_file(url, file_seq, target_id) {
+    if (isDownloading) {
+        alert_error("이미 다운로드가 진행중입니다. 완료 후 다시 진행해주세요.");
+        return;
+    }
+
+    isDownloading = true;
+
+    var form_data = new FormData();
+    form_data.append("file_seq", file_seq);
+    form_data.append("target_id", target_id);
+
+    var check_action = url + "/checkDownload.do";
+    var download_action = url + "/download.do";
+
+    ajax_form_post(check_action, form_data, function(res) {
+        if (res.status === "success") {
+        	file_down(download_action, file_seq, target_id, function () {
+                isDownloading = false;
+            }, function () {
+                alert_error("다운로드에 실패했습니다.");
+                isDownloading = false;
+            });
+        } else {
+            alert_error("파일을 다운로드할 수 없습니다.");
+            isDownloading = false;
+        }
+    });
+}
+
+function file_down(action, file_seq, target_id, succ_func, fail_func) {
+    var form_data = new FormData();
+    form_data.append("file_seq", file_seq);
+    form_data.append("target_id", target_id);
+
+    var movePage = new MovePage();
+    movePage._method = "POST";
+    movePage._action = action;
+    movePage._formData = form_data;
+
+    if (is_device_pc()) {
+        let iframe = document.getElementById("_hidden_iframe");
+        if (!iframe) {
+            iframe = document.createElement("iframe");
+            iframe.style.display = "none";
+            iframe.name = "_hidden_iframe";
+            iframe.id = "_hidden_iframe";
+            document.body.appendChild(iframe);
+        }
+
+        movePage._target = "_hidden_iframe";
+
+        // onload는 실제 다운로드 완료 여부와 상관 없이 호출될 수 있으므로 신중히 처리
+        iframe.onload = function () {
+            setTimeout(function () {
+                if (typeof succ_func === "function") {
+                    succ_func();
+                }
+            }, 500);
+        };
+    } else {
+        // 모바일은 iframe 없이 콜백 처리
+        setTimeout(function () {
+            if (typeof succ_func === "function") {
+                succ_func();
+            }
+        }, 500);
+    }
+
+    try {
+        movePage.move();
+    } catch (e) {
+        if (typeof fail_func === "function") {
+            fail_func();
+        }
+    }
+}
+
+
+function download_file_doc(folder_name, file_name) {
+    var form_data = new FormData();
+    form_data.append("folder_name", folder_name);
+    form_data.append("file_name", file_name);
+    
+    action = "/file/downloadDoc.do"
+    
+    var movePage = new MovePage();
+	movePage._method = "POST"; movePage._action = action; movePage._formData = form_data;
+	if( is_device_pc() ){
+		
+		movePage._target = "_hidden_iframe";
+	}
+	movePage.move();
+}
+
+
+
+function file_down_log( file_seq, down_type, succ_func, fail_func ){
+	var form_data = new FormData();
+    	 form_data.append("file_seq", file_seq );
+    	 form_data.append("down_type", down_type );
+
+    var action = "/file/download.do";
+
+	var movePage = new MovePage();
+	movePage._method = "POST"; movePage._action = action; movePage._formData = form_data;
+	if( is_device_pc() ){
+		
+		movePage._target = "_hidden_iframe";
+	}
+	movePage.move();
+
+	
+}
+
+
+
+function resource_down( type, succ_func, fail_func ){
+	var form_data = new FormData();
+	 form_data.append("type", type );
+
+	var action = "/file/resource_download.do";
+
+	var movePage = new MovePage();
+	movePage._method = "POST"; movePage._action = action; movePage._formData = form_data;
+	if( is_device_pc() ){
+		
+		movePage._target = "_hidden_iframe";
+	}
+	movePage.move();
+}
+
+
+
+function move_post( action, form_data ){
+	var movePage = new MovePage();
+		movePage._method = "POST"; movePage._action = action; movePage._formData = form_data;
+	movePage.move();
+}
+
+
+function move_get( action, form_data ){
+	var movePage = new MovePage();
+	movePage._method = "GET"; movePage._action = action; movePage._formData = form_data;
+	movePage.move();
+}
+
+function move_put( action, form_data ){
+	var movePage = new MovePage();
+	movePage._method = "PUT"; movePage._action = action; movePage._formData = form_data;
+	movePage.move();
+}
+
+function move_delete( action, form_data ){
+	var movePage = new MovePage();
+	movePage._method = "DELETE"; movePage._action = action; movePage._formData = form_data;
+	movePage.move();
+}
+
+
+
+function ajax_json_post(action, json, succ_func) {
+    var ajaxJson = new AjaxJson();
+    ajaxJson._method = "POST"; 
+    ajaxJson._action = action; 
+    ajaxJson._json = json; 
+    ajaxJson._succ_func = succ_func;
+    ajaxJson.send({
+        headers: {
+            "Accept": "application/json"  // 서버가 JSON 형식으로 응답하도록 요청
+        }
+    });
+}
+
+function ajax_json_put( action, json, succ_func ){
+	var ajaxJson = new AjaxJson();
+	ajaxJson._method = "PUT"; ajaxJson._action = action; ajaxJson._json = json; ajaxJson._succ_func = succ_func;
+	ajaxJson.send();
+}
+
+function ajax_json_delete( action, json, succ_func ){
+	var ajaxJson = new AjaxJson();
+	ajaxJson._method = "DELETE"; ajaxJson._action = action; ajaxJson._json = json; ajaxJson._succ_func = succ_func;
+	ajaxJson.send();
+}
+
+function ajax_json_get( action, json, succ_func ){
+	var ajaxJson = new AjaxJson();
+	ajaxJson._method = "GET"; ajaxJson._action = action; ajaxJson._json = json; ajaxJson._succ_func = succ_func;
+	ajaxJson.send();
+}
+
+
+
+function ajax_form_post( action, form_data, succ_func ){
+	var ajaxForm = new AjaxForm();
+	ajaxForm._method = "POST"; ajaxForm._action = action; ajaxForm._form_data = form_data; ajaxForm._succ_func = succ_func;
+	ajaxForm.send();
+}
+
+function ajax_form_put( action, form_data, succ_func ){
+	var ajaxForm = new AjaxForm();
+	ajaxForm._method = "PUT"; ajaxForm._action = action; ajaxForm._form_data = form_data; ajaxForm._succ_func = succ_func;
+	ajaxForm.send();
+}
+
+function ajax_form_delete( action, form_data, succ_func ){
+	var ajaxForm = new AjaxForm();
+	ajaxForm._method = "DELETE"; ajaxForm._action = action; ajaxForm._form_data = form_data; ajaxForm._succ_func = succ_func;
+	ajaxForm.send();
+}
+
+function ajax_form_get( action, form_data, succ_func ){
+	var ajaxForm = new AjaxForm();
+	ajaxForm._method = "GET"; ajaxForm._action = action; ajaxForm._form_data = form_data; ajaxForm._succ_func = succ_func;
+	ajaxForm.send();
+}
+
+
+function get_x_file_promise(){
+	return "X_FILE_PROMISE";
+}
+
+
+function get_form_validator( _form, _form_rules, _form_messages ){
+	
+	var _form_validator =
+		$( _form ).validate({
+				rules: _form_rules
+				,messages: _form_messages
+	    });
+
+	return _form_validator;
+}
+
+
+$.fn.serializeObject = function(){
+    var self = this,
+        json = {},
+        push_counters = {},
+        patterns = {
+            "validate": /^[a-zA-Z][a-zA-Z0-9_]*(?:\[(?:\d*|[a-zA-Z0-9_]+)\])*$/,
+            "key":      /[a-zA-Z0-9_]+|(?=\[\])/g,
+            "push":     /^$/,
+            "fixed":    /^\d+$/,
+            "named":    /^[a-zA-Z0-9_]+$/
+        };
+
+    this.build = function(base, key, value){
+        base[key] = value;
+        return base;
+    };
+    this.push_counter = function(key){
+        if(push_counters[key] === undefined){
+            push_counters[key] = 0;
+        }
+        return push_counters[key]++;
+    };
+    $.each($(this).serializeArray(), function(){
+        // Skip invalid keys
+        if(!patterns.validate.test(this.name)){
+            return;
+        }
+
+        var k,
+            keys = this.name.match(patterns.key),
+            merge = this.value,
+            reverse_key = this.name;
+
+        while((k = keys.pop()) !== undefined){
+
+            // Adjust reverse_key
+            reverse_key = reverse_key.replace(new RegExp("\\[" + k + "\\]$"), '');
+
+            // Push
+            if(k.match(patterns.push)){
+                merge = self.build([], self.push_counter(reverse_key), merge);
+            }
+
+            // Fixed
+            else if(k.match(patterns.fixed)){
+                merge = self.build([], k, merge);
+            }
+
+            // Named
+            else if(k.match(patterns.named)){
+                merge = self.build({}, k, merge);
+            }
+        }
+        json = $.extend(true, json, merge);
+    });
+
+    return json;
+};
+
+
+function validateFile(file, allowedExts, expectedMimeMap, maxSize, failCallback) {
+	if (!file) return false;
+
+	const fileName = file.name;
+	const ext = fileName.split('.').pop().toLowerCase();
+
+	// 1. 확장자 검사
+	if ($.inArray(ext, allowedExts) === -1) {
+		failCallback("허용되지 않은 파일 형식입니다. (" + allowedExts.join(", ") + ")");
+		return false;
+	}
+
+	// 2. MIME 타입 검사 (단, HWP는 스킵)
+	if (expectedMimeMap[ext]) {
+		const actualMime = file.type;
+		const expectedMime = expectedMimeMap[ext];
+
+		// MIME이 비어 있거나 일치하지 않으면 경고 (단, HWP는 허용)
+		if (ext !== "hwp" && (!actualMime || actualMime !== expectedMime)) {
+			failCallback("파일 확장자와 MIME 형식이 일치하지 않습니다.");
+			return false;
+		}
+	}
+
+	// 3. 용량 검사
+	if (maxSize && file.size > maxSize) {
+		failCallback("파일 크기는 " + (maxSize / 1024) + "KB 이하로 업로드해야 합니다.");
+		return false;
+	}
+
+	return true; 
+}
+
+</script>
+
+
+ 
+
+<!-- 공통 JS -->
+
+<script src="/js/global.js"></script>
+<script src="/jquery/js/fn.js"></script>
+<script src="/jquery/js/swiper-bundle.min.js"></script>
+<script type="text/javascript">
+$(document).ready (function(){
+
+	// 서버에서 전달된 error_response 객체가 있는지 확인
+	var errorResponse = false;
+
+	if (errorResponse) {
+		// error_response 객체의 메시지를 JavaScript 변수로 가져오기
+		var errorMessage = "";
+
+		// 오류 메시지를 alert로 표시
+		alert_error(errorMessage);
+
+		// 또는 사용자 정의 경고창 함수가 있다면 그것을 사용
+		// alert_warning(errorMessage, null);
+	}
+	
+	
+	$( "#login_main" ).on( "click", function(){
+		var url = $( this ).data( "url" );
+		move_post( url, null );
+	});
+	
+	$( "#logout_main" ).on( "click", function(){
+        var url = event.target.getAttribute('data-url');
+        
+        // Form 생성하여 POST 방식으로 요청을 보냄
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        // 폼을 문서에 추가하고 제출
+        document.body.appendChild(form);
+        form.submit();
+    });
+	$(".m-site-group select").on("change", function() {
+	    const selectedText = this.value;
+
+	    const urlMap = {
+	      '한국어문회': '/kal/info/thanks.do',
+	      '한국어문교육연구회': '/klea/info/thanks.do',
+	      '전국한자능력검정시험': '/kccpt/info/intro.do',
+	      '한자지도사자격검정시험': '/klei/info/thanks.do',
+	    };
+
+	    const url = urlMap[selectedText];
+	    if (url) {
+	      window.location.href = url;
+	    }
+	  });
+
+	
+	
+});
+	// 정시 시험 접수 진행
+	function goRaApply(){
+		showLoadingOverlay();
+		var form_data = new FormData();
+		move_post( "/kccpt/apply/raApply.do", form_data );
+	}
+
+	// 수시 시험 접수 진행
+	function goEaApply(){
+		showLoadingOverlay();
+		var form_data = new FormData();
+		move_post( "/kccpt/apply/eaApply.do", form_data );
+	}
+</script>
+</head>
+<body>
+
+<div id="wrap">
+<div id="gnb_top">
+	<div class="gnb-top-wrap">
+		<div class="site-group">
+			<a href="/kal/info/thanks.do">한국어문회</a>
+			<a href="/klea/info/thanks.do">한국어문교육연구회</a>
+			<a href="/kccpt/info/intro.do" class="active">전국한자능력검정시험</a>
+			<a href="/klei/info/thanks.do">한자지도사자격검정시험</a>
+		</div>
+		<div class="m-site-group">
+			<select class="active">
+				<option>한국어문회</option>
+				<option>한국어문교육연구회</option>
+				<option selected>전국한자능력검정시험</option>
+				<option>한자지도사자격검정시험</option>
+			</select>
+		</div>
+		<div class="util">
+			
+			<!-- <a href="" class="sitemap">사이트맵</a> -->
+		</div>
+	</div>
+</div>
+<header id="header">
+<div class="header-wrap">
+<h1 id="logo">
+	<a href="/"><img src="/common/img/layout/logo_kccpt.png" alt="전국한자능력검정시험"></a>
+</h1>
+<nav id="gnb1">
+	<ul id="head_menu" class="topmenu">
+		<li class="lnb1 mnfirst">
+			<a href="/kccpt/info/intro.do">기관 소개</a>
+			<div class="submenu" style="display:none;">
+				<p class="desc">
+					<strong class="title">기관 소개</strong>
+					<span class="txt">한국한자능력검정회를<br>방문해 주셔서 감사합니다.</span>
+				</p>
+				<ul class="sub01">
+					<li class="sub01 subfirst">
+						<a href="/kccpt/info/intro.do">본회소개</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/info/intro.do">인사말</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/info/found.do">설립취지</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/info/officer.do">임원진</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub02">
+						<a href="/kccpt/info/hwscholarship.do">난정장학금</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/info/hwscholarship.do">난정장학생</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/info/hwsRule.do">장학금규정</a></li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+			</div>
+		</li>
+		<li class="lnb2">
+			<a href="/kccpt/exam/certInfo.do">시험 안내</a>
+			<div class="submenu" style="display:none;">
+				<p class="desc">
+					<strong class="title">시험 안내</strong>
+					<span class="txt">한국한자능력검정회를<br>방문해 주셔서 감사합니다.</span>
+				</p>
+				<ul class="sub02">
+					<li class="sub02"><a href="/kccpt/exam/certInfo.do">자격 정보</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/exam/certInfo.do">자격소개</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/qualifyAplca.do">응시자격</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/levelConfirm.do">급수배정</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/questInfo.do">출제기준</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/successRule.do">합격(시상)기준</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/preferential.do">우대사항</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub03"><a href="/kccpt/exam/applyMeth.do">접수 정보</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/exam/applyMeth.do">접수 방법</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/applyInfo.do">응시정보 변경</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub05"><a href="/kccpt/exam/examFeeInfo.do">검정료 정보</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/exam/examFeeInfo.do">검정료</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/refundInfo.do">검정료 환불</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub05"><a href="/kccpt/exam/dpCnvenceOffer.do">장애인 편의 제공 정보</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/exam/dpCnvenceOffer.do">장애인 편의 제공 안내</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub01 subfirst"><a href="/kccpt/exam/examInfo.do">응시 정보</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/exam/examInfo.do">시험 일정</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/examTime.do">시험 시간</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/examPrecautions.do">응시 전 유의사항</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/writeAns.do">답안지 작성 시 유의사항</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub06 sublast"><a href="/kccpt/exam/studyInfo.do">학습 자료 정보</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/exam/studyInfo.do">학습교재</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/previousQuestion.do">기출문제</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/exam/otherData.do">기타자료</a></li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+			</div>
+		</li>
+		<li class="lnb3">
+			<a href="/kccpt/apply/raMainExam.do">원서 접수</a>
+			<div class="submenu" style="display:none;">
+				<p class="desc">
+					<strong class="title">원서 접수</strong>
+					<span class="txt">한국한자능력검정회를<br>방문해 주셔서 감사합니다.</span>
+				</p>
+				<ul class="sub03">
+					<li class="sub01 subfirst"><a href="/kccpt/apply/raMainExam.do">정기시험</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/apply/raMainExam.do">시험 일정</a></li>
+								<li class="lnb-detail-item"><a href="javascript:void(0);" onclick="goRaApply(); return false;">원서 접수</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/apply/myApplicationDetail.do">원서 접수 내역</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/apply/myPrintExamCard.do">수험표 출력</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/apply/raExamHall.do">정기시험 고사장 안내</a></li>
+							</ul>
+						</div>
+					</li>
+					<li class="sub02"><a href="/kccpt/apply/eaEveryExam.do">수시시험</a>
+						<div>
+							<ul class="lnb-detail">
+								<li class="lnb-detail-item"><a href="/kccpt/apply/eaEveryExam.do">시험 일정</a></li>
+								<li class="lnb-detail-item"><a href="javascript:void(0);" onclick="goEaApply(); return false;">원서 접수</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/apply/myEaApplicationDetail.do">원서 접수 내역</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/apply/myPrintEaExamCard.do">수험표 출력</a></li>
+								<li class="lnb-detail-item"><a href="/kccpt/apply/eaExamHall.do">수시시험 고사장 안내</a></li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+			</div>
+		</li>
+		<li class="lnb4">
+			<a href="/kccpt/pass/passUser.do">합격 발표</a>
+			<div class="submenu" style="display:none;">
+				<p class="desc">
+					<strong class="title">합격 발표</strong>
+					<span class="txt">한국한자능력검정회를<br>방문해 주셔서 감사합니다.</span>
+				</p>
+				<ul class="sub03">
+					<li class="sub01 subfirst"><a href="/kccpt/pass/passUser.do">합격자 발표</a></li>
+				</ul>
+			</div>
+		</li>
+		<li class="lnb5">
+			<a href="/kccpt/guide/signUp.do">이용 가이드</a>
+			<div class="submenu" style="display:none;">
+				<p class="desc">
+					<strong class="title">이용 가이드</strong>
+					<span class="txt">한국한자능력검정회를<br>방문해 주셔서 감사합니다.</span>
+				</p>
+				<ul class="sub03">
+					<li class="sub01 subfirst"><a href="/kccpt/guide/signUp.do">회원 가입 안내</a></li>
+					<li class="sub02"><a href="/kccpt/guide/cardApply.do">급수증 신청</a></li>
+					<li class="sub03"><a href="/kccpt/guide/certApply.do">증명서 신청</a></li>
+					<li class="sub04"><a href="/kccpt/guide/counsel.do">상담 및 문의</a></li>
+					<li class="sub05"><a href="/kccpt/guide/form.do">민원 서식 안내</a></li>
+					<li class="sub06 sublast"><a href="/kccpt/guide/faq.do">자주 묻는 질문</a></li>
+				</ul>
+			</div>
+		</li>
+	</ul>
+</nav>
+</div>
+
+<nav id="gnb2">
+	<div id="gnb_util">
+		<div class="lnb-logo">
+			<a href="/"><img src="/common/img/layout/logo_kccpt.png" alt="전국한자능력검정시험"></a>
+		</div>
+		
+		<div class="mutil">
+		
+		
+		
+		<button type="button" id="login_main" data-url="/login_page.do">로그인</button>
+		
+		</div>
+		
+		<button type="button" class="control open">전체메뉴</button>
+		<button type="button" class="control close">메뉴닫기</button>
+	</div>
+	<ul id="head_menu_all" class="topmenu_all">
+	<li class="lnb1 mnfirst">
+		<a href="">기관 소개</a>
+		<div class="submenu">
+			<ul class="sub01">
+				<li class="sub01 subfirst">
+					<a href="/kccpt/info/intro.do">본회소개</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/info/intro.do">인사말</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/info/found.do">설립취지</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/info/officer.do">임원진</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub02 sublast">
+					<a href="/kccpt/info/hwscholarship.do">난정장학금</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/info/hwscholarship.do">난정장학생</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/info/hwsRule.do">장학금 규정</a></li>
+						</ul>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</li>
+	<li class="lnb2">
+		<a href="/kccpt/exam/certInfo.do">시험 안내</a>
+		<div class="submenu">
+			<ul class="sub02">
+				<li class="sub02"><a href="/kccpt/exam/certInfo.do">자격 정보</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/exam/certInfo.do">자격소개</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/qualifyAplca.do">응시자격</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/levelConfirm.do">급수배정</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/questInfo.do">출제기준</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/successRule.do">합격(시상)기준</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/preferential.do">우대사항</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub03"><a href="/kccpt/exam/applyMeth.do">접수 정보</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/exam/applyMeth.do">접수 방법</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/applyInfo.do">응시정보 변경</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub05"><a href="/kccpt/exam/examFeeInfo.do">검정료 정보</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/exam/examFeeInfo.do">검정료</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/refundInfo.do">검정료 환불</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub05"><a href="/kccpt/exam/dpCnvenceOffer.do">장애인 편의 제공 정보</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/exam/dpCnvenceOffer.do">장애인 편의 제공 안내</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub01 subfirst"><a href="/kccpt/exam/examInfo.do">응시 정보</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/exam/examInfo.do">시험 일정</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/examTime.do">시험 시간</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/examPrecautions.do">응시 전 유의사항</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/writeAns.do">답안지 작성 시 유의사항</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub06 sublast"><a href="/kccpt/exam/studyInfo.do">학습 자료 정보</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/exam/studyInfo.do">학습교재</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/previousQuestion.do">기출문제</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/exam/otherData.do">기타자료</a></li>
+						</ul>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</li>
+	<li class="lnb3">
+		<a href="/kccpt/apply/raMainExam.do">원서 접수</a>
+		<div class="submenu">
+			<ul class="sub03">
+				<li class="sub01 subfirst"><a href="/kccpt/apply/raMainExam.do">정기시험</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/apply/raMainExam.do">시험 일정</a></li>
+							<li class="lnb-detail-item"><a href="javascript:void(0);" onclick="goRaApply(); return false;">원서 접수</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/apply/myApplicationDetail.do">원서 접수 내역</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/apply/myPrintExamCard.do">수험표 출력</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/apply/raExamHall.do">정기시험 고사장 안내</a></li>
+						</ul>
+					</div>
+				</li>
+				<li class="sub02"><a href="/kccpt/apply/eaEveryExam.do">수시시험</a>
+					<div>
+						<ul class="lnb-detail">
+							<li class="lnb-detail-item"><a href="/kccpt/apply/eaEveryExam.do">시험 일정</a></li>
+							<li class="lnb-detail-item"><a href="javascript:void(0);" onclick="goEaApply(); return false;">원서 접수</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/apply/myEaApplicationDetail.do">원서 접수 내역</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/apply/myPrintEaExamCard.do">수험표 출력</a></li>
+							<li class="lnb-detail-item"><a href="/kccpt/apply/eaExamHall.do">수시시험 고사장 안내</a></li>
+						</ul>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</li>
+	<li class="lnb4">
+		<a href="/kccpt/pass/passUser.do">합격 발표</a>
+		<div class="submenu">
+			<ul class="sub04">
+				<li class="sub01 subfirst"><a href="/kccpt/pass/passUser.do">합격자 발표</a></li>
+			</ul>
+		</div>
+	</li>
+	<li class="lnb5 mnlast">
+		<a href="/kccpt/guide/signUp.do">이용 가이드</a>
+		<div class="submenu">
+			<ul class="sub04">
+				<li class="sub01 subfirst"><a href="/kccpt/guide/signUp.do">회원 가입 안내</a></li>
+				<li class="sub02"><a href="/kccpt/guide/cardApply.do">급수증 신청</a></li>
+				<li class="sub03"><a href="/kccpt/guide/certApply.do">증명서 신청</a></li>
+				<li class="sub04"><a href="/kccpt/guide/counsel.do">상담 및 문의</a></li>
+				<li class="sub05"><a href="/kccpt/guide/form.do">민원 서식 안내</a></li>
+				<li class="sub06 sublast"><a href="/kccpt/guide/faq.do">자주 묻는 질문</a></li>
+			</ul>
+		</div>
+	</li>
+</ul>
+</nav>
+
+<div id="mypage_pop">
+<div class="mypage-wrap">
+	<div class="mypage-tit">마이페이지</div>
+	<div class="mypage-cont">
+		<div class="menu">
+			<div class="tit">이력 관리</div>
+			<ul>
+				<li><a href="/mypage/myJobManage.do">응시이력 및 결과</a></li><!-- 20260120 자격접수내역 > 응시이력으로 수정  -->
+				<li><a href="/mypage/myCertifiManage.do">합격이력 및 급수증 보유현황</a></li><!-- 20260120 합격내역 > 합격이력으로 수정  -->
+				<li><a href="/mypage/myCertifiPrint.do">증명서 출력</a></li>
+			</ul>
+		</div>
+		<div class="menu">
+			<div class="tit">회원정보 관리</div>
+			<ul>
+				<li><a href="/mypage/modifyMem.do">회원정보 수정</a></li>
+			</ul>
+		</div>
+		<div class="menu">
+			<div class="tit">1:1 문의</div>
+			<ul>
+				<li><a href="/mypage/myPersonalQna.do">나의 1:1 문의 내역</a></li>
+			</ul>
+		</div>
+	</div>
+	<button type="button" class="btn-mp-close">마이페이지 닫기</button>
+</div>
+</div>
+
+</header>
+<div class="nav-bg"></div>
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+$(document).ready (function(){
+	
+});
+</script>
+
+<div id="content">
+<div class="cont-wrap">
+	<div id="snb" class="snb">
+   		<h2 class="title">시험 안내</h2>
+   		<nav class="list">
+   			<ul id="left_menu_top" class="head_menu_depth">
+				<li class="first active">
+   					<a href="">자격 정보</a>
+					<ul>
+						<li class="first"><a href="/kccpt/exam/certInfo.do">자격소개</a></li>
+						<li><a href="/kccpt/exam/qualifyAplca.do">응시자격</a></li>
+						<li class="active"><a href="/kccpt/exam/levelConfirm.do">급수배정</a></li>
+						<li><a href="/kccpt/exam/questInfo.do">출제기준</a></li>
+						<li><a href="/kccpt/exam/successRule.do">합격(시상)기준</a></li>
+						<li class="last"><a href="/kccpt/exam/preferential.do">우대사항</a></li>
+					</ul>
+				</li>
+				<li>
+   					<a href="">접수 정보</a>
+					<ul>
+						<li class="first"><a href="/kccpt/exam/applyMeth.do">접수 방법</a></li>
+						<li class="last"><a href="/kccpt/exam/applyInfo.do">응시정보 변경</a></li>
+					</ul>
+				</li>
+				<li>
+   					<a href="">검정료 정보</a>
+					<ul>
+						<li class="first"><a href="/kccpt/exam/examFeeInfo.do">검정료</a></li>
+						<li class="last"><a href="/kccpt/exam/refundInfo.do">검정료 환불</a></li>
+					</ul>
+				</li>
+				<li>
+   					<a href="">장애인 편의 제공 정보</a>
+					<ul>
+						<li class="first"><a href="/kccpt/exam/dpCnvenceOffer.do">장애인 편의 제공 안내</a></li>
+					</ul>
+				</li>
+				<li>
+   					<a href="">응시 정보</a>
+					<ul>
+						<li class="first"><a href="/kccpt/exam/examInfo.do">시험 일정</a></li>
+						<li><a href="/kccpt/exam/examTime.do">시험시간</a></li>
+						<li><a href="/kccpt/exam/examPrecautions.do">응시 전 유의사항</a></li>
+						<li class="last"><a href="/kccpt/exam/writeAns.do">답안지 작성 유의사항</a></li>
+					</ul>
+				</li>
+				<li>
+   					<a href="">학습 자료 정보</a>
+					<ul>
+						<li class="first"><a href="/kccpt/exam/studyInfo.do">학습교재</a></li>
+						<li><a href="/kccpt/exam/previousQuestion.do">기출문제</a></li>
+						<li class="last"><a href="/kccpt/exam/otherData.do">기타자료</a></li>
+					</ul>
+				</li>
+			</ul>
+		</nav>
+	</div>
+	<main id="subpage">
+		<div class="sub-info">
+			<h3 class="title">급수배정</h3>
+			<div class="location">
+				<ul>
+					<li class="home">
+						<a href="/">홈</a>
+					</li>
+					<li>시험 안내</li>
+					<li>자격 정보</li>
+					<li>급수배정</li>
+				</ul>
+			</div>
+		</div>
+		<!-- ## 수정 작업 부분 ## -->
+		<div class="page">
+                    <h3 class="tit_02 mgb15">급수배정 안내</h3>
+
+					<div class="scroll_info">
+						<p>표를 좌우로 스크롤 하시면 전체 내용을 보실 수 있습니다.</p>
+					</div>
+
+                    <section class="section-box tblTy01 scrollx-500">
+                        <table class="min-width-500">
+                            <thead>
+                                <tr>
+                                    <th>급수</th>
+                                    <th>읽기</th>
+                                    <th>쓰기</th>
+                                    <th>수준 및 특성</th>
+                                    <th>배정한자</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                 <tr>
+                                    <th>특급</th>
+                                    <td>5,978</td>
+                                    <td>3,500</td>
+                                    <td>國漢混用 古典을 불편 없이 읽고, 연구할 수 있는 고급 수준<br>(韓中 古典 추출한자 도합 5978자, 쓰기 3500자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자특급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>특급II</th>
+                                    <td>4,918</td>
+                                    <td>2,355</td>
+                                    <td>國漢混用 古典을 불편 없이 읽고, 연구할 수 있는 중급 수준
+                                        <br>(KSX1001 한자 4888자 포함, 전체 4918자, 쓰기 2355자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자특급II.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>1급</th>
+                                    <td>3,500</td>
+                                    <td>2,005</td>
+                                    <td>國漢混用 古典을 불편 없이 읽고, 연구할 수 있는 초급 수준
+                                        <br>(상용한자+준상용한자 도합 3500자, 쓰기 2005자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자1급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>2급</th>
+                                    <td>2,355</td>
+                                    <td>1,817</td>
+                                    <td>常用漢字를 활용하는 것은 물론 인명지명용 기초한자 활용 단계
+                                        <br>(상용한자+인명지명용 한자 도합 2355자, 쓰기 1817자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자2급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>3급</th>
+                                    <td>1,817</td>
+                                    <td>1,000</td>
+                                    <td>고급 常用漢字 활용의 중급 단계
+                                        <br>(상용한자 1817자-교육부 1800자 모두 포함, 쓰기 1000자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자3급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>3급II</th>
+                                    <td>1,500</td>
+                                    <td>750</td>
+                                    <td>고급 常用漢字 활용의 초급 단계(상용한자 1500자, 쓰기 750자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자3급II.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>4급</th>
+                                    <td>1,000</td>
+                                    <td>500</td>
+                                    <td>중급 常用漢字 활용의 고급 단계(상용한자 1000자, 쓰기 500자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자4급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>4급II</th>
+                                    <td>750</td>
+                                    <td>400</td>
+                                    <td>중급 常用漢字 활용의 중급 단계(상용한자 750자, 쓰기 400자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자4급II.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>5급</th>
+                                    <td>500</td>
+                                    <td>300</td>
+                                    <td>중급 常用漢字 활용의 초급 단계(상용한자 500자, 쓰기 300자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자5급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>5급II</th>
+                                    <td>400</td>
+                                    <td>225</td>
+                                    <td>중급 常用漢字 활용의 초급 단계(상용한자 400자, 쓰기 225자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자5급II.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>6급</th>
+                                    <td>300</td>
+                                    <td>150</td>
+                                    <td>기초 常用漢字 활용의 고급 단계(상용한자 300자, 쓰기 150자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자6급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>6급II</th>
+                                    <td>225</td>
+                                    <td>50</td>
+                                    <td>기초 常用漢字 활용의 중급 단계(상용한자 225자, 쓰기 50자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자6급II.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>7급</th>
+                                    <td>150</td>
+                                    <td>-</td>
+                                    <td>기초 常用漢字 활용의 초급 단계(상용한자 150자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자7급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>7급II</th>
+                                    <td>100</td>
+                                    <td>-</td>
+                                    <td>기초 常用漢字 활용의 초급 단계(상용한자 100자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자7급II.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                                <tr>
+                                    <th>8급</th>
+                                    <td>50</td>
+                                    <td>-</td>
+                                    <td>漢字 學習 동기 부여를 위한 급수(상용한자 50자)</td>
+                                    <td><a href="javascript:download_file_doc('levelConfirm','배정한자8급.hwp');" download=""><i class="ri-save-3-line"></i></a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <div class="sm-btn-area korAndHj-area_info-btn mgt40">
+                        <a href="javascript:download_file_doc('levelConfirm','배정한자 전체 대표훈음 부수 음표 명기본(xls).xls');" 
+							class="sm-btn sm-font-9" download="">
+							전체배정한자
+						</a>
+                    </div> 
+                    <section class="section-box info-column inpForum-area">
+                        <div class="info-column_body">
+                            <ul>
+                                <li class="li-num">
+                                    <span>■ </span>
+                                    <span>상위급수 한자는 하위급수 한자를 모두 포함하고 있습니다.</span>
+                                </li>
+                                <li class="li-num">
+                                    <span>■ </span>
+                                    <span>쓰기 배정 한자는 한두 급수 아래의 읽기 배정한자이거나 그 범위 내에 있습니다.</span>
+                                </li>
+                                <li class="li-num">
+                                    <span>■ </span>
+                                    <span>초등학생은 4급, 중ㆍ고등학생은 3급, 대학생은 2급과 1급 취득에 목표를 두고, 학습하길 권해 드립니다.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+				</div>
+		<!-- ## 수정 작업 부분 ## -->
+	</main>
+</div>
+</div>
+
+<!-- 공통 JS -->
+<script src="/js/sub/layout.js"></script>
+
+
+
+
+<footer id="footer">
+<div class="footer-wrap">
+<div id="fnb">
+    <ul class="fnb1">
+        <li><a href="/kccpt/footer/privacy.do">개인정보처리방침</a></li>
+    	<li><a href="/kccpt/footer/history.do?kid=3">본회연혁</a></li>
+        <li><a href="/kccpt/footer/terms.do">이용약관</a></li>
+		<li><a href="/kccpt/footer/cctvPolicy.do">영상정보처리기기 운영·관리 방침</a></li>
+		<li><a href="/kccpt/footer/emailReject.do">전자우편수집거부</a></li>
+		<li><a href="/kccpt/footer/location.do">찾아오시는 길</a></li>
+		<li><a href="https://www.pqi.or.kr/" target="_blank" rel="noopener noreferrer">민간자격정보서비스</a></li>
+    </ul>
+</div>
+<div class="siteinfo">
+	<ul>
+		<li>
+			<p><span>사단법인 한국어문회</span></p>
+			<address>(06640) 서울특별시 서초구 사임당로 64 한국어문회관 501호</address>
+		    <div class="tel">
+		    	<span>대표자 : 남기탁</span>
+		    	<span>사업자등록번호 : 102-82-08997</span>
+		    </div>
+		    <p>통신판매업신고 : 2017-서울서초-0554</p>
+		</li>
+		<li>
+			<p><span>문의</span> 평일 09:00~17:00(중식시간 제외)</p>
+			<p><span>전화</span> 1566-1400(ARS 1번)</p>
+			<p><span>팩스</span> 02-6003-1414~5</p>
+		</li>
+		<li>
+			<p class="list">인터넷접수 시간은 접수시작일 09:00 ~ 접수마감일 18:00 입니다.</p>
+			<p class="list">인터넷접수 문의는 1566-1400 (ARS 1번) 연락주세요.</p>
+			<p class="list">신규 이용자는 '회원가입' 후, 기존 이용자는 '마이페이지 > 회원정보' 확인 후 접수하세요.</p>
+			<p class="list">본 사이트는 PC에 최적화되었으며, 그 외 사용기기에서 문제가 발생할 수 있습니다.</p>
+		</li>
+	</ul>
+   
+    <div class="copyright">
+    	<span>본 사이트의 저작권 및 소유권은 사단법인 한국어문회에 있으며, 무단도용, 불법접근, 광고 등 허가하지 않은 행위을 금지합니다.</span>
+    	<span>© 사단법인 한국어문회. ALL RIGHTS RESERVED.</span>
+    </div>
+</div>
+
+<a href="#gnb_top" class="btn_top">TOP</a>
+
+</div>
+</footer>
+</div>
+
+<!-- 공통 JS -->
+<script src="/main/js/layout.js"></script>
+
+<!-- 메인 JS -->
+<script src="/main/js/sub.js"></script>
+
+
+
+<script type="text/javascript" src="//wcs.pstatic.net/wcslog.js"></script>
+<script type="text/javascript">
+if(!wcs_add) var wcs_add = {};
+wcs_add["wa"] = "3b46d62da0139c";
+if(window.wcs) {
+wcs_do();
+}
+</script>
+
+
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Q22KXB2NDX"></script>
+<script type="text/javascript">
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-Q22KXB2NDX');
+</script>
+
+
+</body>
+</html>

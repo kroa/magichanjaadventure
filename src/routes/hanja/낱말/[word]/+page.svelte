@@ -2,6 +2,7 @@
 	import { DICT_ORIGIN } from '$lib/sites';
 	import { jsonLd } from '$lib/dict/jsonld';
 	import { withParticle } from '$lib/dict';
+	import StrokeOrder from '$lib/components/dict/StrokeOrder.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -79,6 +80,70 @@
 		{/each}
 	</div>
 </section>
+
+{#if data.parts.length}
+	<!--
+		글자가 어떻게 만들어졌는지 — 日 + 月 = 明.
+		여느 한자 사전에 없는 각도이고, 낱말을 찾은 사람에게는 글자를 외울 실마리가 된다.
+	-->
+	<section>
+		<h2>글자의 짜임</h2>
+		{#each data.parts as p (p.character)}
+			<p class="recipe">
+				<b>{p.character}</b>
+				<span class="formula">
+					{#each p.recipe.parts as part, i (part)}
+						{#if i > 0}<em>+</em>{/if}<a href="/hanja/{part}">{part}</a>
+					{/each}
+					<em>=</em>
+					<a href="/hanja/{p.character}">{p.character}</a>
+				</span>
+				<span class="story">{p.recipe.note}</span>
+			</p>
+		{/each}
+	</section>
+{/if}
+
+{#if data.strokes.length}
+	<!--
+		낱말을 찾은 사람은 대개 그 글자를 **쓸 줄 모른다.**
+		획순은 이 사전이 따로 만들어 가진 것인데 지금까지 글자 페이지에만 있었다.
+		한 번 더 눌러 들어가야 보이면 대부분은 안 누른다 — 여기서 바로 보여 준다.
+	-->
+	<section>
+		<h2>획순</h2>
+		<div class="strokes">
+			{#each data.strokes as s (s.character)}
+				<!-- 글자마다 하나로 감싼다 — 컴포넌트가 최상위 요소를 몇 개 내보내든 여기서는 한 칸이다 -->
+				<div class="stroke-card">
+					<StrokeOrder character={s.character} strokes={s.strokes} />
+				</div>
+			{/each}
+		</div>
+	</section>
+{/if}
+
+{#if data.homophones.length}
+	<!--
+		한자어를 배우는 이유가 여기 다 들어 있다 — 소리는 같은데 뜻이 딴판인 낱말.
+		'구조' 라고 똑같이 읽어도 救助 와 構造 는 아무 관계가 없고, **한자를 봐야** 갈린다.
+	-->
+	<section>
+		<h2>소리가 같은 다른 낱말</h2>
+		<p class="note">
+			똑같이 ‘{e.reading}’이라 읽지만 한자가 다르고 뜻도 다르다. 소리만으로는 가릴 수 없다.
+		</p>
+		<ul class="words">
+			{#each data.homophones as w (w.word)}
+				<li>
+					<a href="/hanja/낱말/{w.word}">
+						<b>{w.word}</b><span>{w.reading}</span><i>{w.meaning}</i>
+					</a>
+				</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
 
 {#if data.sharesHead.length}
 	<section>
@@ -275,6 +340,69 @@
 		font-style: normal;
 		white-space: nowrap;
 		text-overflow: ellipsis;
+	}
+
+	.recipe {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem 0.75rem;
+		align-items: baseline;
+		margin: 0 0 0.75rem;
+	}
+
+	.recipe > b {
+		font-size: 1.5rem;
+		font-weight: 500;
+	}
+
+	.formula {
+		display: inline-flex;
+		gap: 0.35rem;
+		align-items: baseline;
+		font-size: 1.125rem;
+	}
+
+	.formula a {
+		color: var(--ink);
+		text-decoration: none;
+		border-bottom: 1px solid var(--line);
+	}
+
+	.formula a:hover {
+		color: var(--accent);
+		border-bottom-color: var(--accent);
+	}
+
+	.formula em {
+		color: var(--muted);
+		font-family: var(--ui);
+		font-size: 0.8125rem;
+		font-style: normal;
+	}
+
+	.story {
+		color: #3a3a44;
+		font-size: 0.9375rem;
+	}
+
+	.strokes {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+		gap: 1.25rem;
+	}
+
+	.stroke-card {
+		display: grid;
+		gap: 0.5rem;
+		align-content: start;
+	}
+
+	.note {
+		max-width: 34rem;
+		margin: 0 0 0.9rem;
+		color: var(--muted);
+		font-family: var(--ui);
+		font-size: 0.8125rem;
 	}
 
 	.more {

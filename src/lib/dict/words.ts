@@ -70,6 +70,21 @@ export function wordsWith(character: string): Word[] {
 }
 
 /**
+ * 소리는 같고 한자가 다른 낱말.
+ *
+ * 한자어를 배우는 이유가 여기 다 들어 있다 — '구조' 라고 똑같이 읽는데
+ * 救助(건져 도움)와 構造(얽어 만든 꼴)는 아무 관계가 없다. 소리만으로는
+ * 절대 못 가르고, **한자를 봐야** 갈린다.
+ *
+ * 사전에 실을 값어치가 여기 있고, 검색에서도 사람들이 실제로 헷갈려 찾는 자리다.
+ */
+export function homophones(word: string): Word[] {
+	const w = BY_WORD.get(word);
+	if (!w) return [];
+	return ALL_WORDS.filter((o) => o.word !== w.word && o.reading === w.reading);
+}
+
+/**
  * 첫소리(ㄱ~ㅎ)로 묶는다.
  *
  * 815개를 한 줄로 늘어놓으면 아무도 찾지 못한다. 종이 사전이 그러듯
