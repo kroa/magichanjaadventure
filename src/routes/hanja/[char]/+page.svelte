@@ -1,6 +1,6 @@
 <script lang="ts">
 	import StrokeOrder from '$lib/components/dict/StrokeOrder.svelte';
-	import { withParticle } from '$lib/dict';
+	import { gradeExists, withParticle } from '$lib/dict';
 	import { jsonLd } from '$lib/dict/jsonld';
 	import { DICT_ORIGIN } from '$lib/sites';
 	import type { PageData } from './$types';
@@ -9,6 +9,14 @@
 
 	const site = DICT_ORIGIN;
 	const e = $derived(data.entry);
+	/*
+	 * 급수표가 있는 급수인가.
+	 *
+	 * 이 사전은 8급~4급의 한자표를 만든다. 3급II·3급·2급 글자도 28자 섞여 있는데
+	 * 그 급수의 표는 만들지 않으므로(그 급수 배정한자를 다 담고 있지 않다),
+	 * 링크를 걸면 404 가 된다 — 실제로 빌드가 그렇게 멈췄다.
+	 */
+	const hasTable = $derived(gradeExists(e.gradeLabel));
 	const url = $derived(`${site}/hanja/${encodeURIComponent(e.character)}`);
 
 	const ld = $derived(
@@ -42,7 +50,12 @@
 
 <nav class="crumb" aria-label="위치">
 	<a href="/hanja">한자사전</a> <span aria-hidden="true">›</span>
-	<a href="/hanja/급수/{e.gradeLabel}">{e.gradeLabel}</a> <span aria-hidden="true">›</span>
+	{#if hasTable}
+		<a href="/hanja/급수/{e.gradeLabel}">{e.gradeLabel}</a>
+	{:else}
+		<span>{e.gradeLabel}</span>
+	{/if}
+	<span aria-hidden="true">›</span>
 	<span>{e.character}</span>
 </nav>
 
@@ -70,7 +83,13 @@
 			</div>
 			<div>
 				<dt>급수</dt>
-				<dd><a href="/hanja/급수/{e.gradeLabel}">{e.gradeLabel}</a></dd>
+				<dd>
+					{#if hasTable}
+						<a href="/hanja/급수/{e.gradeLabel}">{e.gradeLabel}</a>
+					{:else}
+						{e.gradeLabel}
+					{/if}
+				</dd>
 			</div>
 			<div>
 				<dt>분류</dt>

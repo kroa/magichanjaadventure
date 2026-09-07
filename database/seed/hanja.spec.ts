@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { HANJA_IDS } from './ids';
 import { HANJA_SEED } from './hanja';
 import { AREAS } from '../../src/lib/game/areas';
 
@@ -27,9 +28,37 @@ describe('한자 시드 데이터', () => {
 		expect(duplicates, `중복 한자: ${duplicates.join(' / ')}`).toEqual([]);
 	});
 
-	it('id 가 1부터 1000까지 빠짐없이 이어진다', () => {
-		const ids = HANJA_SEED.map((h) => h.id);
+	it('id 가 1부터 1000까지 빠짐없이 쓰인다', () => {
+		/*
+		 * **순서가 아니라 집합을 본다.**
+		 *
+		 * 예전에는 시드에 실린 차례대로 번호를 매겼고 이 검사도 그 순서를 못 박았다.
+		 * 그런데 급수 데이터를 공식 자료에 맞춰 고치자 485개의 번호가 다른 글자로
+		 * 옮겨붙었다 — 그대로 나갔다면 아이가 배워 둔 기록이 통째로 어긋났을 것이다.
+		 * 이제 번호는 글자에 고정되어 있으므로(ids.ts) 파일 순서와 같을 이유가 없다.
+		 * 지켜야 할 것은 **빠짐도 겹침도 없다**는 것뿐이다.
+		 */
+		const ids = HANJA_SEED.map((h) => h.id).sort((a, b) => a - b);
 		expect(ids).toEqual(Array.from({ length: 1000 }, (_, i) => i + 1));
+	});
+
+	it('글자마다 번호가 고정되어 있다', () => {
+		/*
+		 * 이 검사가 없으면 다음에 시드를 손볼 때 같은 사고가 조용히 되살아난다.
+		 * 번호는 아이의 진행 기록이 가리키는 값이다 — 글자와 번호의 짝이 흔들리면
+		 * 배운 글자가 다른 글자로 바뀐다.
+		 */
+		const missing = HANJA_SEED.filter((h) => HANJA_IDS[h.character] === undefined);
+		expect(
+			missing.map((h) => h.character),
+			'번호표에 없는 글자'
+		).toEqual([]);
+
+		const moved = HANJA_SEED.filter((h) => HANJA_IDS[h.character] !== h.id);
+		expect(
+			moved.map((h) => `${h.character}: ${HANJA_IDS[h.character]} → ${h.id}`),
+			'번호가 바뀐 글자'
+		).toEqual([]);
 	});
 
 	it('각 지역의 한자 수가 지역 정의와 일치한다', () => {

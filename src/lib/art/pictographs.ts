@@ -368,6 +368,24 @@ export const PICTOGRAPHS: Record<string, Pictograph> = {
 			<path d="M30 26.5 C43 25.7 57 25.7 69 26.5" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" opacity=".4" />
 			<path d="M15 71 C15 65 18 62.4 26 62 C43 61.1 59 61.1 74 62.1 C82 62.6 85 65.3 85 71 C85 76.7 82 79.4 74 79.9 C59 80.9 43 80.9 26 80 C18 79.6 15 76.9 15 71 Z" fill="#FFD166" stroke="#F2A93B" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
 			<path d="M27 67 C43 66.1 59 66.1 72 66.9" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" opacity=".4" />`
+	},
+
+	/*
+	 * 실타래에서 여러 가닥이 이어져 내려오는 모습.
+	 * 글자 생김새를 흉내 내지 않고, **여섯 살이 보고 ‘실’ 이라고 알아보는가**만 본다.
+	 */
+	系: {
+		label: '실타래',
+		svg: `
+			<ellipse cx="50" cy="26" rx="21" ry="15" fill="#FFDCC2" stroke="#D9A97E" stroke-width="6" />
+			<path d="M33 21 C42 27 58 27 67 21" fill="none" stroke="#D9A97E" stroke-width="4" stroke-linecap="round" opacity=".7" />
+			<path d="M34 31 C43 37 57 37 66 31" fill="none" stroke="#D9A97E" stroke-width="4" stroke-linecap="round" opacity=".7" />
+			<g fill="none" stroke="#E05A38" stroke-width="7" stroke-linecap="round">
+			<path d="M50 41 C50 52 44 58 38 66 C33 73 32 80 33 88" />
+			<path d="M50 41 C50 54 50 62 50 72 C50 80 50 84 50 89" />
+			<path d="M50 41 C50 52 56 58 62 66 C67 73 68 80 67 88" />
+			</g>
+			<circle cx="50" cy="41" r="6" fill="#E05A38" />`
 	}
 };
 

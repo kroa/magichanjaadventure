@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { ALL, GRADES, charactersOfGrade, entryOf, summarize, withParticle } from './index';
+import { OFFICIAL_GRADE } from '../../../database/seed/official-grades';
+import {
+	ABOVE_GRADES,
+	ALL,
+	GRADES,
+	IN_GRADE_TABLE,
+	charactersOfGrade,
+	entryOf,
+	summarize,
+	withParticle
+} from './index';
 
 /**
  * 사전이 **검색엔진과 광고 심사 앞에서 버티는가.**
@@ -11,10 +21,45 @@ import { ALL, GRADES, charactersOfGrade, entryOf, summarize, withParticle } from
  */
 
 describe('사전 데이터', () => {
-	it('1000자가 모두 급수에 속한다', () => {
+	it('1000자가 모두 어딘가에 속한다', () => {
+		/*
+		 * 예전에는 "1,000자가 전부 8급~4급 급수표에 든다" 를 못 박고 있었다.
+		 * 그런데 공식 배정급수를 대 보니 28자는 3급II·3급·2급이었다 —
+		 * 게임이 마지막 마을에 넣어 둔 글자들이다. 급수표에 끼워 넣으면 사전이
+		 * 거짓을 말하게 되므로 따로 모았고, 대신 **한 자도 새지 않았는지**를 본다.
+		 * 어디에도 안 걸린 글자는 링크가 닿지 않는 섬이 되어 색인에서 사라진다.
+		 */
 		expect(ALL.length).toBe(1000);
-		const inGrades = GRADES.reduce((n, g) => n + g.count, 0);
-		expect(inGrades, '어느 급수에도 없는 글자가 있다').toBe(ALL.length);
+		const above = ABOVE_GRADES.reduce((n, g) => n + g.entries.length, 0);
+		expect(IN_GRADE_TABLE + above, '어디에도 속하지 않는 글자가 있다').toBe(ALL.length);
+	});
+
+	it('급수가 공식 배정급수와 어긋나지 않는다', () => {
+		/*
+		 * 급수는 검정시험을 준비하는 사람에게 핵심 정보다. 틀린 급수를 자신 있게
+		 * 적는 것은 안 적느니만 못하다. 시드(게임의 마을 순서)를 그대로 쓰다가
+		 * 133자가 틀려 있었고, 이 검사가 그때 없었다.
+		 */
+		const wrong = ALL.filter((e) => e.gradeLabel !== OFFICIAL_GRADE[e.character]);
+		expect(
+			wrong.map((e) => `${e.character}: ${e.gradeLabel} ≠ ${OFFICIAL_GRADE[e.character]}`),
+			'공식 급수와 다른 글자'
+		).toEqual([]);
+	});
+
+	it('완전히 담고 있는 급수는 공식 자수와 같다', () => {
+		// 8급~6급은 공식 배정한자를 빠짐없이 담고 있다. 여기가 어긋나면 데이터가 샌 것이다
+		const official: Record<string, number> = {
+			'8급': 50,
+			'7급II': 50,
+			'7급': 50,
+			'6급II': 75,
+			'6급': 75,
+			'5급II': 100
+		};
+		for (const [label, n] of Object.entries(official)) {
+			expect(GRADES.find((g) => g.label === label)?.count, `${label}`).toBe(n);
+		}
 	});
 
 	it('급수마다 글자가 있고 순서가 유지된다', () => {

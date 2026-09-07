@@ -8,6 +8,7 @@ import { GRADE_5II } from './grade-5ii';
 import { GRADE_5 } from './grade-5';
 import { GRADE_4II } from './grade-4ii';
 import { GRADE_4 } from './grade-4';
+import { HANJA_IDS } from './ids';
 
 /**
  * 한자 1000자 = 한국어문회 배정한자 8급 ~ 4급 누적.
@@ -37,15 +38,24 @@ const BLOCKS: GradeBlock[] = [
 	{ label: '4급', difficulty: 9, areaId: 9, levelRequired: 46, rows: GRADE_4 }
 ];
 
+/**
+ * 번호는 **글자에 붙는다.**
+ *
+ * 예전에는 시드에 실린 차례대로 1번부터 매겼는데, 급수 데이터를 공식 자료에 맞춰
+ * 고치자 1,000개 중 485개의 번호가 다른 글자로 옮겨붙었다. 그대로 배포했다면
+ * 아이가 배워 둔 기록이 통째로 어긋났을 것이다 — 系를 배운 기록이 故를 배운 것으로.
+ *
+ * 그래서 `ids.ts` 에 고정해 둔 번호를 쓰고, 거기 없는 새 글자만 뒤에 이어 붙인다.
+ */
 function build(): HanjaSeed[] {
 	const out: HanjaSeed[] = [];
-	let id = 1;
+	let next = Math.max(0, ...Object.values(HANJA_IDS)) + 1;
 
 	for (const block of BLOCKS) {
 		block.rows.forEach((row, index) => {
 			const [character, reading, meaning, strokes, category, words, description] = row;
 			out.push({
-				id: id++,
+				id: HANJA_IDS[character] ?? next++,
 				character,
 				reading,
 				meaning,

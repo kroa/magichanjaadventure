@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DICT_ORIGIN } from '$lib/sites';
 	import { jsonLd } from '$lib/dict/jsonld';
-	import { withParticle } from '$lib/dict';
+	import { gradeExists, withParticle } from '$lib/dict';
 	import StrokeOrder from '$lib/components/dict/StrokeOrder.svelte';
 	import type { PageData } from './$types';
 
@@ -9,6 +9,8 @@
 
 	const e = $derived(data.entry);
 	const url = $derived(`${DICT_ORIGIN}/hanja/낱말/${e.word}`);
+	/* 급수표가 없는 급수(3급II 등)로 링크를 걸면 404 가 된다 — 있을 때만 급수 이름을 준다 */
+	const headGrade = $derived(e.head && gradeExists(e.head.gradeLabel) ? e.head.gradeLabel : null);
 
 	/** 앞·뒤 글자를 같은 모양의 카드로 보여 준다 */
 	const parts = $derived(
@@ -177,8 +179,8 @@
 
 <p class="more">
 	<a href="/hanja/낱말">낱말 전체 보기</a>
-	{#if e.head}
-		<a href="/hanja/급수/{e.head.gradeLabel}">{e.head.gradeLabel} 글자 목록</a>
+	{#if headGrade}
+		<a href="/hanja/급수/{headGrade}">{headGrade} 글자 목록</a>
 	{/if}
 </p>
 

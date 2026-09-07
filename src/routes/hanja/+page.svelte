@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { DICT_ORIGIN } from '$lib/sites';
-	import { GRADES, ALL } from '$lib/dict';
+	import { ABOVE_GRADES, GRADES, ALL, IN_GRADE_TABLE } from '$lib/dict';
 	import { ALL_WORDS, wordsByInitial } from '$lib/dict/words';
 	import { jsonLd } from '$lib/dict/jsonld';
 
 	const total = ALL.length;
+	/*
+	 * 1,000자를 전부 "8급~4급 배정한자" 라고 적어 왔는데 **사실이 아니었다.**
+	 * 공식 배정급수를 대 보니 28자는 3급II·3급·2급이다. 숫자를 갈라 적는다 —
+	 * 급수를 보고 들어오는 사람에게 이 한 줄이 틀리면 나머지를 믿을 이유가 없다.
+	 */
+	const inTable = IN_GRADE_TABLE;
+	const aboveTotal = ABOVE_GRADES.reduce((n, g) => n + g.entries.length, 0);
 	const wordTotal = ALL_WORDS.length;
 	/* 목차에서는 첫소리만 보여 준다 — 815개를 여기에 다 늘어놓을 자리가 아니다 */
 	const initials = wordsByInitial();
@@ -25,7 +32,7 @@
 		name: '한자사전',
 		url: `${DICT_ORIGIN}/hanja`,
 		inLanguage: 'ko',
-		description: `한국어문회 배정한자 8급~4급 ${total}자와 두 글자 한자어 ${wordTotal}개의 훈·음·총획·뜻풀이`,
+		description: `한국어문회 8급~4급 배정한자 ${inTable}자와 그 위 급수 ${aboveTotal}자, 두 글자 한자어 ${wordTotal}개의 훈·음·총획·뜻풀이`,
 		about: { '@type': 'Thing', name: '한자', alternateName: '漢字' },
 		mainEntity: {
 			'@type': 'ItemList',
@@ -42,10 +49,10 @@
 </script>
 
 <svelte:head>
-	<title>한자사전 — 8급~4급 배정한자 1,000자 훈·음·획수</title>
+	<title>한자사전 — 8급~4급 배정한자 {inTable}자 훈·음·획수</title>
 	<meta
 		name="description"
-		content="한국어문회 배정한자 8급부터 4급까지 1,000자의 훈과 음, 총획, 쓰이는 낱말을 급수별로 정리했습니다. 글자를 이루는 조각과 획순도 함께 볼 수 있습니다."
+		content="한국어문회 8급부터 4급까지 배정한자 {inTable}자의 훈과 음, 총획, 쓰이는 낱말을 급수별 한자표로 정리했습니다. 글자를 이루는 조각과 획순, 두 글자 한자어 {wordTotal}개의 풀이도 함께 볼 수 있습니다."
 	/>
 	<link rel="canonical" href="{DICT_ORIGIN}/hanja" />
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- jsonLd 가 `<` 를 이스케이프한다 -->
@@ -56,8 +63,9 @@
 	<p class="kicker">한국어문회 배정한자 8급~4급</p>
 	<h1>한자사전</h1>
 	<p class="lead">
-		{total.toLocaleString()}자의 훈·음·총획과 쓰이는 낱말을 급수별로 정리했다. 글자를 이루는 조각(日
-		+ 月 = 明)과 획순({withStrokes}자), 두 글자 한자어 {wordTotal}개의 풀이도 함께 볼 수 있다.
+		한자 {total.toLocaleString()}자의 훈·음·총획과 쓰이는 낱말을 정리했다. 그중 {inTable}자가
+		8급~4급 배정한자이고, {aboveTotal}자는 그보다 위 급수다. 글자를 이루는 조각(日 + 月 = 明)과
+		획순({withStrokes}자), 두 글자 한자어 {wordTotal}개의 풀이도 함께 볼 수 있다.
 	</p>
 </header>
 
@@ -127,10 +135,39 @@
 	</ul>
 </section>
 
+{#if aboveTotal}
+	<!--
+		급수표에 못 싣는 글자들을 **감추지 않는다.**
+
+		이 사전은 8급~4급을 다루는데 그보다 위 급수 글자가 {aboveTotal}자 섞여 있다.
+		급수표에 끼워 넣으면 3급II 배정한자 500자 중 22자만 담고서 `3급II 한자표` 라고
+		말하는 셈이라 거짓이 되고, 빼 버리면 그 글자 페이지가 어디에서도 닿지 않는 섬이 된다.
+		따로 모아 그대로 밝히는 것이 둘 다 피하는 유일한 길이다.
+	-->
+	<section>
+		<h2><i>05</i> 4급보다 위 급수 {aboveTotal}자</h2>
+		<p class="body">
+			이 사전이 다루는 범위는 8급~4급이다. 다만 아래 {aboveTotal}자는 공식 배정급수가 그보다 위라
+			급수표에 싣지 않았다. 그 급수의 배정한자를 다 담고 있지 않으므로 ‘한자표’ 라고 부를 수 없기
+			때문이다. 글자마다 제 급수는 정확히 적혀 있다.
+		</p>
+		{#each ABOVE_GRADES as g (g.label)}
+			<p class="above">
+				<b>{g.label}</b>
+				<span>
+					{#each g.entries as e (e.character)}
+						<a href="/hanja/{e.character}" title="{e.meaning} {e.reading}">{e.character}</a>
+					{/each}
+				</span>
+			</p>
+		{/each}
+	</section>
+{/if}
+
 <section>
-	<h2><i>05</i> 이 자료에 대하여</h2>
+	<h2><i>06</i> 이 자료에 대하여</h2>
 	<p class="body">
-		한국어문회(한국한자능력검정회) 급수별 배정한자를 기준으로 삼았다. 8급이 가장 쉽고 급수가
+		급수는 사단법인 한국어문회가 배포하는 배정한자 자료를 그대로 따랐다. 8급이 가장 쉽고 급수가
 		올라갈수록 어려워지며, 상위 급수는 하위 급수를 포함한다. 각 글자 페이지에는 훈과 음, 총획, 해당
 		급수, 쓰이는 낱말, 그리고 그 글자를 이루는 조각을 실었다.
 	</p>
@@ -276,6 +313,44 @@
 
 	.go:hover {
 		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	/* 4급보다 위 급수 — 급수마다 한 줄로 늘어놓는다 */
+	.above {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 0.9rem;
+		align-items: baseline;
+		margin: 0 0 0.6rem;
+	}
+
+	.above b {
+		min-width: 3.5rem;
+		color: var(--muted);
+		font-family: var(--ui);
+		font-size: 0.8125rem;
+		font-weight: 400;
+	}
+
+	.above span {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.15rem;
+	}
+
+	.above a {
+		display: grid;
+		place-items: center;
+		/* 48px — 손가락은 화면이 바뀜다고 작아지지 않는다 */
+		min-width: 48px;
+		min-height: 48px;
+		color: var(--ink);
+		font-size: 1.25rem;
+		text-decoration: none;
+	}
+
+	.above a:hover {
 		color: var(--accent);
 	}
 </style>

@@ -1,4 +1,5 @@
 import { HANJA_SEED } from '../../../database/seed/hanja';
+import { OFFICIAL_GRADE } from '../../../database/seed/official-grades';
 import type { ExampleWord } from '../../../database/seed/types';
 import { strokesOf } from '$lib/game/stroke-data';
 import { FUSION_RECIPES } from '$lib/game/fusion';
@@ -38,7 +39,17 @@ export interface DictEntry {
 	sortOrder: number;
 }
 
+/**
+ * 급수표에 싣는 차례. **이 사전이 다루는 범위**이기도 하다.
+ *
+ * 4급보다 위 급수 글자도 28자 섞여 있는데(게임이 마지막 마을에 넣어 둔 것들),
+ * 그 급수의 배정한자를 다 담고 있지는 않으므로 `3급II 한자표` 같은 얼굴을 하지 않는다.
+ * 그 28자는 제 페이지에서 제 급수를 정확히 말하고, 목차에서 따로 모아 보여 준다.
+ */
 const ORDER = ['8급', '7급II', '7급', '6급II', '6급', '5급II', '5급', '4급II', '4급'];
+
+/** 4급보다 위 — 급수표를 만들지 않는 급수들. 쉬운 쪽부터 */
+const ABOVE = ['3급II', '3급', '2급', '1급', '특급II', '특급'];
 
 const BY_CHAR = new Map<string, DictEntry>(
 	HANJA_SEED.map((h) => [
@@ -48,7 +59,11 @@ const BY_CHAR = new Map<string, DictEntry>(
 			reading: h.reading,
 			meaning: h.meaning,
 			strokeCount: h.strokeCount,
-			gradeLabel: h.gradeLabel,
+			/*
+			 * 급수는 **공식 표에서 읽는다.** 시드의 `gradeLabel` 은 게임의 마을 순서라,
+			 * 그대로 쓰면 사전이 틀린 급수를 말하게 된다 — 실제로 133자가 그랬다.
+			 */
+			gradeLabel: OFFICIAL_GRADE[h.character] ?? h.gradeLabel,
 			category: h.category,
 			exampleWords: h.exampleWords,
 			childNote: h.description,
@@ -72,6 +87,24 @@ export const GRADES: { label: string; count: number }[] = ORDER.map((label) => (
 export function gradeExists(label: string): boolean {
 	return GRADES.some((g) => g.label === label);
 }
+
+/**
+ * 4급보다 위 급수인 글자들.
+ *
+ * 이 사전은 8급~4급을 다룬다고 말하는데, 실제로는 그보다 위 급수 글자가 28자 섞여 있다
+ * (게임이 마지막 마을에 넣어 둔 것들이다). 없는 척하면 그 글자 페이지가 어디에서도
+ * 닿지 않는 섬이 되고, 급수표에 끼워 넣으면 사전이 거짓을 말하게 된다 —
+ * 3급II 배정한자 500자 중 22자만 담고서 `3급II 한자표` 라고 할 수는 없다.
+ *
+ * 그래서 **따로 모아 그대로 밝힌다.**
+ */
+export const ABOVE_GRADES: { label: string; entries: DictEntry[] }[] = ABOVE.map((label) => ({
+	label,
+	entries: ALL.filter((e) => e.gradeLabel === label).sort((a, b) => a.sortOrder - b.sortOrder)
+})).filter((g) => g.entries.length > 0);
+
+/** 급수표에 실리는 글자 수 (8급~4급) */
+export const IN_GRADE_TABLE: number = GRADES.reduce((n, g) => n + g.count, 0);
 
 /** 그 급수의 글자들. 시드 순서를 그대로 따른다 (교재의 배열 순서다) */
 export function charactersOfGrade(label: string): DictEntry[] {
