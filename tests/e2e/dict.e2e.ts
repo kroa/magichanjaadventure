@@ -104,6 +104,32 @@ test.describe('한자사전', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText(word!);
 	});
 
+	test('급수표가 누적 자수를 알려 준다', async ({ page }, testInfo) => {
+		/*
+		 * `N급 한자 개수` 로 찾아오는 사람이 알고 싶은 것은 **누적 자수**다 —
+		 * 시험은 상위 급수가 하위를 포함해 나오기 때문이다. 신규 자수만 적으면
+		 * 7급을 50자로 알고 돌아간다. 실제 7급 시험 범위는 150자다.
+		 */
+		await page.goto('/hanja/급수');
+		await expect(page.getByRole('heading', { name: '한자 급수표', level: 1 })).toBeVisible();
+		await expect(page.locator('tbody tr')).toHaveCount(9);
+
+		// 공식 누적 자수 — 8급 50 → 7급 150 → 5급 500 → 4급 1000
+		const rows = page.locator('tbody tr');
+		await expect(rows.nth(0)).toContainText('50자');
+		await expect(rows.nth(2)).toContainText('150자');
+		await expect(rows.nth(8)).toContainText('1000자');
+
+		await waitForFonts(page);
+		await captureScreen(page, testInfo, 'dict-grade-table');
+		await expectHealthyLayout(page);
+
+		// 급수 페이지에도 같은 숫자가 적혀 있어야 한다
+		await page.getByRole('link', { name: '7급', exact: true }).first().click();
+		await page.waitForURL((u) => decodeURIComponent(u.pathname).endsWith('/급수/7급'));
+		await expect(page.locator('.facts')).toContainText('150자');
+	});
+
 	test('따라쓰기 활동지가 열리고 인쇄용으로 짜여 있다', async ({ page }, testInfo) => {
 		await page.goto('/hanja/급수/8급/따라쓰기');
 		await expect(page.getByRole('heading', { level: 1 })).toContainText('따라쓰기');
@@ -198,6 +224,29 @@ test.describe('한자사전', () => {
 			const res = await page.request.get(path, { headers: { host }, maxRedirects: 0 });
 			expect(res.status(), `${host} 에서 키 파일이 200 이 아니다`).toBe(200);
 			expect((await res.text()).trim(), `${host} 의 키 파일 내용이 키와 다르다`).toBe(INDEXNOW_KEY);
+		}
+	});
+
+	test('static 에 놓은 파일은 두 도메인 모두에서 그대로 나온다', async ({ page }) => {
+		/*
+		 * 사전 도메인은 제 것이 아닌 경로를 전부 게임 도메인으로 308 넘긴다.
+		 * 그래서 `static/` 에 파일을 놓아도 **있는데 남의 도메인에서 404 가 나는** 일이 생긴다.
+		 * `/favicon.png` 와 `/ads.txt` 가 실제로 그랬고, IndexNow 키도 그럴 뻔했다.
+		 *
+		 * 파일 이름을 손으로 적어 막던 방식은 다음 파일에서 또 터진다 —
+		 * ads.txt 든 소유확인 파일이든, 놓기만 하면 열려야 한다.
+		 * 이제 `vite.config.ts` 가 폴더를 읽어 자동으로 채우므로, 그 약속을 여기서 지킨다.
+		 */
+		const res = await page.request.get('/robots.txt', {
+			headers: { host: 'hanjasajeon.pages.dev' }
+		});
+		expect(res.status()).toBe(200);
+
+		// static 루트에 실제로 있는 파일 하나가 두 도메인에서 다 열리는가
+		const file = `/${INDEXNOW_KEY}.txt`;
+		for (const host of ['hanjasajeon.pages.dev', 'magichanjaadventure.pages.dev']) {
+			const r = await page.request.get(file, { headers: { host }, maxRedirects: 0 });
+			expect(r.status(), `${host} 에서 ${file} 이 새어 나간다`).toBe(200);
 		}
 	});
 
@@ -358,7 +407,7 @@ test.describe('한자사전', () => {
 		expect(map.ok()).toBe(true);
 		const xml = await map.text();
 		expect(xml).toContain('<urlset');
-		// 1000자 + 급수 9 + 따라쓰기 9 + 퀴즈 9 + 목차 1 + 낱말 목차 1 + 낱말 815
-		expect((xml.match(/<url>/g) ?? []).length).toBe(1844);
+		// 1000자 + 급수표 1 + 급수 9 + 따라쓰기 9 + 퀴즈 9 + 목차 1 + 낱말 목차 1 + 낱말 815
+		expect((xml.match(/<url>/g) ?? []).length).toBe(1845);
 	});
 });

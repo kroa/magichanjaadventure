@@ -56,10 +56,38 @@
 
 <header class="head">
 	<p class="kicker">한국어문회 배정한자</p>
-	<h1>{data.grade}</h1>
+	<h1>{data.grade} 한자표</h1>
 	<p class="count">{data.characters.length}자</p>
+	{#if data.info}
+		<!--
+			`N급 한자 개수` 로 찾아오는 사람이 알고 싶은 것은 **누적 자수**다.
+			시험은 상위 급수가 하위를 포함해 나오므로, 신규만 적으면
+			7급을 50자로 알고 돌아간다 — 실제로 7급 시험 범위는 150자다.
+
+			공식 자수와 이 사전이 담은 자수가 다를 때는 감추지 않고 나란히 적는다.
+		-->
+		<dl class="facts">
+			<div>
+				<dt>{data.grade}에 새로 나오는 글자</dt>
+				<dd>{data.info.official}자</dd>
+			</div>
+			<div>
+				<dt>{data.grade} 시험 범위 (8급부터 누적)</dt>
+				<dd><strong>{data.info.cumulative}자</strong></dd>
+			</div>
+			{#if !data.info.complete}
+				<div>
+					<dt>이 표에 실린 글자</dt>
+					<dd>{data.info.ours}자</dd>
+				</div>
+			{/if}
+		</dl>
+	{/if}
 	<p class="lead">
 		훈과 음, 총획을 함께 실었다. 글자를 누르면 쓰이는 낱말과 글자를 이루는 조각을 볼 수 있다.
+		{#if data.info && !data.info.complete}
+			공식 {data.grade} 배정한자는 {data.info.official}자이고, 그중 {data.info.ours}자를 담았다.
+		{/if}
 	</p>
 </header>
 
@@ -134,6 +162,35 @@
 		font-family: var(--ui);
 		font-size: 0.8125rem;
 		letter-spacing: 0.04em;
+	}
+
+	/* 급수의 숫자들 — 신규·누적·실린 자수를 한눈에 */
+	.facts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 2rem;
+		margin: 1.25rem 0 0;
+	}
+
+	.facts div {
+		padding: 0.5rem 0;
+	}
+
+	.facts dt {
+		color: var(--muted);
+		font-family: var(--ui);
+		font-size: 0.75rem;
+	}
+
+	.facts dd {
+		margin: 0.1rem 0 0;
+		font-size: 1.375rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.facts strong {
+		color: var(--accent);
+		font-weight: 500;
 	}
 
 	.lead {

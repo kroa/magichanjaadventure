@@ -71,6 +71,10 @@
 
 <section>
 	<h2><i>01</i> 급수별로 보기</h2>
+	<p class="body">
+		8급이 가장 쉽고 숫자가 작아질수록 어려워진다. 상위 급수는 하위 급수를 포함하므로 7급 시험 범위는
+		50자가 아니라 150자다 — <a href="/hanja/급수">급수표에서 급수별 자수</a>를 한눈에 볼 수 있다.
+	</p>
 	<ul class="grades">
 		{#each GRADES as g (g.label)}
 			<li>
@@ -228,6 +232,10 @@
 	.body {
 		max-width: 38rem;
 		margin: 0 0 0.75rem;
+	}
+
+	.body a {
+		color: var(--accent);
 	}
 
 	.grades {

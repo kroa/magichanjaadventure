@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-cloudflare';
@@ -29,20 +30,27 @@ export default defineConfig({
 				routes: {
 					include: ['/*'],
 					/*
-					 * IndexNow 키 파일은 **반드시 여기 있어야 한다.**
+					 * `static/` 루트의 파일은 **하나도 빠짐없이** 여기 들어가야 한다.
 					 *
-					 * 없으면 워커를 타고, 워커는 사전 도메인의 비(非)사전 경로를 게임 도메인으로
-					 * 308 넘긴다 — 검색엔진은 키를 못 읽고 403(키 무효)을 돌려주므로 통보가
-					 * 통째로 무시된다. 실제로 `/favicon.png` 가 308 로 나가는 것을 보고 알았다.
-					 * hooks 쪽에도 예외를 두었지만 그건 안전망이고, 정답은 워커를 아예 안 타는 것이다.
+					 * 빠지면 워커를 타고, 워커는 사전 도메인의 비(非)사전 경로를 게임 도메인으로
+					 * 308 넘긴다 — 파일이 있는데도 남의 도메인에서 404 가 난다.
+					 * `/favicon.png` 와 `/ads.txt` 가 실제로 그렇게 새고 있었고,
+					 * IndexNow 키도 하마터면 같은 이유로 통보가 통째로 무시될 뻔했다.
+					 *
+					 * 그때는 파일 이름을 손으로 적어 막았는데, 그 방식은 **다음 파일에서 또 터진다.**
+					 * 소유확인 파일이든 ads.txt 든 새로 놓을 때마다 여기를 고쳐야 한다는 것을
+					 * 아무도 기억하지 못한다. 그래서 폴더를 읽어 자동으로 채운다.
+					 *
+					 * 글꼴은 337개라 하나씩 적으면 100줄 상한을 넘긴다. 폴더째 와일드카드로 접는다.
 					 */
 					exclude: [
 						'<build>',
-						'/fonts/*',
+						...readdirSync('static', { withFileTypes: true }).map((f) =>
+							f.isDirectory() ? `/${f.name}/*` : `/${f.name}`
+						),
 						'/hanja',
 						'/hanja/*',
-						'/sitemap.xml',
-						'/9dda83b0a5957e29009a4ea9ebd272b0.txt'
+						'/sitemap.xml'
 					]
 				}
 			})

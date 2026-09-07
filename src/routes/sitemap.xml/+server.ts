@@ -25,6 +25,7 @@ export const GET: RequestHandler = () => {
 	 */
 	const urls = [
 		{ loc: encodeURI(`${SITE}/hanja`), priority: '1.0' },
+		{ loc: encodeURI(`${SITE}/hanja/급수`), priority: '0.9' },
 		...GRADES.map((g) => ({ loc: encodeURI(`${SITE}/hanja/급수/${g.label}`), priority: '0.8' })),
 		...GRADES.map((g) => ({
 			loc: encodeURI(`${SITE}/hanja/급수/${g.label}/따라쓰기`),

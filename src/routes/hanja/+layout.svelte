@@ -69,6 +69,7 @@
 	<header>
 		<a class="brand" href="/hanja">한자사전</a>
 		<nav aria-label="차례">
+			<a class="all" href="/hanja/급수">급수표</a>
 			{#each GRADES as g (g.label)}
 				<a href="/hanja/급수/{g.label}">{g.label}</a>
 			{/each}
@@ -162,6 +163,14 @@
 		letter-spacing: 0.02em;
 		text-decoration: none;
 		transition: color 0.15s ease;
+	}
+
+	/* 급수표는 개별 급수보다 위에 있는 길이라 먼저 놓고 먹색으로 세운다 */
+	nav a.all {
+		margin-right: 0.4rem;
+		padding-right: 0.8rem;
+		border-right: 1px solid var(--line);
+		color: var(--ink);
 	}
 
 	/* 낱말은 급수와 성격이 다른 축이라 한 칸 띄우고 먹색으로 세워 둔다 */
