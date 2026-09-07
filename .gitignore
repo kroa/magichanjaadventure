@@ -37,3 +37,7 @@ playwright-report
 blob-report
 .playwright
 /screenshots
+
+# 조사하다 저장소 루트에 받아 둔 문서 — 두 번 딸려 들어간 적이 있다
+# (src/app.html 은 루트가 아니므로 무사하다)
+/*.html
