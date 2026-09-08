@@ -43,7 +43,13 @@ export const INDEXNOW_KEY = '9dda83b0a5957e29009a4ea9ebd272b0';
  * `/favicon.png` 가 308 로 넘어가는 것을 보고 알았다. 검색엔진은 키를 못 읽고
  * 403(키가 유효하지 않음)을 돌려주므로, 알림이 통째로 무시된다.
  */
-const DICT_PATHS = ['/hanja', '/sitemap.xml', '/robots.txt', `/${INDEXNOW_KEY}.txt`];
+const DICT_PATHS = [
+	'/hanja',
+	'/sitemap.xml',
+	'/sitemap.txt',
+	'/robots.txt',
+	`/${INDEXNOW_KEY}.txt`
+];
 
 export function isDictPath(pathname: string): boolean {
 	return DICT_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));

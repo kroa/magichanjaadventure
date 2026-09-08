@@ -50,7 +50,8 @@ export default defineConfig({
 						),
 						'/hanja',
 						'/hanja/*',
-						'/sitemap.xml'
+						'/sitemap.xml',
+						'/sitemap.txt'
 					]
 				}
 			})

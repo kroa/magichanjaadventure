@@ -227,6 +227,35 @@ test.describe('한자사전', () => {
 		}
 	});
 
+	test('사이트맵이 두 형식으로 같은 목록을 낸다', async ({ page }) => {
+		/*
+		 * 서치콘솔이 XML 을 "가져올 수 없음" 으로 두고 있는데 우리가 잴 수 있는 것은
+		 * 전부 정상이다. 원인을 모를 때는 길을 하나 더 내 둔다 — 구글은 줄바꿈으로
+		 * 나눈 주소 목록도 사이트맵으로 받는다.
+		 *
+		 * 목록을 두 군데서 만들면 반드시 어긋나므로, **같은지**를 여기서 지킨다.
+		 */
+		const xml = await (await page.request.get('/sitemap.xml')).text();
+		const txtRes = await page.request.get('/sitemap.txt');
+		expect(txtRes.status()).toBe(200);
+		expect(txtRes.headers()['content-type']).toContain('text/plain');
+
+		const fromXml = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+		const fromTxt = (await txtRes.text()).trim().split('\n');
+		expect(fromTxt, 'XML 과 텍스트 사이트맵의 목록이 어긋난다').toEqual(fromXml);
+
+		// 텍스트 사이트맵은 주소만 있어야 한다 — 주석 한 줄이 섞여도 규격 위반이다
+		const notUrl = fromTxt.filter((l) => !l.startsWith('https://hanjasajeon.pages.dev/'));
+		expect(notUrl, '주소가 아닌 줄이 섞였다').toEqual([]);
+
+		// robots 가 둘 다 가리키는가
+		const robots = await (
+			await page.request.get('/robots.txt', { headers: { host: 'hanjasajeon.pages.dev' } })
+		).text();
+		expect(robots).toContain('/sitemap.xml');
+		expect(robots).toContain('/sitemap.txt');
+	});
+
 	test('static 에 놓은 파일은 두 도메인 모두에서 그대로 나온다', async ({ page }) => {
 		/*
 		 * 사전 도메인은 제 것이 아닌 경로를 전부 게임 도메인으로 308 넘긴다.

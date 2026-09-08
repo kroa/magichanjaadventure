@@ -18,7 +18,9 @@ export const GET: RequestHandler = ({ request }) => {
 				'User-agent: *',
 				'Allow: /',
 				'',
+				// 두 형식 다 가리킨다 — 한쪽이 안 읽혀도 다른 쪽으로 발견될 수 있다
 				`Sitemap: ${DICT_ORIGIN}/sitemap.xml`,
+				`Sitemap: ${DICT_ORIGIN}/sitemap.txt`,
 				''
 			].join('\n')
 		: [
