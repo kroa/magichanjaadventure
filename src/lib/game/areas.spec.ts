@@ -41,8 +41,8 @@ describe('AREAS', () => {
 		expect(tops.size, `서로 다른 흙 윗색: ${[...tops].join(' ')}`).toBeGreaterThanOrEqual(8);
 	});
 
-	it('전체 한자 수가 1000자다', () => {
-		expect(TOTAL_HANJA).toBe(1000);
+	it('전체 한자 수가 1028자다', () => {
+		expect(TOTAL_HANJA).toBe(1028);
 	});
 });
 

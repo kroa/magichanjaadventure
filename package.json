@@ -34,7 +34,8 @@
 		"video:play": "PLAY_VIDEO=1 playwright test tests/visual/play-video.e2e.ts --project=desktop",
 		"video:gif": "node scripts/make-gif.mjs",
 		"audit:seo": "node scripts/seo-audit.mjs",
-		"indexnow": "node scripts/indexnow.mjs"
+		"indexnow": "node scripts/indexnow.mjs",
+		"words:gen": "node scripts/gen-words.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

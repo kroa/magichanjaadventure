@@ -30,7 +30,10 @@ function derive(): Map<string, string> {
 describe('낱말 풀', () => {
 	it('씨드와 어긋나지 않는다', () => {
 		const fresh = derive();
-		expect(WORDS.length, '생성된 목록의 개수가 다르다 — 다시 생성해야 한다').toBe(fresh.size);
+		expect(
+			WORDS.length,
+			'생성된 목록의 개수가 다르다 — `npm run words:gen` 으로 다시 생성하라'
+		).toBe(fresh.size);
 		for (const w of WORDS) {
 			const row = fresh.get(w.word);
 			expect(row, `${w.word} 이 씨드에 없다`).toBeDefined();

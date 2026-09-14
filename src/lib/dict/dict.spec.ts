@@ -21,7 +21,7 @@ import {
  */
 
 describe('사전 데이터', () => {
-	it('1000자가 모두 어딘가에 속한다', () => {
+	it('1028자가 모두 어딘가에 속한다', () => {
 		/*
 		 * 예전에는 "1,000자가 전부 8급~4급 급수표에 든다" 를 못 박고 있었다.
 		 * 그런데 공식 배정급수를 대 보니 28자는 3급II·3급·2급이었다 —
@@ -29,7 +29,7 @@ describe('사전 데이터', () => {
 		 * 거짓을 말하게 되므로 따로 모았고, 대신 **한 자도 새지 않았는지**를 본다.
 		 * 어디에도 안 걸린 글자는 링크가 닿지 않는 섬이 되어 색인에서 사라진다.
 		 */
-		expect(ALL.length).toBe(1000);
+		expect(ALL.length).toBe(1028);
 		const above = ABOVE_GRADES.reduce((n, g) => n + g.entries.length, 0);
 		expect(IN_GRADE_TABLE + above, '어디에도 속하지 않는 글자가 있다').toBe(ALL.length);
 	});
@@ -47,15 +47,22 @@ describe('사전 데이터', () => {
 		).toEqual([]);
 	});
 
-	it('완전히 담고 있는 급수는 공식 자수와 같다', () => {
-		// 8급~6급은 공식 배정한자를 빠짐없이 담고 있다. 여기가 어긋나면 데이터가 샌 것이다
+	it('급수마다 공식 배정 자수를 빠짐없이 담고 있다', () => {
+		/*
+		 * 이제 8급~4급 **아홉 급수 전부**가 공식 자수와 같다.
+		 * 예전에는 5급 94/100, 4급II 232/250, 4급 246/250 으로 모자랐다 —
+		 * 빠진 글자를 마저 담으면서 채워졌다. 여기가 어긋나면 데이터가 샌 것이다.
+		 */
 		const official: Record<string, number> = {
 			'8급': 50,
 			'7급II': 50,
 			'7급': 50,
 			'6급II': 75,
 			'6급': 75,
-			'5급II': 100
+			'5급II': 100,
+			'5급': 100,
+			'4급II': 250,
+			'4급': 250
 		};
 		for (const [label, n] of Object.entries(official)) {
 			expect(GRADES.find((g) => g.label === label)?.count, `${label}`).toBe(n);
@@ -86,7 +93,7 @@ describe('페이지 내용', () => {
 		}
 	});
 
-	it('설명이 글자마다 다르다 — 같은 문장이 1000장이면 자동 생성 페이지다', () => {
+	it('설명이 글자마다 다르다 — 같은 문장이 1028장이면 자동 생성 페이지다', () => {
 		const texts = new Set(ALL.map((e) => summarize(e)));
 		expect(texts.size, '설명이 겹치는 글자가 있다').toBe(ALL.length);
 	});

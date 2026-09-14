@@ -437,6 +437,6 @@ test.describe('한자사전', () => {
 		const xml = await map.text();
 		expect(xml).toContain('<urlset');
 		// 1000자 + 급수표 1 + 급수 9 + 따라쓰기 9 + 퀴즈 9 + 목차 1 + 낱말 목차 1 + 낱말 815
-		expect((xml.match(/<url>/g) ?? []).length).toBe(1845);
+		expect((xml.match(/<url>/g) ?? []).length).toBe(1907);
 	});
 });

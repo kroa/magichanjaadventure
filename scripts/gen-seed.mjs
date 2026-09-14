@@ -41,14 +41,14 @@ const { ACHIEVEMENTS } = await server.ssrLoadModule(
 );
 await server.close();
 
-if (HANJA_SEED.length !== 1000) {
-	console.error(`[gen-seed] 한자가 1000자가 아닙니다: ${HANJA_SEED.length}`);
+if (HANJA_SEED.length !== 1028) {
+	console.error(`[gen-seed] 한자가 1028자가 아닙니다: ${HANJA_SEED.length}`);
 	process.exit(1);
 }
 
 const lines = [
 	'-- ============================================================================',
-	'-- 콘텐츠 시드 — 한자 1000자 + 업적',
+	'-- 콘텐츠 시드 — 한자 1028자 + 업적',
 	'--',
 	'-- ⚠️ 이 파일은 `node scripts/gen-seed.mjs` 가 생성한다. 직접 고치지 말 것.',
 	'--    데이터는 database/seed/*.ts 에서 고치고 다시 생성한다.',

@@ -10,8 +10,15 @@ import { AREAS } from '../../src/lib/game/areas';
  * 화면이 깨지는 버그보다 심각하게 취급한다.
  */
 describe('한자 시드 데이터', () => {
-	it('정확히 1000자다', () => {
-		expect(HANJA_SEED).toHaveLength(1000);
+	it('정확히 1028자다', () => {
+		/*
+		 * 1,000 이 아니라 1,028 이다.
+		 *
+		 * 공식 배정한자 8급~4급 1,000자를 **빠짐없이** 담으면서, 게임이 마지막 마을에
+		 * 넣어 둔 그 위 급수 28자(3급II·3급·2급)는 그대로 두었기 때문이다.
+		 * 빼면 그 글자로 만든 낱말과 조합이 함께 무너진다.
+		 */
+		expect(HANJA_SEED).toHaveLength(1028);
 	});
 
 	it('중복된 한자가 없다', () => {
@@ -28,7 +35,7 @@ describe('한자 시드 데이터', () => {
 		expect(duplicates, `중복 한자: ${duplicates.join(' / ')}`).toEqual([]);
 	});
 
-	it('id 가 1부터 1000까지 빠짐없이 쓰인다', () => {
+	it('id 가 1부터 1028까지 빠짐없이 쓰인다', () => {
 		/*
 		 * **순서가 아니라 집합을 본다.**
 		 *
@@ -39,7 +46,7 @@ describe('한자 시드 데이터', () => {
 		 * 지켜야 할 것은 **빠짐도 겹침도 없다**는 것뿐이다.
 		 */
 		const ids = HANJA_SEED.map((h) => h.id).sort((a, b) => a - b);
-		expect(ids).toEqual(Array.from({ length: 1000 }, (_, i) => i + 1));
+		expect(ids).toEqual(Array.from({ length: 1028 }, (_, i) => i + 1));
 	});
 
 	it('글자마다 번호가 고정되어 있다', () => {

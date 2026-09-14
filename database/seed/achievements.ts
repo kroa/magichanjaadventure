@@ -88,12 +88,16 @@ export const ACHIEVEMENTS: Achievement[] = [
 		sortOrder: 6
 	},
 	{
+		/*
+		 * id 는 `collect_1000` 그대로 둔다 — 아이가 이미 딴 업적 기록이 이 id 를 가리킨다.
+		 * 공식 배정한자를 마저 담아 1,028자가 되었으므로 조건과 문구만 옮긴다.
+		 */
 		id: 'collect_1000',
 		title: '한자 대현자',
-		description: '한자 1000자를 모두 모았어요',
+		description: '한자 1028자를 모두 모았어요',
 		icon: '🐉',
 		conditionType: 'hanja_learned',
-		conditionValue: 1000,
+		conditionValue: 1028,
 		expReward: 5000,
 		gemReward: 500,
 		sortOrder: 7
