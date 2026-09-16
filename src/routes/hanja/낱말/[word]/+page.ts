@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { madeOf, strokesFor } from '$lib/dict';
+import { entryOf, madeOf, strokesFor, summarize } from '$lib/dict';
 import { ALL_WORDS, describeWord, homophones, relatedWords, wordEntry } from '$lib/dict/words';
 import type { EntryGenerator, PageLoad } from './$types';
 
@@ -25,8 +25,22 @@ export const load: PageLoad = ({ params }) => {
 	 */
 	const strokes = [...params.word].map((ch) => ({ character: ch, strokes: strokesFor(ch) }));
 
+	/*
+	 * 글자마다의 사전 풀이를 낱말 페이지에도 싣는다.
+	 *
+	 * 낱말 페이지는 두 글자를 훈·음·급수·획수로만 소개하고 있었다. 그래서
+	 * 太陽 처럼 두 글자가 다른 낱말에 안 쓰이는 낱말은 페이지에 실을 것이
+	 * 거의 없었다(본문 186자). 정작 그 사람이 알고 싶은 것은 **각 글자가 무엇인가**인데
+	 * 그걸 보려면 글자 페이지로 한 번 더 들어가야 했다.
+	 */
+	const explain = [...params.word]
+		.map((ch) => ({ character: ch, entry: entryOf(ch) }))
+		.filter((x): x is { character: string; entry: NonNullable<typeof x.entry> } => Boolean(x.entry))
+		.map((x) => ({ character: x.character, text: summarize(x.entry) }));
+
 	return {
 		entry,
+		explain,
 		summary: describeWord(entry),
 		sharesHead: trim(related.sharesHead),
 		sharesTail: trim(related.sharesTail),

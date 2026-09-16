@@ -74,7 +74,10 @@
 				<b class="part-glyph">{p.ch}</b>
 				{#if p.entry}
 					<span class="hun">{p.entry.meaning} {p.entry.reading}</span>
-					<span class="meta">{p.entry.gradeLabel} · {p.entry.strokeCount}획</span>
+					<span class="meta">
+						{p.entry.gradeLabel} · {p.entry.strokeCount}획{#if p.entry.radical}
+							· 부수 {p.entry.radical}{/if}
+					</span>
 				{:else}
 					<span class="hun">이 사전에 없는 글자</span>
 				{/if}
@@ -82,6 +85,23 @@
 		{/each}
 	</div>
 </section>
+
+{#if data.explain.length}
+	<!--
+		두 글자가 각각 무엇인지 여기서 끝낸다.
+		예전에는 훈·음·급수·획수만 적어 두고 나머지는 글자 페이지로 미뤘는데,
+		낱말을 찾아온 사람이 정작 알고 싶은 것이 그것이라 한 번 더 누르게 만들었다.
+	-->
+	<section>
+		<h2>글자 풀이</h2>
+		{#each data.explain as x (x.character)}
+			<p class="explain">
+				<b>{x.character}</b>
+				<span>{x.text}</span>
+			</p>
+		{/each}
+	</section>
+{/if}
 
 {#if data.parts.length}
 	<!--
@@ -300,6 +320,28 @@
 		color: var(--muted);
 		font-family: var(--ui);
 		font-size: 0.75rem;
+	}
+
+	/* 글자 풀이 — 한자를 왼쪽에 세우고 문장을 그 옆에 붙인다 */
+	.explain {
+		display: flex;
+		gap: 0.75rem;
+		align-items: baseline;
+		max-width: 40rem;
+		margin: 0 0 0.9rem;
+	}
+
+	.explain b {
+		flex: none;
+		width: 1.6rem;
+		font-size: 1.5rem;
+		font-weight: 500;
+		line-height: 1.2;
+	}
+
+	.explain span {
+		color: #3a3a44;
+		font-size: 0.9375rem;
 	}
 
 	.words {

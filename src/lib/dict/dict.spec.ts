@@ -78,6 +78,26 @@ describe('사전 데이터', () => {
 		}
 	});
 
+	it('글자마다 부수가 있다', () => {
+		/*
+		 * 부수는 한자 사전을 찾는 사람이 가장 먼저 보는 값 중 하나인데 시드에 아예 없었다.
+		 * 지금은 `radicals.ts` 에서 온다 — 나중에 글자를 더할 때 그 표에 넣는 것을
+		 * 잊으면 카드가 조용히 비어 버리므로 여기서 막는다.
+		 */
+		const empty = ALL.filter((e) => !e.radical.trim());
+		expect(
+			empty.map((e) => e.character),
+			'부수가 비어 있는 글자'
+		).toEqual([]);
+
+		// 부수를 뺀 획수는 총획보다 클 수 없다
+		const odd = ALL.filter((e) => e.radicalRest > e.strokeCount);
+		expect(
+			odd.map((e) => `${e.character}: 총획 ${e.strokeCount} < 부수 뺀 획수 ${e.radicalRest}`),
+			'획수가 앞뒤가 안 맞는 글자'
+		).toEqual([]);
+	});
+
 	it('글자가 중복되지 않는다 — 같은 주소가 둘이면 색인이 갈린다', () => {
 		const seen = new Set(ALL.map((e) => e.character));
 		expect(seen.size).toBe(ALL.length);

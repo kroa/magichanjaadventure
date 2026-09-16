@@ -81,6 +81,17 @@
 				<dt>총획</dt>
 				<dd>{e.strokeCount}획</dd>
 			</div>
+			{#if e.radical}
+				<!--
+					부수는 한자 사전을 찾는 사람이 가장 먼저 보는 값 중 하나인데
+					지금까지 이 사전에는 아예 없었다. 부수를 뺀 획수도 함께 적는다 —
+					옥편에서 글자를 찾을 때 쓰는 것이 그 숫자다.
+				-->
+				<div>
+					<dt>부수</dt>
+					<dd>{e.radical} <span class="rest">+{e.radicalRest}획</span></dd>
+				</div>
+			{/if}
 			<div>
 				<dt>급수</dt>
 				<dd>
@@ -265,6 +276,13 @@
 
 	.facts dd a {
 		color: var(--ink);
+	}
+
+	/* 부수를 뺀 획수 — 부수 글자보다 한 단 낮게 */
+	.facts .rest {
+		color: var(--muted);
+		font-family: var(--ui);
+		font-size: 0.8125rem;
 	}
 
 	/* ── 절 ───────────────────────────────────────────────── */

@@ -1,5 +1,6 @@
 import { HANJA_SEED } from '../../../database/seed/hanja';
 import { OFFICIAL_GRADE } from '../../../database/seed/official-grades';
+import { RADICALS } from '../../../database/seed/radicals';
 import type { ExampleWord } from '../../../database/seed/types';
 import { strokesOf } from '$lib/game/stroke-data';
 import { FUSION_RECIPES } from '$lib/game/fusion';
@@ -30,6 +31,13 @@ export interface DictEntry {
 	/** 훈 (예: '밝을') */
 	meaning: string;
 	strokeCount: number;
+	/**
+	 * 부수 — 한자 사전이라면 당연히 있어야 하는데 시드에는 아예 없던 값이다.
+	 * 값은 `database/seed/radicals.ts` (한국어문회 마스터 파일에서 옮긴 표)에서 온다.
+	 */
+	radical: string;
+	/** 부수를 뺀 획수. 총획에서 부수 획수를 덜어 낸 값이다 */
+	radicalRest: number;
 	gradeLabel: string;
 	/** 시드의 분류 (자연/숫자/사람/방향/시간/학교/동작/색/생활) */
 	category: string;
@@ -59,6 +67,8 @@ const BY_CHAR = new Map<string, DictEntry>(
 			reading: h.reading,
 			meaning: h.meaning,
 			strokeCount: h.strokeCount,
+			radical: RADICALS[h.character]?.radical ?? '',
+			radicalRest: RADICALS[h.character]?.rest ?? 0,
 			/*
 			 * 급수는 **공식 표에서 읽는다.** 시드의 `gradeLabel` 은 게임의 마을 순서라,
 			 * 그대로 쓰면 사전이 틀린 급수를 말하게 된다 — 실제로 133자가 그랬다.
@@ -116,7 +126,7 @@ export function charactersOfGrade(label: string): DictEntry[] {
  *
  * 여느 한자 사전에 없는 각도라 이 사전의 고유한 부분이다.
  * 부수(部首) 와는 다르다 — 부수는 색인용 분류이고, 이건 **글자를 이루는 조각**이다.
- * 부수 데이터는 아직 없으므로 부수라고 부르지 않는다.
+ * 부수는 `radicals.ts` 에 따로 있으며, 둘을 같은 것으로 묶지 않는다.
  */
 export function madeOf(character: string): { parts: string[]; note: string } | null {
 	const recipe = FUSION_RECIPES.find((r) => r.result === character);
